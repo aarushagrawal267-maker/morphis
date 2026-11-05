@@ -1,0 +1,27 @@
+{
+  "name": "@morphis/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.1.0",
+    "@morphis/shared": "0.1.0",
+    "@morphis/sim": "0.1.0",
+    "@prisma/client": "6.19.3",
+    "fastify": "^5.6.0",
+    "socket.io": "^4.8.1",
+    "tsx": "^4.20.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "prisma": "6.19.3",
+    "socket.io-client": "^4.8.1"
+  }
+}
