@@ -5,7 +5,8 @@
  */
 import type { Server } from 'socket.io';
 import type { InitPayload, SaveSummary, SimCommand } from '@morphis/shared';
-import { SOCKET_EVENTS } from '@morphis/shared';
+import { PUBLIC_COMMANDS, SOCKET_EVENTS } from '@morphis/shared';
+import { timingSafeEqual } from 'node:crypto';
 import { CitySimulation, SimulationRunner, SimulatedExecutor } from '@morphis/sim';
 import type { AgentController } from '../ai/agents';
 import type { ServerConfig } from '../config';
@@ -95,6 +96,26 @@ export class SimulationHost {
   async save(name?: string): Promise<SaveSummary> {
     const data = this.sim.serialize(name ?? `Morphis day ${Math.floor(this.sim.time / 86400) + 1}`);
     return this.persistence.save(data, { population: this.sim.state.citizens.length, sim: this.sim } as { population: number });
+  }
+
+  /** Hosted towns: control commands need the admin key; visitors can walk, wave and talk. */
+  canRun(cmd: SimCommand, token: string | undefined): boolean {
+    const key = this.cfg.ADMIN_TOKEN;
+    if (!key || PUBLIC_COMMANDS.includes(cmd.type)) return true;
+    return this.isAdmin(token);
+  }
+
+  isAdmin(token: string | undefined): boolean {
+    const key = this.cfg.ADMIN_TOKEN;
+    if (!key) return true;
+    if (!token) return false;
+    const a = Buffer.from(token);
+    const b = Buffer.from(key);
+    return a.length === b.length && timingSafeEqual(a, b);
+  }
+
+  get locked(): boolean {
+    return !!this.cfg.ADMIN_TOKEN;
   }
 
   async command(cmd: SimCommand): Promise<CommandReply> {

@@ -98,6 +98,12 @@ export interface InitPayload {
   ventures?: Venture[];
 }
 
+/** Whether this connection may change the town (hosted towns lock control commands behind an admin key). */
+export interface AccessInfo {
+  locked: boolean;
+  admin: boolean;
+}
+
 export interface SaveSummary {
   id: string;
   name: string;
@@ -114,6 +120,7 @@ export type AuthorityMessage =
   | { t: 'state'; state: StateFrame }
   | { t: 'events'; events: SimEvent[] }
   | { t: 'approvals'; approvals: ApprovalRequest[] }
+  | { t: 'access'; access: AccessInfo }
   | { t: 'reply'; id: number; ok: boolean; data?: unknown; error?: string };
 
 /** Socket.IO event names. */
@@ -123,5 +130,6 @@ export const SOCKET_EVENTS = {
   state: 'sim.state',
   events: 'sim.events',
   approvals: 'ai.approvals',
+  access: 'access',
   command: 'sim.command',
 } as const;

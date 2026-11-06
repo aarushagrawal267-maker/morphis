@@ -54,6 +54,8 @@ interface SimData {
   persistence: PersistenceInfo | null;
   ai: AiProviderInfo | null;
   approvals: ApprovalRequest[];
+  /** Hosted towns may lock control commands behind the host's admin key. */
+  access: { locked: boolean; admin: boolean };
   /** Logged deeds (newest last). */
   deeds: Deed[];
   life: Map<string, AgentLife>;
@@ -94,6 +96,7 @@ export const useSim = create<SimData>((set, get) => ({
   persistence: null,
   ai: null,
   approvals: [],
+  access: { locked: false, admin: true },
   deeds: [],
   life: new Map(),
   ventures: [],

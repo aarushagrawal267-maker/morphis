@@ -14,6 +14,23 @@ services:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 5s
       retries: 10
+  # The whole town in one container (docker compose --profile app up --build).
+  # Put AI_API_KEY in a .env file next to this compose file; it stays on the server.
+  app:
+    build: .
+    profiles: ['app']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:morphis@postgres:5432/morphis
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_PROVIDER: ${AI_PROVIDER:-openai-compatible}
+      AI_BASE_URL: ${AI_BASE_URL:-https://integrate.api.nvidia.com/v1}
+      AI_MODEL: ${AI_MODEL:-nvidia/nemotron-3-ultra-550b-a55b}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+    ports: ['8787:8787']
+    volumes: ['morphis-data:/data']
   # Not used yet: reserved for task/event queues once multiple agent workers run (see docs).
   redis:
     image: redis:7-alpine
@@ -21,3 +38,4 @@ services:
     ports: ['6379:6379']
 volumes:
   morphis-pg:
+  morphis-data:

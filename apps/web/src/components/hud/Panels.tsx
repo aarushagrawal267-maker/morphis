@@ -82,6 +82,42 @@ export function ClockPanel() {
   );
 }
 
+/** Hosted towns: the host unlocks control commands with the admin key (kept in this browser). */
+function AdminKey() {
+  const mode = useSim((s) => s.mode);
+  const access = useSim((s) => s.access);
+  const [key, setKey] = useState('');
+  if (mode !== 'server' || !access.locked) return null;
+  return (
+    <div className="admin-key" data-testid="admin-key">
+      <h4>Admin key</h4>
+      <p className="note">
+        {access.admin
+          ? 'You are the host: you can change speed, weather, saves and give JARVIS commands.'
+          : 'This town is run by its host. Visitors can walk, wave and talk; changing the town needs the admin key.'}
+      </p>
+      {!access.admin && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            try {
+              localStorage.setItem('morphis.adminKey', key);
+            } catch {
+              /* storage unavailable */
+            }
+            location.reload();
+          }}
+        >
+          <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="Admin key" autoComplete="off" />
+          <button type="submit" disabled={key.length < 8}>
+            Unlock
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 export function SettingsPanel() {
   const open = useUI((s) => s.panel === 'settings');
   const q = useUI((s) => s.quality);
@@ -101,6 +137,7 @@ export function SettingsPanel() {
   return (
     <section className="side-panel glass" data-testid="settings-panel">
       <PanelHeader title="SETTINGS" />
+      <AdminKey />
       <h4>Graphics</h4>
       <Toggle label="Bloom (neon glow)" on={q.bloom} set={(v) => ui.setQuality({ bloom: v })} id="set-bloom" />
       <Toggle label="Shadows" on={q.shadows} set={(v) => ui.setQuality({ shadows: v })} id="set-shadows" />

@@ -115,7 +115,11 @@ export function talkFacts(sim: CitySimulation, c: CitizenRT): TalkFacts {
     doing = dest ? `${how} to ${nameOf(sim, dest)}${dest.id === p.homeId ? ' (home)' : ''}` : `${how} across town`;
   } else if (d.location.kind === 'stop') doing = `Waiting for the bus${dest ? ` to ${nameOf(sim, dest)}` : ''}`;
   else if (d.location.kind === 'rail') doing = `Waiting for the Skyrail${dest ? ` to ${nameOf(sim, dest)}` : ''}`;
-  else doing = `${DOING[d.activity] ?? 'Busy'}${here && here.id !== p.homeId ? ` at ${nameOf(sim, here)}` : here ? ' at home' : ''}`;
+  else {
+    const base = DOING[d.activity] ?? 'Busy';
+    const where = here && here.id !== p.homeId ? ` at ${nameOf(sim, here)}` : here && !/home|sleep/i.test(base) ? ' at home' : '';
+    doing = `${base}${where}`;
+  }
   const task = d.currentTaskId ? sim.workforce.task(d.currentTaskId) : undefined;
   const mood = d.energy < 0.2 ? 'exhausted' : d.satiety < 0.25 ? 'hungry' : d.happiness > 0.75 ? 'cheerful' : d.happiness < 0.4 ? 'a bit down' : 'calm';
 

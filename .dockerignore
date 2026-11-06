@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+.git
+test-results
+playwright-report
+apps/web/dist
+apps/web/dist-static
+apps/server/data
+apps/server/.env
+**/.env
+**/.env.*
+!**/.env.example
+data
+*.log

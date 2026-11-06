@@ -1,5 +1,5 @@
 import { createServer, type Server as HttpServer } from 'node:http';
-import { mkdtempSync, existsSync, readFileSync } from 'node:fs';
+import { mkdtempSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -271,6 +271,29 @@ describe('AI conversations (mock provider)', () => {
     expect((r2.data as { by: string }).by).toBe('sim');
     expect((r2.data as { reply: string }).reply.length).toBeGreaterThan(5);
     await plain.app.close();
+  });
+});
+
+describe('hosted towns: admin key and web client', () => {
+  it('locks control commands behind ADMIN_TOKEN but lets visitors talk; serves the built site', async () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), 'morphis-host-'));
+    const webDir = mkdtempSync(path.join(tmpdir(), 'morphis-web-'));
+    writeFileSync(path.join(webDir, 'index.html'), '<!doctype html><title>Morphis</title>');
+    const ctx = await buildServer(loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '60', AI_PROVIDER: 'none', ADMIN_TOKEN: 'secret-key-123', WEB_DIST: webDir }));
+    const speed = { type: 'sim.setSpeed', speed: 5 };
+    expect((await ctx.app.inject({ method: 'POST', url: '/api/commands', payload: speed })).statusCode).toBe(403);
+    expect((await ctx.app.inject({ method: 'POST', url: '/api/commands', payload: speed, headers: { 'x-admin-token': 'secret-key-123' } })).statusCode).toBe(200);
+    expect((await ctx.app.inject({ method: 'POST', url: '/api/jarvis', payload: { text: 'Research parks' } })).statusCode).toBe(403);
+    const id = ctx.host.sim.life.agents()[0].profile.id;
+    const talk = await ctx.app.inject({ method: 'POST', url: '/api/commands', payload: { type: 'guest.talk', citizenId: id, topic: 'upto' } });
+    expect(talk.statusCode).toBe(200);
+    const page = await ctx.app.inject({ method: 'GET', url: '/any/deep/link' });
+    expect(page.statusCode).toBe(200);
+    expect(page.body).toContain('<title>Morphis</title>');
+    const traversal = await ctx.app.inject({ method: 'GET', url: '/../../etc/passwd' });
+    expect(traversal.body).not.toContain('root:');
+    expect((await ctx.app.inject({ method: 'GET', url: '/api/nope' })).statusCode).toBe(404);
+    await ctx.app.close();
   });
 });
 

@@ -3,7 +3,7 @@
  * stream and accept the same validated commands.
  */
 import { io, type Socket } from 'socket.io-client';
-import type { ApprovalRequest, AuthorityMessage, InitPayload, MotionFrame, SimCommand, SimEvent, StateFrame } from '@morphis/shared';
+import type { ApprovalRequest, AuthorityMessage, InitPayload, MotionFrame, SimCommand, SimEvent, StateFrame, AccessInfo } from '@morphis/shared';
 import { SOCKET_EVENTS } from '@morphis/shared';
 
 export interface Transport {
@@ -69,7 +69,13 @@ export class SocketTransport implements Transport {
 
   start(onMessage: (m: AuthorityMessage) => void, onStatus: (s: ConnectionStatus) => void): void {
     onStatus('connecting');
-    const s = io(this.url, { transports: ['websocket'], reconnection: true });
+    let token: string | undefined;
+    try {
+      token = localStorage.getItem('morphis.adminKey') ?? undefined;
+    } catch {
+      token = undefined;
+    }
+    const s = io(this.url, { transports: ['websocket'], reconnection: true, auth: token ? { token } : {} });
     this.socket = s;
     s.on('connect', () => onStatus('connected'));
     s.on('disconnect', () => onStatus('disconnected'));
@@ -79,6 +85,7 @@ export class SocketTransport implements Transport {
     s.on(SOCKET_EVENTS.state, (state: StateFrame) => onMessage({ t: 'state', state }));
     s.on(SOCKET_EVENTS.events, (events: SimEvent[]) => onMessage({ t: 'events', events }));
     s.on(SOCKET_EVENTS.approvals, (approvals: ApprovalRequest[]) => onMessage({ t: 'approvals', approvals }));
+    s.on(SOCKET_EVENTS.access, (access: AccessInfo) => onMessage({ t: 'access', access }));
   }
 
   send(cmd: SimCommand): Promise<unknown> {

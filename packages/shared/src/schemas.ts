@@ -44,6 +44,9 @@ export const commandSchema = z.discriminatedUnion('type', [
 ]);
 
 export type SimCommand = z.infer<typeof commandSchema>;
+
+/** Commands any visitor may send to a hosted town. Everything else needs the host's admin key when one is set. */
+export const PUBLIC_COMMANDS: readonly string[] = ['guest.wave', 'guest.talk', 'city.list'];
 export type SimCommandType = SimCommand['type'];
 
 export const cityConfigSchema = z.object({
