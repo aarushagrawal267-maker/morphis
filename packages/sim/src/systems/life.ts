@@ -772,6 +772,52 @@ export class LifeSystem {
     return `${firstName(c.profile.name)}'s ${VENTURE_KINDS[kind].label}`;
   }
 
+  /**
+   * Hourly: agents who spend time in the same place (a café, a park, a party,
+   * a fit-out) get to know each other. First meeting and friendship are deeds.
+   */
+  hourly(): void {
+    const sim = this.sim;
+    if (!this.st.life) return;
+    const bonds = (this.st.bonds ??= {});
+    const SOCIAL = new Set(['eat', 'leisure', 'event', 'park', 'build', 'shop']);
+    const byPlace = new Map<string, CitizenRT[]>();
+    for (const l of this.st.life) {
+      const c = sim.citizenById(l.citizenId);
+      if (!c || !c.insideId || !SOCIAL.has(c.dyn.activity)) continue;
+      const list = byPlace.get(c.insideId);
+      if (list) list.push(c);
+      else byPlace.set(c.insideId, [c]);
+    }
+    for (const [placeId, group] of byPlace) {
+      if (group.length < 2) continue;
+      const place = displayName(sim.economy.byBuilding(placeId)?.name ?? sim.building(placeId).name);
+      for (let i = 0; i < group.length; i++) {
+        for (let j = i + 1; j < group.length; j++) {
+          const [a, b] = [group[i], group[j]].sort((x, y) => (x.profile.id < y.profile.id ? -1 : 1));
+          const key = `${a.profile.id}|${b.profile.id}`;
+          const before = bonds[key] ?? 0;
+          const after = before + 1;
+          bonds[key] = after;
+          const what = a.dyn.activity === 'build' ? 'fitting out' : a.dyn.activity === 'eat' ? 'a meal at' : a.dyn.activity === 'park' ? 'a walk in' : 'an evening at';
+          if (before === 0) {
+            this.addDeed(a, 'met', `${firstName(a.profile.name)} met ${b.profile.name} over ${what} ${place}.`, 'sim', { buildingId: placeId, others: [b.profile.id] });
+          } else if (before < 3 && after >= 3) {
+            const la = this.life(a.profile.id);
+            const lb = this.life(b.profile.id);
+            if (la && !la.friends?.includes(b.profile.id)) (la.friends ??= []).push(b.profile.id);
+            if (lb && !lb.friends?.includes(a.profile.id)) (lb.friends ??= []).push(a.profile.id);
+            this.addDeed(a, 'friends', `${firstName(a.profile.name)} and ${firstName(b.profile.name)} became friends at ${place}.`, 'sim', { buildingId: placeId, others: [b.profile.id] });
+          }
+        }
+      }
+    }
+  }
+
+  friendsOf(citizenId: string): string[] {
+    return this.life(citizenId)?.friends ?? [];
+  }
+
   /** A guest waved and this agent waved back. */
   metGuest(citizenId: string): void {
     const l = this.life(citizenId);

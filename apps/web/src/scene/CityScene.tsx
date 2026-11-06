@@ -22,6 +22,7 @@ import { PostcardCapture } from './guest/PostcardCapture';
 import { Skyrail } from './rail/Skyrail';
 import { VentureSites } from './buildings/VentureSites';
 import { Fireflies } from './props/Fireflies';
+import { StreetGlow } from './props/StreetGlow';
 import { Buildings } from './buildings/Buildings';
 import { HQ } from './buildings/HQ';
 import { CameraRig } from './camera/CameraRig';
@@ -68,6 +69,7 @@ export function CityScene() {
           <Signs />
           <Props />
           <Fireflies />
+          <StreetGlow />
           {island ? <IslandWorld /> : <Skyline />}
           <Skyrail />
           <VentureSites />

@@ -86,6 +86,8 @@ export interface AgentLife {
   decideAt: number;
   pending: string | null;
   guestsMet: number;
+  /** Other agents this agent has become friends with. */
+  friends?: string[];
 }
 
 export type DeedKind =
@@ -102,7 +104,9 @@ export type DeedKind =
   | 'project'
   | 'hired'
   | 'dividend'
-  | 'rest';
+  | 'rest'
+  | 'met'
+  | 'friends';
 
 export interface Deed {
   id: string;

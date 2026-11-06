@@ -192,4 +192,6 @@ export interface SimState {
   ventures?: Venture[];
   decisions?: LifeDecision[];
   trains?: TrainRT[];
+  /** Time agents have spent together (hours), keyed "citizenA|citizenB" (sorted). */
+  bonds?: Record<string, number>;
 }

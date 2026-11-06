@@ -255,7 +255,11 @@ test('the town floats on an island; you can walk into a building and talk to peo
   expect(id).not.toBeNull();
   await page.evaluate((cid) => (window as any).__morphis.ui.getState().select({ kind: 'citizen', id: cid }), id);
   await page.getByTestId('talk-upto').click();
+  await expect(page.getByTestId('talk').locator('.talk__line--them')).toHaveCount(1);
   await page.getByTestId('talk-where').click();
   await expect(page.getByTestId('talk').locator('.talk__line--them')).toHaveCount(2);
+  await page.getByTestId('talk-input').fill('Hello there');
+  await page.getByTestId('talk-send').click();
+  await expect(page.getByTestId('talk').locator('.talk__line--them')).toHaveCount(3);
   expect(errors).toEqual([]);
 });

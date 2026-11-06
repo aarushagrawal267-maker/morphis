@@ -18,6 +18,7 @@ import { AgentMemory } from './memory';
 import { createProvider, type AiProvider, type ChatMessage, type RateLimiter } from './provider';
 import { ToolManager } from './tools';
 import { LlmLifeMind } from './life';
+import { LlmTalker } from './talk';
 import { Workspace } from './workspace';
 
 const LANDMARK_KEYS = ['hq', 'ai_lab', 'university', 'orbital', 'corporate', 'bank', 'studio', 'datacenter', 'hospital', 'market', 'station'];
@@ -453,6 +454,7 @@ export class AgentController {
   readonly planner: LlmMasterPlanner | null;
   readonly executor: LiveTaskExecutor | null;
   readonly lifeMind: LlmLifeMind | null;
+  readonly talker: LlmTalker | null;
   info: AiProviderInfo;
   verified: 'unverified' | 'ok' | 'failed' = 'unverified';
   lastError: string | null = null;
@@ -489,6 +491,7 @@ export class AgentController {
             dailyCap: cfg.AI_DAILY_REQUEST_CAP,
           })
         : null;
+    this.talker = provider && cfg.AI_TALK_PER_MINUTE > 0 ? new LlmTalker(provider, limiter, { perMinute: cfg.AI_TALK_PER_MINUTE, dailyCap: cfg.AI_DAILY_REQUEST_CAP }) : null;
     this.tools.register({
       name: 'city.data',
       description: 'Read live, real data from the Morphis city simulation (read-only). Use it instead of inventing numbers.',
@@ -551,6 +554,7 @@ export class AgentController {
       approvals: this.tools.recentApprovals(),
       inFlight: this.executor ? [...this.executor.inFlight] : [],
       lifeDecisions: this.lifeMind?.stats ?? null,
+      conversations: this.talker?.stats ?? null,
     };
   }
 }

@@ -5,7 +5,7 @@ import type { AmbitionKind, Interest, VentureKind } from './types/life';
 export const CITY_NAME = 'MORPHIS';
 export const CITY_TAGLINE = 'EMERGENT AI CITY • YEAR 2126 • THE COMPLEX';
 export const DEFAULT_SEED = 2126;
-export const WORLD_VERSION = 2;
+export const WORLD_VERSION = 3;
 
 /** Simulation tick length in simulated seconds (fixed timestep). */
 export const TICK_SECONDS = 1;
@@ -80,10 +80,11 @@ export const ROAD_CLASSES: Record<
   { lanes: number; sidewalk: number; median: number; speed: number; label: string; capacity: number }
 > = {
   // speeds in world units per *motion second* (see MOTION_SECONDS_PER_TICK)
-  highway: { lanes: 3, sidewalk: 0, median: 1.0, speed: 8, label: 'Expressway', capacity: 1.0 },
-  avenue: { lanes: 2, sidewalk: 1.6, median: 0.6, speed: 5.5, label: 'Avenue', capacity: 0.7 },
-  street: { lanes: 1, sidewalk: 1.3, median: 0, speed: 4.4, label: 'Street', capacity: 0.4 },
-  local: { lanes: 1, sidewalk: 1.1, median: 0, speed: 3.6, label: 'Lane', capacity: 0.3 },
+  // town scale: narrow carriageways, generous tree-lined sidewalks
+  highway: { lanes: 2, sidewalk: 0, median: 0.8, speed: 7, label: 'Ring Road', capacity: 0.9 },
+  avenue: { lanes: 1, sidewalk: 2.3, median: 0, speed: 5, label: 'Avenue', capacity: 0.55 },
+  street: { lanes: 1, sidewalk: 1.7, median: 0, speed: 4.2, label: 'Street', capacity: 0.4 },
+  local: { lanes: 1, sidewalk: 1.4, median: 0, speed: 3.4, label: 'Lane', capacity: 0.3 },
 };
 
 export function roadWidth(cls: RoadClass): number {
