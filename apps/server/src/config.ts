@@ -15,7 +15,7 @@ const schema = z.object({
   AI_MODEL: z.string().default('nvidia/nemotron-3-ultra-550b-a55b'),
   AI_API_KEY: z.string().optional(),
   AI_REQUESTS_PER_MINUTE: z.coerce.number().min(1).default(30),
-  AI_MAX_TOKENS: z.coerce.number().int().min(256).default(1800),
+  AI_MAX_TOKENS: z.coerce.number().int().min(256).default(4096),
   AI_DAILY_REQUEST_CAP: z.coerce.number().int().min(1).default(400),
   AI_TIMEOUT_MS: z.coerce.number().int().default(180_000),
   /** NVIDIA NIM reasoning mode (chat_template_kwargs.enable_thinking). Slower, sometimes better. */

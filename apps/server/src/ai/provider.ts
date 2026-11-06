@@ -17,6 +17,8 @@ export interface CompletionResult {
   text: string;
   inputTokens: number;
   outputTokens: number;
+  /** The model stopped because it hit the output token limit. */
+  truncated: boolean;
 }
 
 export interface AiProvider {
@@ -117,10 +119,10 @@ export class OpenAICompatibleProvider implements AiProvider {
           }),
         });
         if (!res.ok) throw new HttpError(res.status, `${this.name} ${res.status}: ${(await res.text()).slice(0, 300)}`);
-        const json = (await res.json()) as { choices?: { message?: { content?: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+        const json = (await res.json()) as { choices?: { message?: { content?: string }; finish_reason?: string }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } };
         const text = stripReasoning(json.choices?.[0]?.message?.content ?? '');
         if (!text) throw new Error(`${this.name}: empty completion`);
-        return { text, inputTokens: json.usage?.prompt_tokens ?? 0, outputTokens: json.usage?.completion_tokens ?? 0 };
+        return { text, inputTokens: json.usage?.prompt_tokens ?? 0, outputTokens: json.usage?.completion_tokens ?? 0, truncated: json.choices?.[0]?.finish_reason === 'length' };
       } finally {
         clearTimeout(timer);
       }
@@ -155,10 +157,10 @@ export class AnthropicProvider implements AiProvider {
           body: JSON.stringify({ model: this.model, system, messages: rest, max_tokens: opts.maxTokens ?? this.maxTokens, temperature: opts.temperature ?? 0.4 }),
         });
         if (!res.ok) throw new HttpError(res.status, `anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
-        const json = (await res.json()) as { content?: { type: string; text?: string }[]; usage?: { input_tokens?: number; output_tokens?: number } };
+        const json = (await res.json()) as { content?: { type: string; text?: string }[]; usage?: { input_tokens?: number; output_tokens?: number }; stop_reason?: string };
         const text = (json.content ?? []).filter((c) => c.type === 'text').map((c) => c.text ?? '').join('').trim();
         if (!text) throw new Error('anthropic: empty completion');
-        return { text, inputTokens: json.usage?.input_tokens ?? 0, outputTokens: json.usage?.output_tokens ?? 0 };
+        return { text, inputTokens: json.usage?.input_tokens ?? 0, outputTokens: json.usage?.output_tokens ?? 0, truncated: json.stop_reason === 'max_tokens' };
       } finally {
         clearTimeout(timer);
       }
