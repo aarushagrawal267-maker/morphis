@@ -114,9 +114,11 @@ describe('AI agents against a mock OpenAI-compatible provider', () => {
         const observed = json.messages.some((m) => m.content.startsWith('Observation from'));
         calls.push({ system, user });
         // agents: first a tool step, then the final deliverable as JSON
+        // like the real model: write the full document as the task file, then hand in a short summary
+        const fileName = /saved as (\S+\.md)/.exec(user)?.[1] ?? 'out.md';
         let content = observed
-          ? JSON.stringify({ thought: 'done', final: '# Deliverable\n\n- Finding one\n- Finding two' })
-          : JSON.stringify({ thought: 'check the workspace first', action: 'workspace.list', args: {} });
+          ? JSON.stringify({ thought: 'done', final: `Saved as ${fileName}.` })
+          : JSON.stringify({ thought: 'write it', action: 'workspace.write', args: { path: fileName, content: '# Deliverable\n\n- Finding one\n- Finding two with plenty of detail' } });
         if (user.includes('single word: ready')) content = 'ready';
         else if (system.includes('Master Planner'))
           content =
@@ -132,7 +134,7 @@ describe('AI agents against a mock OpenAI-compatible provider', () => {
               ],
             }) +
             '\n```';
-        else if (system.includes('reviewer') && observed) content = '<think>internal</think># Final synthesis\nAll good.';
+        else if (system.includes('reviewer')) content = '<think>internal</think># Final synthesis\nAll good.';
         res.setHeader('content-type', 'application/json');
         res.end(JSON.stringify({ choices: [{ message: { content } }], usage: { prompt_tokens: 10, completion_tokens: 20 } }));
       });
@@ -167,6 +169,8 @@ describe('AI agents against a mock OpenAI-compatible provider', () => {
       expect(t.output).toMatch(/^\[AI · mock-model\]/);
       const file = ctx.agents.workspace.resolve(t.artifact!);
       expect(existsSync(file)).toBe(true);
+      // the full document survives the short hand-in summary
+      if (!/review/i.test(t.title)) expect(readFileSync(file, 'utf8')).toContain('Finding two with plenty of detail');
     }
     expect(project.report).toContain('Final synthesis');
     expect(project.report).not.toContain('<think>');
