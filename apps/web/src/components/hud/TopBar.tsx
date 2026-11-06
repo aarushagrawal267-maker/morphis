@@ -64,8 +64,8 @@ export function TopHeader() {
         <span className={`conn conn--${connection}`} title={`Simulation authority: ${mode === 'server' ? 'Node.js server' : 'in-browser worker'} (${connection})`}>
           {mode === 'server' ? 'SERVER' : 'LOCAL SIM'}
         </span>
-        <span className={`conn ${ai?.connected ? 'conn--connected' : 'conn--sim'}`} title={ai?.detail}>
-          {ai?.connected ? `AI · ${ai.provider}` : 'AI · SIMULATED'}
+        <span className={`conn ${ai?.connected ? 'conn--connected' : 'conn--sim'}`} title={ai?.connected ? `${ai.provider} — ${ai.detail}` : ai?.detail} data-testid="ai-badge">
+          {ai?.connected ? 'AI · LIVE' : 'AI · SIMULATED'}
         </span>
       </div>
     </header>

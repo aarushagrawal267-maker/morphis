@@ -369,6 +369,66 @@ export class LiveTaskExecutor implements TaskExecutor {
   }
 }
 
+/** Read-only snapshot of real simulation data for agents (units: 1 world unit = 2 m). */
+export function cityData(sim: CitySimulation | null, topic: string): object {
+  if (!sim) return { error: 'no city running' };
+  const st = sim.state;
+  const time = `day ${Math.floor(st.clock.time / 86400) + 1} ${String(Math.floor((st.clock.time % 86400) / 3600)).padStart(2, '0')}:${String(Math.floor((st.clock.time % 3600) / 60)).padStart(2, '0')}`;
+  const stats = sim.stats();
+  const edges = sim.world.roads.edges;
+  switch (topic) {
+    case 'traffic': {
+      const byRoad = new Map<string, { vehicles: number; stopped: number; lengthM: number }>();
+      for (const e of edges) {
+        const r = byRoad.get(e.name) ?? { vehicles: 0, stopped: 0, lengthM: 0 };
+        r.vehicles += sim.traffic.edgeCount[e.id];
+        r.stopped += sim.traffic.edgeStopped[e.id];
+        r.lengthM += e.length * 2;
+        byRoad.set(e.name, r);
+      }
+      const roads = [...byRoad.entries()].map(([name, r]) => ({ name, ...r, lengthM: Math.round(r.lengthM) })).sort((x, y) => y.vehicles - x.vehicles);
+      const ring = roads.find((r) => r.name === 'Command Circle');
+      return {
+        time,
+        vehiclesMoving: stats.vehiclesMoving,
+        vehiclesTotal: stats.vehiclesTotal,
+        avgSpeedKmh: Math.round(stats.avgTrafficSpeed * 7.2),
+        congestionShare: stats.congestion,
+        cityStatus: stats.status,
+        centralRoundabout: ring ?? null,
+        busiestRoads: roads.slice(0, 10),
+        signalisedJunctions: sim.signalNodes.length,
+        note: 'congestionShare = share of moving vehicles held longer than one signal cycle',
+      };
+    }
+    case 'transit':
+      return {
+        time,
+        busLines: sim.world.busLines.map((l) => ({ name: l.name, stops: l.stops.length, buses: st.vehicles.filter((v) => v.info.lineId === l.id).length })),
+        riderBoardingsToday: st.economy.summary.transitRidersToday,
+        taxiTripsToday: st.economy.summary.taxiTripsToday,
+        taxis: st.vehicles.filter((v) => v.info.kind === 'taxi').length,
+        privateCars: st.vehicles.filter((v) => v.info.kind === 'car').length,
+        citizensWalkingNow: stats.walking,
+        citizensInVehiclesNow: stats.traveling,
+      };
+    case 'economy': {
+      const e = st.economy.summary;
+      return { time, currency: 'simulated credits (fictional)', cityBudget: e.cityBudget, gdpToday: e.gdpToday, gdpYesterday: e.gdpYesterday, employed: e.employed, unemployed: e.unemployed, avgHappiness: e.avgHappiness, businessesOpen: e.businessesOpen, history: e.history.slice(-7) };
+    }
+    case 'resources':
+      return { time, ...st.economy.summary.resources, units: 'MW / ML (simulated)' };
+    case 'districts':
+      return sim.world.districts.map((d) => ({
+        name: d.name,
+        buildings: sim.world.buildings.filter((b) => b.districtId === d.id).length,
+        peopleInsideNow: sim.world.buildings.filter((b) => b.districtId === d.id).reduce((a, b) => a + st.buildings[b.index].occupants.length, 0),
+      }));
+    default:
+      return { time, population: stats.population, activeCitizens: stats.activeCitizens, working: stats.working, walking: stats.walking, sleeping: stats.sleeping, weather: st.weather.kind, cityStatus: stats.status, topics: ['traffic', 'transit', 'economy', 'resources', 'districts'] };
+  }
+}
+
 export class AgentController {
   readonly provider: AiProvider | null;
   readonly limiter: RateLimiter;
@@ -406,6 +466,14 @@ export class AgentController {
     });
     this.planner = provider ? new LlmMasterPlanner(provider) : null;
     this.executor = provider ? new LiveTaskExecutor(this) : null;
+    this.tools.register({
+      name: 'city.data',
+      description: 'Read live, real data from the Morphis city simulation (read-only). Use it instead of inventing numbers.',
+      args: { topic: 'one of: overview | traffic | transit | economy | resources | districts' },
+      permission: 'auto',
+      enabled: true,
+      run: async (a) => JSON.stringify(cityData(this.sim(), a.topic ?? 'overview'), null, 1).slice(0, 6000),
+    });
   }
 
   bindSimulation(get: () => CitySimulation | null): void {

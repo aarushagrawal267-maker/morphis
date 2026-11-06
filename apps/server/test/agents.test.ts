@@ -46,3 +46,17 @@ describe('truncated output recovery', () => {
     expect(step.final).toContain('cut off at the token limit');
   });
 });
+
+describe('city.data tool', () => {
+  it('returns real simulation numbers for agents', async () => {
+    const { cityData } = await import('../src/ai/agents');
+    const { CitySimulation } = await import('@morphis/sim');
+    const sim = CitySimulation.create({ population: 80 });
+    sim.run(3600 * 2);
+    const traffic = cityData(sim, 'traffic') as { busiestRoads: unknown[]; centralRoundabout: { name: string } | null };
+    expect(traffic.busiestRoads.length).toBeGreaterThan(5);
+    expect(traffic.centralRoundabout?.name).toBe('Command Circle');
+    expect((cityData(sim, 'economy') as { currency: string }).currency).toMatch(/simulated/);
+    expect((cityData(null, 'traffic') as { error: string }).error).toBeTruthy();
+  });
+});
