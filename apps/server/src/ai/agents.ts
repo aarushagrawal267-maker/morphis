@@ -401,15 +401,16 @@ export function cityData(sim: CitySimulation | null, topic: string): object {
       const ring = roads.find((r) => r.name === 'Command Circle');
       return {
         time,
-        vehiclesMoving: stats.vehiclesMoving,
-        vehiclesTotal: stats.vehiclesTotal,
+        vehiclesOnRoadNow: stats.vehiclesMoving,
+        vehiclesParkedOrOffRoad: stats.vehiclesTotal - stats.vehiclesMoving,
+        vehiclesInFleet: stats.vehiclesTotal,
         avgSpeedKmh: Math.round(stats.avgTrafficSpeed * 7.2),
         congestionShare: stats.congestion,
         cityStatus: stats.status,
         centralRoundabout: ring ?? null,
         busiestRoads: roads.slice(0, 10),
         signalisedJunctions: sim.signalNodes.length,
-        note: 'congestionShare = share of moving vehicles held longer than one signal cycle',
+        note: 'vehiclesOnRoadNow includes vehicles waiting at lights; parked vehicles are not on the road. congestionShare = share of on-road vehicles held longer than one signal cycle. Per-road "stopped" counts vehicles currently halted on that road (queues at lights included).',
       };
     }
     case 'transit':
