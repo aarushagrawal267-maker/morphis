@@ -57,6 +57,11 @@ export function goTo(buildingId: string): void {
   if (!dropIn(b.entrance.x, b.entrance.z)) focusBuilding(buildingId);
 }
 
+function buildingName(id: string): string {
+  const s = useSim.getState();
+  return s.businessByBuilding.get(id)?.name ?? s.buildingsById.get(id)?.name ?? id;
+}
+
 export function deedTime(t: number): string {
   return `Day ${dayOf(t)} ${WEEKDAYS[weekdayOf(t)]} ${formatClock(t)}`;
 }
@@ -121,6 +126,7 @@ export function AgentSections({ p }: { p: CitizenProfile }) {
             </div>
           )}
           <div className="rows">
+            <Row k="Home" v={<a onClick={() => goTo(p.homeId)}>{displayName(buildingName(p.homeId))}</a>} />
             {venture && <Row k="Owns" v={<a onClick={() => goTo(venture.buildingId)}>{venture.name} · {venture.status === 'OPEN' ? 'open' : `fit-out ${Math.round((venture.progress / venture.work) * 100)}%`}</a>} />}
             {helping && <Row k="Helping build" v={<a onClick={() => goTo(helping.buildingId)}>{helping.name}</a>} />}
             {life?.study && <Row k="Studying" v={`${life.study.field} · ${Math.round((life.study.minutes / life.study.required) * 100)}%`} />}

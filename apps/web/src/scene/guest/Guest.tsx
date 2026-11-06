@@ -18,6 +18,7 @@ import { characterGeometry, citizenMaterial } from '../citizens/Citizens';
 import { railPoint } from '../rail/railGeo';
 import { collidersFor } from './collision';
 import { enterDoor, guestWave, takePostcard } from './actions';
+import { sound } from '../../audio/engine';
 
 const WALK = 4.2;
 const RUN = 8;
@@ -122,6 +123,12 @@ export function GuestController() {
       if (k === 'q') guestWave();
       if (k === 'e') enterDoor();
       if (k === 'p') takePostcard();
+      if (k === 'j') useUI.getState().togglePanel('journal');
+      if (k === 'r') {
+        useGuest.getState().exit();
+        useUI.getState().requestCamera({ kind: 'overview' }, 'overview');
+      }
+      if (k === 'm') sound.setSettings({ ...sound.settings, enabled: !sound.settings.enabled });
     };
     const up = (e: KeyboardEvent) => guestInput.keys.delete(e.key.toLowerCase());
     const blur = () => guestInput.keys.clear();

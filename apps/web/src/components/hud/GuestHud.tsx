@@ -251,7 +251,7 @@ function GuestPrompt() {
       <kbd>W</kbd>
       <kbd>A</kbd>
       <kbd>S</kbd>
-      <kbd>D</kbd> or click to walk · drag to look · <kbd>Shift</kbd> run · <kbd>Q</kbd> wave · <kbd>P</kbd> postcard · <kbd>E</kbd> enter
+      <kbd>D</kbd> or click to walk · drag to look · <kbd>Shift</kbd> run · <kbd>Q</kbd> wave · <kbd>P</kbd> postcard · <kbd>E</kbd> enter · <kbd>J</kbd> journal · <kbd>R</kbd> rise
     </div>
   );
 }
