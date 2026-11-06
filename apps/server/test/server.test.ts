@@ -381,3 +381,18 @@ describe('outside agents (bring your own agent)', () => {
     await ctx.app.close();
   });
 });
+
+describe('journal sync codes', () => {
+  it('saves a journal under a private code and restores it', async () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), 'morphis-journal-'));
+    const ctx = await buildServer(loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '60', AI_PROVIDER: 'none', WEB_DIST: '' }));
+    const saved = await ctx.app.inject({ method: 'POST', url: '/api/journal', payload: { journal: { visited: ['a'], totals: { waves: 3 } } } });
+    const { code } = saved.json() as { code: string };
+    expect(code).toMatch(/^MORPH-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+    const back = await ctx.app.inject({ method: 'GET', url: `/api/journal/${code.toLowerCase()}` });
+    expect(back.json().journal.totals.waves).toBe(3);
+    expect((await ctx.app.inject({ method: 'GET', url: '/api/journal/MORPH-AAAA-AAAA-AAAA' })).statusCode).toBe(404);
+    expect((await ctx.app.inject({ method: 'GET', url: '/api/journal/../../etc' })).statusCode).not.toBe(200);
+    await ctx.app.close();
+  });
+});

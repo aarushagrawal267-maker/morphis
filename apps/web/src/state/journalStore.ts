@@ -63,6 +63,9 @@ interface JournalState extends JournalData {
   loadPostcards(): Promise<void>;
   deletePostcard(id: string): Promise<void>;
   badges(landmarkCount: number): Badge[];
+  /** Everything worth syncing (postcard images stay on this device). */
+  snapshot(): JournalData;
+  restore(d: JournalData): void;
 }
 
 const KEY = 'morphis.journal';
@@ -249,6 +252,11 @@ export const useJournal = create<JournalState>((set, get) => {
         /* ignore */
       }
     },
+    snapshot: () => {
+      const s = get();
+      return { date: s.date, goals: s.goals, visited: s.visited, met: s.met, totals: s.totals, lastVisitDay: s.lastVisitDay };
+    },
+    restore: (d) => commit({ ...EMPTY, ...d, totals: { ...EMPTY.totals, ...d.totals } }),
     badges: (landmarkCount) => {
       const s = get();
       const t = s.totals;
