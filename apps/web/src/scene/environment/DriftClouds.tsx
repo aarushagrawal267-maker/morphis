@@ -39,14 +39,15 @@ export function DriftClouds() {
   );
   const day = useMemo(() => new THREE.Color('#ffffff'), []);
   const night = useMemo(() => new THREE.Color('#5a6aa8'), []);
+  const storm = useMemo(() => new THREE.Color('#8a909c'), []);
   useFrame((_, dt) => {
     const g = group.current;
     if (!g) return;
-    mat.color.copy(day).lerp(night, env.uNight.value);
+    mat.color.copy(day).lerp(storm, env.uRain.value * 0.8).lerp(night, env.uNight.value);
     mat.opacity = 0.42 - env.uNight.value * 0.12 + env.uRain.value * 0.2;
     g.children.forEach((s, i) => {
       const c = clouds[i];
-      c.a += c.speed * dt;
+      c.a += c.speed * dt * (1 + env.uRain.value * 2.5);
       s.position.set(Math.cos(c.a) * c.r, c.y, Math.sin(c.a) * c.r);
     });
   });
