@@ -218,7 +218,11 @@ export function placeOccupants<T extends { activity: string }>(
   const used = new Map<Room, number>();
   return occupants.map((o, i) => {
     const rooms = layout.rooms.filter((r) => r.hosts.includes(o.activity as ActivityKind));
-    const room = rooms.find((r) => (used.get(r) ?? 0) < r.slots.length) ?? rooms[0] ?? layout.rooms[0];
+    // a free seat in a fitting room, else a free seat anywhere, else the least crowded room
+    const room =
+      rooms.find((r) => (used.get(r) ?? 0) < r.slots.length) ??
+      layout.rooms.find((r) => (used.get(r) ?? 0) < r.slots.length) ??
+      [...layout.rooms].sort((a, b) => (used.get(a) ?? 0) / (a.w * a.d) - (used.get(b) ?? 0) / (b.w * b.d))[0];
     const n = used.get(room) ?? 0;
     used.set(room, n + 1);
     const slot = room.slots[n];

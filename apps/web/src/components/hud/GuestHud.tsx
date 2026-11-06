@@ -11,6 +11,7 @@ import { sound } from '../../audio/engine';
 import { collidersFor } from '../../scene/guest/collision';
 import { enterDoor, guestWave, takePostcard } from '../../scene/guest/actions';
 import { leaveInterior } from '../../scene/guest/InteriorGuest';
+import { floorLabel, floorsOf } from '../../scene/interiors/plan';
 import { citizenPosition } from '../../scene/positions';
 import { simClient } from '../../sim/client';
 import { arrival, guestInput, guestPose, useGuest } from '../../state/guestStore';
@@ -107,7 +108,9 @@ function InsideBar({ buildingId }: { buildingId: string }) {
   const b = useSim((s) => s.buildingsById.get(buildingId));
   const biz = useSim((s) => s.businessByBuilding.get(buildingId));
   const here = useSim((s) => (b ? (s.state?.occupancy[b.index] ?? 0) : 0));
+  const floor = useUI((s) => s.interior?.floor ?? 0);
   if (!b) return null;
+  const floors = floorsOf(b);
   return (
     <>
       <section className="guest-bar glass" data-testid="inside-bar">
@@ -129,6 +132,17 @@ function InsideBar({ buildingId }: { buildingId: string }) {
           <button className="icon-btn" title="Take a postcard (P)" onClick={takePostcard}>
             <Icon name="camera" />
           </button>
+          {floors > 1 && (
+            <>
+              <button className="chip" disabled={floor === 0} onClick={() => useUI.getState().setFloor(floor - 1)} data-testid="btn-down">
+                Downstairs
+              </button>
+              <button className="chip" disabled={floor >= floors - 1} onClick={() => useUI.getState().setFloor(floor + 1)} data-testid="btn-up">
+                Upstairs
+              </button>
+              <small className="floor-now">{floorLabel(floor)}</small>
+            </>
+          )}
         </div>
       </section>
       <TouchStick />

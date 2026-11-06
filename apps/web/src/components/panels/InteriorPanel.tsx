@@ -1,7 +1,8 @@
 /** Interior navigation: rooms, who is where, and the way back to the city. */
 import { useMemo } from 'react';
 import { BUILDING_TYPES } from '@morphis/shared';
-import { layoutFor, placeOccupants } from '../../scene/interiors/layouts';
+import { placeOccupants } from '../../scene/interiors/layouts';
+import { floorLabel, floorOfOccupant, floorsOf, planFor } from '../../scene/interiors/plan';
 import { hash01 } from '../../scene/positions';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
@@ -15,15 +16,31 @@ export function InteriorPanel() {
   const b = useSim((s) => (interior ? s.buildingsById.get(interior.buildingId) : undefined));
   const state = useSim((s) => s.state);
   const citizens = useSim((s) => s.citizens);
-  const layout = useMemo(() => (b ? layoutFor(b.interior ?? 'office', b.name) : null), [b]);
+  const floor = interior?.floor ?? 0;
+  const layout = useMemo(() => (b ? planFor(b, floor, b.name) : null), [b, floor]);
   if (!interior || !b || !layout) return null;
-  const inside = state ? state.citizens.map((d, i) => ({ d, p: citizens[i], activity: d.activity as string })).filter((x) => x.d.location.kind === 'building' && x.d.location.id === b.id) : [];
+  const floors = floorsOf(b);
+  const all = state ? state.citizens.map((d, i) => ({ d, p: citizens[i], activity: d.activity as string })).filter((x) => x.d.location.kind === 'building' && x.d.location.id === b.id) : [];
+  const inside = all.filter((x) => floorOfOccupant(b, x.p.index, x.activity) === floor);
   const placed = placeOccupants(layout, inside.slice(0, 120), hash01);
   return (
     <aside className="sel-panel glass interior-panel" data-testid="interior-panel">
       <div className="sel-panel__kicker">INTERIOR VIEW · {BUILDING_TYPES[b.type].label.toUpperCase()}</div>
       <h2>{b.name}</h2>
-      <div className="badge">{inside.length} PEOPLE INSIDE</div>
+      <div className="badge">{all.length} PEOPLE INSIDE</div>
+      {floors > 1 && (
+        <>
+          <h4>Floors</h4>
+          <div className="floors" data-testid="floors">
+            {Array.from({ length: floors }, (_, f) => (
+              <button key={f} className={f === floor ? 'on' : ''} onClick={() => useUI.getState().setFloor(f)} data-testid={`floor-${f}`}>
+                {f === 0 ? 'G' : f}
+              </button>
+            ))}
+            <small>{floorLabel(floor)} · {inside.length} here</small>
+          </div>
+        </>
+      )}
       <h4>Rooms</h4>
       <div className="list rooms">
         {layout.rooms.map((r, i) => {
