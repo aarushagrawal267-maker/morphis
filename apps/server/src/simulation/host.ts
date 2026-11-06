@@ -42,6 +42,7 @@ export class SimulationHost {
 
   private attachExecutor(): void {
     this.sim.workforce.executor = this.agents.executor && this.agents.live ? this.agents.executor : new SimulatedExecutor();
+    this.sim.life.mind = this.agents.lifeMind && this.agents.live ? this.agents.lifeMind : null;
   }
 
   /** Re-evaluate live vs simulated execution (e.g. after the provider check). */
@@ -123,6 +124,11 @@ export class SimulationHost {
           const reply = this.sim.jarvisCommand(cmd.text, plan, cmd.urgent ?? false);
           this.broadcastPending();
           return reply.ok ? { ok: true, data: { ...(reply.data as object), note } } : { ok: false, error: reply.error };
+        }
+        case 'guest.wave': {
+          const r = this.sim.command(cmd);
+          this.broadcastPending();
+          return r;
         }
         default: {
           const r = this.sim.command(cmd);

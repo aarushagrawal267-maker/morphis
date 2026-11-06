@@ -1,0 +1,62 @@
+/**
+ * What people say out loud. Every line is derived from the citizen's real
+ * simulated state (activity, needs, weather, time, city events, ventures) or,
+ * for agents, from their plan for the day (which an AI wrote when one is
+ * connected). Lines change every ten simulated minutes.
+ */
+import type { AgentLife, CitizenDynamic, CitizenProfile, CityEvent, Venture, WeatherKind } from '@morphis/shared';
+import { hourOf } from '@morphis/shared';
+
+const pick = (arr: string[], seed: number) => arr[Math.abs(Math.floor(seed)) % arr.length];
+
+export interface ChatterContext {
+  time: number;
+  weather: WeatherKind;
+  events: CityEvent[];
+  ventures: Venture[];
+  busyProjects: number;
+}
+
+export function chatterFor(p: CitizenProfile, d: CitizenDynamic, life: AgentLife | undefined, ctx: ChatterContext): string {
+  const slot = Math.floor(ctx.time / 600);
+  const seed = p.index * 7 + slot;
+  const h = hourOf(ctx.time);
+  if (life?.plan && seed % 3 !== 2) return life.plan;
+  if (d.satiety < 0.28) return pick(['Starving. Where is the nearest café?', 'I could eat a whole noodle bar.', 'Lunch. Now.'], seed);
+  if (d.energy < 0.2) return pick(['I need about twelve hours of sleep.', 'Running on fumes.', 'Bed. Soon.'], seed);
+  if (ctx.weather === 'storm') return pick(['This storm is no joke.', 'Stay off the skyways tonight.', 'Did you see that lightning?'], seed);
+  if (ctx.weather === 'rain') return pick(['Should have brought an umbrella.', 'Rain makes the neon look better.', 'Wet streets again.'], seed);
+  if (ctx.weather === 'fog') return pick(["Can't even see the towers today.", 'This fog is thick.', 'Feels like walking through a cloud.'], seed);
+  const live = ctx.events.find((e) => e.status === 'LIVE');
+  if (live && seed % 4 === 0) return pick([`Are you going to ${live.name}?`, `${live.name} is on right now.`, `Heard ${live.name} is packed.`], seed);
+  const open = ctx.ventures.filter((v) => v.status === 'OPEN');
+  if (open.length && seed % 5 === 1) {
+    const v = open[seed % open.length];
+    return pick([`Have you tried ${v.name}?`, `${v.name} is my new favourite place.`, `They say ${v.name} was built by agents.`], seed);
+  }
+  const building = ctx.ventures.filter((v) => v.status === 'FITTING_OUT');
+  if (building.length && seed % 5 === 3) return `Someone is opening ${building[seed % building.length].name}.`;
+  if (ctx.busyProjects > 0 && p.core && seed % 3 === 0) return pick(['JARVIS has us all busy.', 'Another project just landed.', 'Deadline tonight.'], seed);
+  switch (d.activity) {
+    case 'work':
+      return pick(['Running late again.', 'Another shift.', 'Work, then dinner.', 'Big day today.'], seed);
+    case 'eat':
+      return pick(['Noodles or dumplings?', 'Food first.', 'I know a good place nearby.'], seed);
+    case 'shop':
+      return pick(['Just need a few things.', 'Window shopping.', 'Prices keep going up.'], seed);
+    case 'park':
+      return pick(['Fresh air, finally.', 'Good spot for a walk.', 'The trees are real, you know.'], seed);
+    case 'leisure':
+    case 'event':
+      return pick(['Work is done. Now the fun part.', 'Anyone up for the arcade?', 'Meeting friends tonight.'], seed);
+    case 'study':
+      return pick(['Exams next week.', 'One more class.', 'The Institute library closes at ten.'], seed);
+    case 'build':
+      return pick(['Almost finished the counter.', 'Fit-out work, again.', 'This place will be great.'], seed);
+    case 'home':
+    case 'sleep':
+      return h >= 21 || h < 5 ? pick(['Heading home.', 'Long day.', 'Night, Morphis.'], seed) : pick(['Back home for a bit.', 'Forgot something at home.'], seed);
+  }
+  if (h >= 22 || h < 5) return pick(['The neon never sleeps.', 'Quiet streets.', 'Late again.'], seed);
+  return pick(['Morning, neighbour.', 'Nice day.', 'Busy city.', 'This street has the best signs.'], seed);
+}

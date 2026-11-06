@@ -35,6 +35,7 @@ import {
 } from './buildings';
 import { buildDistricts, districtAt } from './districts';
 import { buildPedGraph, type PedAttachment } from './pedestrian';
+import { buildRail } from './rail';
 import { finaliseIntersections, generateStrokes, planarise, sidewalkOffset } from './roads';
 
 export function defaultConfig(overrides: Partial<CityConfig> = {}): CityConfig {
@@ -501,6 +502,7 @@ export function generateWorld(config: CityConfig): GeneratedWorld {
   for (const st of busStops) st.pedNode = ped.attachNode.get(st.id) ?? -1;
 
   // ---------------------------------------------------------------- props + skyline
+  const rail = buildRail(nodes, edges, nav, landmarks, buildings, ped.nodes, (id) => nodeNear(id, { x: 0, z: 0 }));
   const props = generateProps(Rng.derive(config.seed, 'props'), nodes, edges, buildings, busStops, ped.nodes, ped.edges);
   const skyline = generateSkyline(Rng.derive(config.seed, 'skyline'), size);
 
@@ -517,6 +519,7 @@ export function generateWorld(config: CityConfig): GeneratedWorld {
     props,
     busStops,
     busLines,
+    rail,
     skyline,
     landmarks: buildings.filter((b) => b.named).map((b) => b.id),
     hqId: landmarks.hq,

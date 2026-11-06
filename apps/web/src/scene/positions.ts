@@ -8,6 +8,7 @@ import type { BuildingDef, CitizenDynamic } from '@morphis/shared';
 import { localToWorld } from '@morphis/sim';
 import { simClient } from '../sim/client';
 import { useSim } from '../state/simStore';
+import { platformSpot, railPoint } from './rail/railGeo';
 
 const out = new THREE.Vector3();
 
@@ -65,6 +66,18 @@ export function citizenPosition(index: number, dyn?: CitizenDynamic): THREE.Vect
   if (loc.kind === 'vehicle') {
     const v = sim.vehicles.findIndex((x) => x.id === loc.id);
     if (v >= 0) return vehiclePosition(v);
+  }
+  if (loc.kind === 'rail' && sim.world?.rail) {
+    const line = sim.world.rail;
+    if (loc.id.startsWith('train_')) {
+      const s = sample?.rail[Number(loc.id.slice(6))];
+      if (s === undefined) return null;
+      const p = { x: 0, z: 0, dx: 0, dz: 0 };
+      railPoint(line, s, p);
+      return out.set(p.x, line.height + 0.6, p.z);
+    }
+    const p = platformSpot(line, loc.id, index);
+    return p ? out.set(p.x, p.y, p.z) : null;
   }
   return null;
 }

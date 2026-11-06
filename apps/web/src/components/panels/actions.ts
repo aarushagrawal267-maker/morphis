@@ -1,9 +1,16 @@
 /** Shared UI actions (camera + selection) used by panels, nav and minimap. */
+import { useGuest } from '../../state/guestStore';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { citizenPosition, vehiclePosition } from '../../scene/positions';
 
+/** Camera moves need the city camera: leave walk-in mode first. */
+function leaveWalk(): void {
+  if (useGuest.getState().active) useGuest.getState().exit();
+}
+
 export function focusBuilding(id: string): void {
+  leaveWalk();
   const b = useSim.getState().buildingsById.get(id);
   if (!b) return;
   const ui = useUI.getState();
@@ -12,14 +19,17 @@ export function focusBuilding(id: string): void {
 }
 
 export function focusPoint(x: number, z: number, radius = 70): void {
+  leaveWalk();
   useUI.getState().requestCamera({ kind: 'point', x, z, radius }, 'district');
 }
 
 export function streetView(x: number, z: number): void {
+  leaveWalk();
   useUI.getState().requestCamera({ kind: 'street', x, z }, 'street');
 }
 
 export function followCitizen(id: string): void {
+  leaveWalk();
   const sim = useSim.getState();
   const idx = sim.citizensById.get(id)?.index;
   const ui = useUI.getState();
@@ -31,6 +41,7 @@ export function followCitizen(id: string): void {
 }
 
 export function followVehicle(id: string): void {
+  leaveWalk();
   const sim = useSim.getState();
   const idx = sim.vehicles.findIndex((v) => v.id === id);
   const ui = useUI.getState();
@@ -42,6 +53,7 @@ export function followVehicle(id: string): void {
 }
 
 export function focusCitizen(id: string): void {
+  leaveWalk();
   const sim = useSim.getState();
   const idx = sim.citizensById.get(id)?.index;
   if (idx === undefined) return;

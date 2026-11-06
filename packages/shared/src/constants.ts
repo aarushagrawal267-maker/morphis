@@ -1,5 +1,6 @@
 import type { BuildingType, DistrictType, InteriorKind, RoadClass } from './types/world';
 import type { CoreRole } from './types/sim';
+import type { AmbitionKind, Interest, VentureKind } from './types/life';
 
 export const CITY_NAME = 'MORPHIS';
 export const CITY_TAGLINE = 'EMERGENT AI CITY • YEAR 2126 • THE COMPLEX';
@@ -499,3 +500,98 @@ export const CORE_CITIZEN_NAMES: Record<CoreRole, string> = {
   project_manager: 'Leo Novak',
   documentation_specialist: 'Iris Moreau',
 };
+
+// ------------------------------------------------------------------ agents
+
+
+/** Total agents: the 25 JARVIS workforce citizens plus 25 independent agents. */
+export const AGENT_COUNT = 50;
+
+export interface IndependentAgentDef {
+  name: string;
+  calling: string;
+  ambition: AmbitionKind;
+  interests: Interest[];
+  /** Where they work at first (a building type), or null when they start without a job. */
+  work: BuildingType | null;
+  dream: VentureKind | null;
+  why: string;
+}
+
+/** The 25 independent agents. Original Morphis characters. */
+export const INDEPENDENT_AGENTS: IndependentAgentDef[] = [
+  { name: 'Juno Albright', calling: 'Barista', ambition: 'founder', interests: ['food', 'community'], work: 'cafe', dream: 'cafe', why: 'I pull espresso for night-shift engineers. One day the counter will be mine.' },
+  { name: 'Teodor Brask', calling: 'Painter', ambition: 'founder', interests: ['art', 'craft'], work: null, dream: 'studio', why: 'The towers are all glass. I came to put colour on the walls of Morphis.' },
+  { name: 'Wren Okonjo', calling: 'Student of robotics', ambition: 'scholar', interests: ['research', 'craft'], work: 'university', dream: null, why: 'The Institute takes anyone who can keep up. I intend to keep up.' },
+  { name: 'Ilse Varga', calling: 'Pastry chef', ambition: 'founder', interests: ['food', 'craft'], work: 'restaurant', dream: 'restaurant', why: 'Every district needs a kitchen that stays open past midnight.' },
+  { name: 'Cass Morrow', calling: 'Venture backer', ambition: 'investor', interests: ['trade', 'community'], work: 'bank', dream: null, why: 'I back people, not pitches. Morphis is full of people worth backing.' },
+  { name: 'Rhea Santangelo', calling: 'Carpenter', ambition: 'builder', interests: ['craft', 'community'], work: 'factory', dream: null, why: 'Somebody has to build the counters, shelves and stages everyone else dreams about.' },
+  { name: 'Obi Mensah', calling: 'Sound designer', ambition: 'founder', interests: ['art', 'explore'], work: 'entertainment', dream: 'studio', why: 'The city hums at 60 hertz. I want to record every corner of it.' },
+  { name: 'Lise Haugen', calling: 'Botanist', ambition: 'scholar', interests: ['research', 'explore'], work: 'research_lab', dream: null, why: 'Plants grow strangely under neon. Someone should find out why.' },
+  { name: 'Dario Fenn', calling: 'Bike mechanic', ambition: 'founder', interests: ['craft', 'trade'], work: null, dream: 'workshop', why: 'Half the city rides. Nobody fixes anything any more. That is my opening.' },
+  { name: 'Mina Sato', calling: 'Bookseller', ambition: 'founder', interests: ['art', 'community'], work: 'library', dream: 'shop', why: 'Paper is rare in 2126. I collect it, and one day I will sell it.' },
+  { name: 'Ezra Quill', calling: 'Street photographer', ambition: 'connector', interests: ['art', 'explore'], work: null, dream: null, why: 'I walk until something happens, then I take its picture.' },
+  { name: 'Anouk Devries', calling: 'Urban gardener', ambition: 'builder', interests: ['community', 'food'], work: null, dream: null, why: 'Every rooftop is a field nobody planted yet.' },
+  { name: 'Kwame Asante', calling: 'Trader', ambition: 'investor', interests: ['trade', 'explore'], work: 'corporate_tower', dream: null, why: 'Credits should move. Idle money is a city asleep.' },
+  { name: 'Saoirse Lynch', calling: 'Nurse in training', ambition: 'scholar', interests: ['community', 'research'], work: 'hospital', dream: null, why: 'The hospital night shift taught me more than any lecture. Now I want both.' },
+  { name: 'Tobias Renner', calling: 'Tinkerer', ambition: 'founder', interests: ['craft', 'research'], work: 'warehouse', dream: 'workshop', why: 'I build drones from parts other people throw away.' },
+  { name: 'Lucía Ferrer', calling: 'Tea maker', ambition: 'founder', interests: ['food', 'community'], work: 'shop', dream: 'cafe', why: 'Coffee runs this city. I think it is time for tea.' },
+  { name: 'Han Seo-yeon', calling: 'Game designer', ambition: 'climber', interests: ['art', 'research'], work: 'office', dream: null, why: 'I want to work where the biggest ideas in Morphis are made.' },
+  { name: 'Felipe Araújo', calling: 'Chef', ambition: 'founder', interests: ['food', 'trade'], work: 'restaurant', dream: 'restaurant', why: 'My grandmother cooked for a whole street. I want to cook for a district.' },
+  { name: 'Greta Lund', calling: 'Architecture student', ambition: 'scholar', interests: ['craft', 'art'], work: 'university', dream: null, why: 'Morphis keeps growing. I want to be the one who draws what comes next.' },
+  { name: 'Amir Karimi', calling: 'Courier', ambition: 'climber', interests: ['explore', 'trade'], work: 'warehouse', dream: null, why: 'I know every shortcut in the city. Now I want a desk with a view of them.' },
+  { name: 'Nell Ashdown', calling: 'Community organiser', ambition: 'connector', interests: ['community', 'explore'], work: 'government', dream: null, why: 'Four hundred people live here. I intend to know all of them.' },
+  { name: 'Viktor Sandberg', calling: 'Retired engineer', ambition: 'investor', interests: ['research', 'trade'], work: null, dream: null, why: 'I built bridges for forty years. Now I fund the people who build what replaces them.' },
+  { name: 'Zuri Ndlovu', calling: 'Florist', ambition: 'founder', interests: ['art', 'trade'], work: null, dream: 'shop', why: 'A city of steel deserves flowers on every corner.' },
+  { name: 'Pim Hollander', calling: 'Apprentice electrician', ambition: 'builder', interests: ['craft', 'research'], work: 'power_plant', dream: null, why: 'Everything in Morphis runs on power. I want to understand all of it.' },
+  { name: 'Ottilie Grey', calling: 'Poet', ambition: 'connector', interests: ['art', 'community'], work: null, dream: null, why: 'I came to write the city down before it changes again.' },
+];
+
+/** Ambitions given to the 25 workforce agents, in role order (cycled). */
+export const WORKFORCE_AMBITIONS: AmbitionKind[] = ['investor', 'builder', 'scholar', 'connector', 'investor', 'builder', 'founder', 'scholar', 'connector', 'builder'];
+
+export const AMBITION_LABEL: Record<AmbitionKind, string> = {
+  founder: 'Wants to open their own place',
+  scholar: 'Wants to study and graduate',
+  investor: 'Backs other agents with credits',
+  builder: 'Helps others build',
+  climber: 'Wants a bigger job',
+  connector: 'Wants to know everyone',
+};
+
+export const VENTURE_KINDS: Record<VentureKind, { label: string; buildings: BuildingType[]; names: string[]; cost: number; work: number; products: string[] }> = {
+  cafe: { label: 'Café', buildings: ['cafe'], names: ['Long Shift', 'Second Cup', 'Night Owl', 'Neon Bean', 'Last Tram', 'Static & Steam'], cost: 6000, work: 1800, products: ['Coffee', 'Tea', 'Pastries'] },
+  restaurant: { label: 'Restaurant', buildings: ['restaurant', 'cafe'], names: ['Midnight Table', 'Copper Pot', 'The Late Plate', 'Ember Kitchen'], cost: 12000, work: 2600, products: ['Meals'] },
+  shop: { label: 'Shop', buildings: ['shop'], names: ['Paper & Wire', 'Corner Bloom', 'Small Hours', 'Found Things'], cost: 7000, work: 1500, products: ['Goods'] },
+  studio: { label: 'Studio', buildings: ['shop', 'office', 'entertainment'], names: ['Open Frequency', 'Colour Works', 'Room Tone', 'Wall Light'], cost: 8000, work: 2000, products: ['Commissions', 'Sessions'] },
+  workshop: { label: 'Workshop', buildings: ['shop', 'warehouse', 'office'], names: ['Spare Parts', 'Spoke & Bolt', 'Fix Lab', 'Second Life'], cost: 9000, work: 2200, products: ['Repairs', 'Parts'] },
+};
+
+export const STUDY_FIELDS = ['Robotics', 'Urban design', 'Machine learning', 'Nursing', 'Finance', 'Botany', 'Systems engineering', 'Literature'];
+
+/** "MORPHIS UNIVERSITY" -> "Morphis University"; mixed-case names are left alone. */
+export function displayName(name: string): string {
+  if (name !== name.toUpperCase()) return name;
+  return name
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => (w === 'ai' || w === 'hq' ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ');
+}
+
+/** First name, skipping titles such as "Dr.". */
+export function firstName(name: string): string {
+  const parts = name.split(/\s+/).filter((p) => !/^(dr|prof|mr|ms|mrs)\.?$/i.test(p));
+  return parts[0] ?? name;
+}
+
+/** Hash-friendly handle for an agent's name. */
+export function agentSlug(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/^dr\.\s*/, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}

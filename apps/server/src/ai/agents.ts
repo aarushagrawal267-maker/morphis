@@ -17,6 +17,7 @@ import type { ServerConfig } from '../config';
 import { AgentMemory } from './memory';
 import { createProvider, type AiProvider, type ChatMessage, type RateLimiter } from './provider';
 import { ToolManager } from './tools';
+import { LlmLifeMind } from './life';
 import { Workspace } from './workspace';
 
 const LANDMARK_KEYS = ['hq', 'ai_lab', 'university', 'orbital', 'corporate', 'bank', 'studio', 'datacenter', 'hospital', 'market', 'station'];
@@ -451,6 +452,7 @@ export class AgentController {
   steps = 0;
   readonly planner: LlmMasterPlanner | null;
   readonly executor: LiveTaskExecutor | null;
+  readonly lifeMind: LlmLifeMind | null;
   info: AiProviderInfo;
   verified: 'unverified' | 'ok' | 'failed' = 'unverified';
   lastError: string | null = null;
@@ -478,6 +480,15 @@ export class AgentController {
     });
     this.planner = provider ? new LlmMasterPlanner(provider) : null;
     this.executor = provider ? new LiveTaskExecutor(this) : null;
+    this.lifeMind =
+      provider && cfg.AI_LIFE_DECISIONS_PER_HOUR > 0
+        ? new LlmLifeMind(provider, limiter, () => this.sim(), {
+            perHour: cfg.AI_LIFE_DECISIONS_PER_HOUR,
+            maxInFlight: 2,
+            reserveShare: 0.4,
+            dailyCap: cfg.AI_DAILY_REQUEST_CAP,
+          })
+        : null;
     this.tools.register({
       name: 'city.data',
       description: 'Read live, real data from the Morphis city simulation (read-only). Use it instead of inventing numbers.',
@@ -539,6 +550,7 @@ export class AgentController {
       tools: this.tools.list(),
       approvals: this.tools.recentApprovals(),
       inFlight: this.executor ? [...this.executor.inFlight] : [],
+      lifeDecisions: this.lifeMind?.stats ?? null,
     };
   }
 }

@@ -138,7 +138,7 @@ export type BuildingType =
 export type FacadeType = 'glass' | 'grid' | 'ribbon' | 'panel' | 'industrial' | 'residential' | 'none';
 export type RooftopType = 'flat' | 'hvac' | 'antenna' | 'helipad' | 'garden' | 'tanks' | 'spire' | 'dish' | 'crown';
 export type ShapeKind = 'box' | 'cylinder' | 'hex';
-export type InteriorKind = 'hq' | 'lab' | 'university' | 'office' | 'apartment';
+export type InteriorKind = 'hq' | 'lab' | 'university' | 'office' | 'apartment' | 'cafe' | 'shop' | 'hall';
 
 /** One volume of a building's massing, in building-local coordinates. */
 export interface BuildingTier {
@@ -241,6 +241,35 @@ export interface BusLine {
   stops: string[];
 }
 
+export interface RailStation {
+  id: string;
+  name: string;
+  /** Distance along the loop. */
+  s: number;
+  /** Street-level pedestrian node at the station's stairs. */
+  pedNode: number;
+  /** Platform centre (on the track). */
+  position: Vec2;
+  /** Street-level access point (the stair tower). */
+  access: Vec2;
+}
+
+/** Elevated maglev loop ("Skyrail"). */
+export interface RailLine {
+  id: string;
+  name: string;
+  color: string;
+  /** Closed polyline [x0, z0, x1, z1, ...] (the last point joins the first). */
+  points: number[];
+  cum: number[];
+  length: number;
+  /** Track height above the street. */
+  height: number;
+  stations: RailStation[];
+  /** Support pylons: kerb-side foot and the track point they carry. */
+  pylons: { x: number; z: number; tx: number; tz: number }[];
+}
+
 export interface SkylineBlock {
   x: number;
   z: number;
@@ -274,6 +303,7 @@ export interface StaticWorld {
   props: WorldProps;
   busStops: BusStop[];
   busLines: BusLine[];
+  rail?: RailLine;
   skyline: SkylineBlock[];
   /** Ids of buildings considered landmarks (named, shown on the minimap). */
   landmarks: string[];

@@ -15,6 +15,7 @@ import type {
   TravelMode,
   WeatherKind,
 } from './types/sim';
+import type { Deed, Venture } from './types/life';
 import type { BuildingDef } from './types/world';
 
 /** A travel route: flattened polyline [x0, z0, x1, z1, ...] with cumulative lengths. */
@@ -54,6 +55,13 @@ export interface SimEventMap {
   'city.event': { event: CityEvent };
   'city.activity': { entry: ActivityEntry };
   'jarvis.command': { command: CommandRecord };
+  /** An agent did something worth logging (founded, invested, graduated...). */
+  'citizen.deed': { deed: Deed };
+  /** A citizen stopped, turned to a guest at (x, z) and waved back. */
+  'citizen.waved': { citizenId: string; x: number; z: number };
+  'venture.updated': { venture: Venture };
+  /** An agent's plan for the day changed. */
+  'agent.plan': { citizenId: string; plan: string; by: 'ai' | 'sim' };
 }
 
 export type SimEventType = keyof SimEventMap;
@@ -90,4 +98,8 @@ export const SIM_EVENT_TYPES: SimEventType[] = [
   'city.event',
   'city.activity',
   'jarvis.command',
+  'citizen.deed',
+  'citizen.waved',
+  'venture.updated',
+  'agent.plan',
 ];

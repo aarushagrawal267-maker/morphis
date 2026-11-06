@@ -7,6 +7,8 @@ export { localToWorld } from './gen/buildings';
 export { RoadNav, PedNav } from './nav/graphs';
 export { templatePlan, validatePlan, projectNameFrom } from './systems/planner';
 export { SimulatedExecutor, type TaskExecutor } from './systems/workforce';
+export { type LifeMind } from './systems/life';
+export { TRAIN_SPEED } from './systems/rail';
 export { Rng, hashString, hash2 } from './core/rng';
 export { samplePolyline, polylineCum } from './core/geom';
 export type { SimState, CitizenRT, VehicleRT } from './state';

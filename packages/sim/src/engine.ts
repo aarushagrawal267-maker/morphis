@@ -34,6 +34,8 @@ import type { CitizenRT, SimState } from './state';
 import { CitizenSystem } from './systems/citizens';
 import { CityEventSystem } from './systems/cityEvents';
 import { EconomySystem, createBusinesses } from './systems/economy';
+import { LifeSystem } from './systems/life';
+import { RailSystem } from './systems/rail';
 import { buildSchedule, generatePopulation } from './systems/population';
 import { templatePlan, validatePlan } from './systems/planner';
 import { TrafficSystem } from './systems/traffic';
@@ -77,6 +79,8 @@ export class CitySimulation {
   weather!: WeatherSystem;
   cityEvents!: CityEventSystem;
   workforce!: WorkforceSystem;
+  life!: LifeSystem;
+  rail!: RailSystem;
 
   private bIdx = new Map<string, number>();
   private typeIndex = new Map<string, BuildingDef[]>();
@@ -200,6 +204,10 @@ export class CitySimulation {
     this.weather = new WeatherSystem(this);
     this.cityEvents = new CityEventSystem(this);
     this.workforce = new WorkforceSystem(this);
+    this.rail = new RailSystem(this);
+    this.rail.ensureTrains();
+    this.life = new LifeSystem(this);
+    this.life.ensureAgents();
     for (const b of this.state.buildings) b.dyn.occupants = b.occupants.length;
   }
 
@@ -311,6 +319,7 @@ export class CitySimulation {
       this.weather.minute();
       this.cityEvents.minute();
       this.workforce.minute();
+      this.life.minute();
       if (minute % 5 === 0) this.citizens.updateNeeds(5);
       if (minute % 10 === 0) {
         this.traffic.manageVisitors();
@@ -328,10 +337,12 @@ export class CitySimulation {
     }
     if (dayOf(time) !== prevDay) {
       this.economy.daily();
+      this.life.daily();
       this.cityEvents.scheduleDay();
     }
     this.citizens.tick();
     this.traffic.tick();
+    this.rail.tick();
 
     const t1 = typeof performance !== 'undefined' ? performance.now() : Date.now();
     this.perf.tickMs = this.perf.tickMs * 0.98 + (t1 - t0) * 0.02;
@@ -365,6 +376,8 @@ export class CitySimulation {
       }
       case 'jarvis.command':
         return this.jarvisCommand(cmd.text, null, cmd.urgent ?? false);
+      case 'guest.wave':
+        return { ok: true, data: { waved: this.citizens.waveAt(cmd.x, cmd.z, cmd.citizens) } };
       default:
         return { ok: false, error: `${cmd.type} must be handled by the host (persistence)` };
     }
@@ -406,7 +419,7 @@ export class CitySimulation {
     for (const v of this.state.vehicles) {
       if (v.route && v.active) vehicles.push(v.info.index, v.route.id, Math.round(v.s * 100) / 100, Math.round(v.v * 100) / 100);
     }
-    return { tick: this.state.clock.tick, time: this.time, citizens, vehicles, signals: this.traffic.signalPhases(this.time) };
+    return { tick: this.state.clock.tick, time: this.time, citizens, vehicles, signals: this.traffic.signalPhases(this.time), rail: this.rail.frame() };
   }
 
   stats(): CityStats {
@@ -467,6 +480,8 @@ export class CitySimulation {
       const buildings: Record<string, typeof st.buildings[number]['dyn']> = {};
       this.world.buildings.forEach((b, i) => (buildings[b.id] = st.buildings[i].dyn));
       frame.buildings = buildings;
+      frame.life = st.life ?? [];
+      frame.ventures = st.ventures ?? [];
     }
     return frame;
   }
@@ -496,6 +511,9 @@ export class CitySimulation {
       commands: st.commands,
       persistence,
       ai,
+      deeds: (st.deeds ?? []).slice(-600),
+      life: st.life ?? [],
+      ventures: st.ventures ?? [],
     };
   }
 

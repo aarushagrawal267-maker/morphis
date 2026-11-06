@@ -8,6 +8,8 @@ import * as THREE from 'three';
 import { simClient } from '../sim/client';
 import { useSim } from '../state/simStore';
 import { useUI } from '../state/uiStore';
+import { guestPose, useGuest } from '../state/guestStore';
+import { useJournal } from '../state/journalStore';
 import { perf } from '../scene/perf';
 
 export function TestHooks() {
@@ -17,6 +19,9 @@ export function TestHooks() {
       simClient,
       sim: useSim,
       ui: useUI,
+      guest: useGuest,
+      guestPose,
+      journal: useJournal,
       project(x: number, y: number, z: number) {
         const v = new THREE.Vector3(x, y, z).project(camera);
         const r = gl.domElement.getBoundingClientRect();

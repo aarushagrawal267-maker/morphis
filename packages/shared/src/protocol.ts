@@ -22,6 +22,7 @@ import type {
 } from './types/sim';
 import type { ApprovalRequest, BuildingDynamic } from './types/sim';
 import type { StaticWorld } from './types/world';
+import type { AgentLife, Deed, Venture } from './types/life';
 
 /** High-frequency motion frame (~15 Hz). */
 export interface MotionFrame {
@@ -33,6 +34,8 @@ export interface MotionFrame {
   vehicles: number[];
   /** Phase (0..5) of each signalised node, ordered by ascending node id. */
   signals: number[];
+  /** Skyrail trains: distance along the loop for each train. */
+  rail?: number[];
 }
 
 /** Low-frequency state frame (~1 Hz). */
@@ -48,6 +51,9 @@ export interface StateFrame {
   /** Included every few frames (and always in the init payload). */
   businesses?: Business[];
   buildings?: Record<string, BuildingDynamic>;
+  /** Agent lives and ventures (included with full frames). */
+  life?: AgentLife[];
+  ventures?: Venture[];
   perf: { tickMs: number; ticksPerSecond: number };
 }
 
@@ -87,6 +93,9 @@ export interface InitPayload {
   persistence: PersistenceInfo;
   ai: AiProviderInfo;
   approvals?: ApprovalRequest[];
+  deeds?: Deed[];
+  life?: AgentLife[];
+  ventures?: Venture[];
 }
 
 export interface SaveSummary {

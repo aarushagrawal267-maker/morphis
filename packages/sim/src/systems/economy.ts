@@ -154,7 +154,7 @@ export class EconomySystem {
     const paid = Math.min(cost, Math.max(0, c.dyn.money));
     c.dyn.money -= paid;
     c.dyn.spending.transport += paid;
-    if (mode === 'bus') this.e.transitToday -= paid; // fares offset transit costs
+    if (mode === 'bus' || mode === 'rail') this.e.transitToday -= paid; // fares offset transit costs
     if (mode === 'taxi') {
       const hub = this.sim.landmark('station');
       const biz = hub ? this.bizByBuilding.get(hub.id) : undefined;
@@ -346,7 +346,7 @@ export class EconomySystem {
     let hired = 0;
     for (const c of sim.state.citizens) {
       if (hired >= n) break;
-      if (c.dyn.employed || c.profile.core || c.profile.age >= 65 || c.profile.occupation === 'Student') continue;
+      if (c.dyn.employed || c.profile.core || c.profile.agent || c.profile.age >= 65 || c.profile.occupation === 'Student') continue;
       c.dyn.employed = true;
       c.profile.workplaceId = biz.buildingId;
       c.profile.occupation = 'Associate';
@@ -356,6 +356,7 @@ export class EconomySystem {
       c.profile.schedule = sched.weekday;
       biz.employees.push(c.profile.id);
       hired++;
+      sim.life?.addDeed(c, 'hired', `Joined ${biz.name} as an associate.`, 'sim', { buildingId: biz.buildingId, silent: true });
       sim.cityEvents.news('economy', `${biz.name} hires ${c.profile.name}`, `${c.profile.name} joins ${biz.name} as an associate (simulated employment).`, 'info', biz.buildingId);
     }
     return hired;
@@ -364,7 +365,7 @@ export class EconomySystem {
   private layoff(biz: Business): void {
     const id = biz.employees.pop();
     const c = id ? this.sim.citizenById(id) : undefined;
-    if (!c || c.profile.core) return;
+    if (!c || c.profile.core || c.profile.agent) return;
     c.dyn.employed = false;
     c.profile.workplaceId = null;
     c.profile.occupation = 'Job Seeker';

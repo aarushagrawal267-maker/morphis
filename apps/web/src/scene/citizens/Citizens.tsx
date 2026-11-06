@@ -12,6 +12,8 @@ import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { env } from '../env';
 import { hash01, parkSpot, stopSpot } from '../positions';
+import { platformSpot } from '../rail/railGeo';
+import { attachWaveListener, waveAmount, waves } from '../waves';
 
 const K = 0.82; // overall scale: ~1.8 m tall (1 unit = 2 m)
 
@@ -63,7 +65,7 @@ export function citizenMaterial(): THREE.MeshStandardMaterial {
         '#include <common>',
         `#include <common>
         uniform float uTime;
-        attribute float aPart; attribute vec2 aAnim; attribute vec3 aTop; attribute vec3 aBottom; attribute vec3 aSkin; attribute vec3 aHair;
+        attribute float aPart; attribute vec2 aAnim; attribute float aWave; attribute vec3 aTop; attribute vec3 aBottom; attribute vec3 aSkin; attribute vec3 aHair;
         varying vec3 vPartColor;`,
       )
       .replace(
@@ -81,6 +83,13 @@ export function citizenMaterial(): THREE.MeshStandardMaterial {
           transformed = vec3(transformed.x, transformed.y * cos(s) - transformed.z * sin(s), transformed.y * sin(s) + transformed.z * cos(s));
           transformed.y += py;
         }
+        // waving: raise the right arm and wave it
+        if (aPart > 4.5 && aPart < 5.5 && aWave > 0.01) {
+          float wa = aWave * (2.55 + 0.35 * sin(uTime * 11.0));
+          vec2 piv = vec2(0.19 * ${K.toFixed(3)}, 0.86 * ${K.toFixed(3)});
+          vec2 q = transformed.xy - piv;
+          transformed.xy = piv + vec2(q.x * cos(wa) - q.y * sin(wa), q.x * sin(wa) + q.y * cos(wa));
+        }
         // idle sway when standing
         transformed.y += abs(sin(uTime * 8.5 + aAnim.x)) * 0.035 * aAnim.y;
         transformed.x += sin(uTime * 1.3 + aAnim.x) * 0.012 * (1.0 - aAnim.y) * step(0.5, transformed.y);
@@ -96,6 +105,7 @@ export function citizenMaterial(): THREE.MeshStandardMaterial {
 
 export function Citizens() {
   const profiles = useSim((s) => s.citizens);
+  attachWaveListener();
   const n = Math.max(1, profiles.length);
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const pickRef = useRef<THREE.InstancedMesh>(null);
@@ -118,6 +128,7 @@ export function Citizens() {
     col('aSkin', (i) => profiles[i].appearance.skin);
     col('aHair', (i) => profiles[i].appearance.hair);
     g.setAttribute('aAnim', new THREE.InstancedBufferAttribute(new Float32Array(n * 2), 2));
+    g.setAttribute('aWave', new THREE.InstancedBufferAttribute(new Float32Array(n), 1));
     return g;
   }, [profiles, n]);
   const mat = useMemo(() => citizenMaterial(), []);
@@ -126,7 +137,10 @@ export function Citizens() {
   const markerGeo = useMemo(() => new THREE.OctahedronGeometry(0.22, 0), []);
   const markerMat = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), []);
   const roleColors = useMemo(
-    () => profiles.map((p) => (p.role ? new THREE.Color(CORE_ROLES[p.role].color).multiplyScalar(2.2) : new THREE.Color(0.6, 2.0, 2.4))),
+    () =>
+      profiles.map((p) =>
+        p.role ? new THREE.Color(CORE_ROLES[p.role].color).multiplyScalar(2.2) : p.agent ? new THREE.Color(2.6, 1.7, 0.35) : new THREE.Color(0.6, 2.0, 2.4),
+      ),
     [profiles],
   );
 
@@ -147,6 +161,9 @@ export function Citizens() {
     const highlight = ui.highlight === 'pedestrians';
     const selected = ui.selection?.kind === 'citizen' ? ui.selection.id : null;
     const anim = geo.getAttribute('aAnim') as THREE.InstancedBufferAttribute;
+    const waveAttr = geo.getAttribute('aWave') as THREE.InstancedBufferAttribute;
+    const now = performance.now();
+    const rail = sim.world?.rail;
     const dyn = sim.state.citizens;
     let k = 0;
     let mk = 0;
@@ -156,6 +173,7 @@ export function Citizens() {
       let z: number;
       let yaw: number;
       let walking = 0;
+      let y = 0.12;
       if (sample.cVisible[i]) {
         // keep walkers on their side of the sidewalk
         const off = (hash01(i) - 0.5) * lateral;
@@ -173,6 +191,13 @@ export function Citizens() {
           x = p.x;
           z = p.z;
           yaw = hash01(i + 9) * 6.28;
+        } else if (loc.kind === 'rail' && rail && loc.id.startsWith('rail_st')) {
+          const p = platformSpot(rail, loc.id, i);
+          if (!p) continue;
+          x = p.x;
+          z = p.z;
+          y = p.y;
+          yaw = hash01(i + 9) * 6.28;
         } else if (loc.kind === 'building') {
           const b = sim.buildingsById.get(loc.id);
           if (!b || (b.type !== 'park' && b.type !== 'plaza')) continue;
@@ -183,20 +208,27 @@ export function Citizens() {
           walking = hash01(i + 5) > 0.6 ? 0.35 : 0;
         } else continue;
       }
+      const wv = waves.size ? waveAmount(i, now) : 0;
+      if (wv > 0) {
+        const w = waves.get(i)!;
+        yaw = Math.atan2(w.x - x, w.z - z);
+        walking = 0;
+      }
       const h = profiles[i].appearance.height;
       tmpQ.setFromAxisAngle(up, yaw);
-      tmpP.set(x, 0.12, z);
+      tmpP.set(x, y, z);
       tmpS.set(profiles[i].appearance.build, h, profiles[i].appearance.build);
       tmpM.compose(tmpP, tmpQ, tmpS);
       mesh.setMatrixAt(k, tmpM);
       pick.setMatrixAt(k, tmpM);
       anim.setXY(k, hash01(i) * 6.28, walking);
+      waveAttr.setX(k, wv);
       instanceToCitizen.current[k] = i;
       k++;
-      if (profiles[i].core || highlight || selected === profiles[i].id) {
+      if (profiles[i].core || profiles[i].agent || highlight || selected === profiles[i].id) {
         const s = selected === profiles[i].id ? 2.2 : highlight ? 1.4 : 0.8;
         tmpS.set(s, s * 1.4, s);
-        tmpP.set(x, 1.55 + Math.sin(env.uTime.value * 3 + i) * 0.08, z);
+        tmpP.set(x, y + 1.45 + Math.sin(env.uTime.value * 3 + i) * 0.08, z);
         tmpQ.setFromAxisAngle(up, env.uTime.value * 2);
         tmpM.compose(tmpP, tmpQ, tmpS);
         marker.setMatrixAt(mk, tmpM);
@@ -212,6 +244,7 @@ export function Citizens() {
     marker.instanceMatrix.needsUpdate = true;
     if (marker.instanceColor) marker.instanceColor.needsUpdate = true;
     anim.needsUpdate = true;
+    waveAttr.needsUpdate = true;
   });
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {

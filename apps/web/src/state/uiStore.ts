@@ -15,7 +15,7 @@ export type CameraMode = 'overview' | 'district' | 'street' | 'building' | 'foll
 
 export type Highlight = 'none' | 'pedestrians' | 'enterable' | 'transport' | 'clickable';
 
-export type Panel = 'features' | 'story' | 'news' | 'clock' | 'settings' | 'saves' | 'jarvis' | 'projects' | 'profile' | 'task' | null;
+export type Panel = 'features' | 'story' | 'news' | 'clock' | 'settings' | 'saves' | 'jarvis' | 'projects' | 'profile' | 'task' | 'journal' | 'look' | 'agents' | null;
 
 export interface DebugLayers {
   roads: boolean;

@@ -17,6 +17,24 @@ const P: Record<string, ReactNode> = {
       <path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4M10 10h4v4h-4z" />
     </>
   ),
+  hand: <path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V5.5a1.5 1.5 0 0 1 3 0V13M17 9.5a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-1a7 7 0 0 1-5.5-2.7L3.6 15.5a1.5 1.5 0 0 1 2.3-1.9L8 15.5" />,
+  camera: (
+    <>
+      <path d="M3 8h4l2-3h6l2 3h4v12H3z" />
+      <circle cx="12" cy="13.5" r="3.5" />
+    </>
+  ),
+  shirt: <path d="M8 3l4 2 4-2 5 4-3 3-2-1v12H8V9l-2 1-3-3z" />,
+  chat: <path d="M4 5h16v11H9l-5 4zM8 9h8M8 12h5" />,
+  rise: <path d="M12 20V5M5 11l7-7 7 7" />,
+  train: (
+    <>
+      <rect x="5" y="3" width="14" height="14" rx="3" />
+      <path d="M5 11h14M9 21l1.5-4M15 21l-1.5-4M8.5 14h.01M15.5 14h.01" />
+    </>
+  ),
+  share: <path d="M15 5l5 5-5 5M20 10H9a5 5 0 0 0-5 5v4" />,
+  spark: <path d="M12 2v6M12 16v6M2 12h6M16 12h6M5 5l3.5 3.5M15.5 15.5L19 19M19 5l-3.5 3.5M8.5 15.5L5 19" />,
   briefcase: <path d="M3 8h18v12H3zM8 8V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v3M3 13h18" />,
   bank: <path d="M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 21h18" />,
   heart: <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10zM9 11h2V9h2v2h2v2h-2v2h-2v-2H9z" />,

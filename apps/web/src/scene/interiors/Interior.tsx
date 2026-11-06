@@ -262,6 +262,7 @@ function Occupants({ buildingId, layout }: { buildingId: string; layout: Layout 
     const anim = new Float32Array(n * 2);
     placements.forEach((pl, i) => anim.set([hash01(i) * 6, pl.pose === 'stand' ? 0.05 : 0], i * 2));
     g.setAttribute('aAnim', new THREE.InstancedBufferAttribute(anim, 2));
+    g.setAttribute('aWave', new THREE.InstancedBufferAttribute(new Float32Array(n), 1));
     return g;
   }, [placements, n]);
   const mat = useMemo(() => citizenMaterial(), []);

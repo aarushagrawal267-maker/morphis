@@ -21,6 +21,10 @@ import type {
   VehicleDynamic,
   VehicleInfo,
   WeatherState,
+  AgentLife,
+  Deed,
+  LifeDecision,
+  Venture,
 } from '@morphis/shared';
 
 export interface CrossLeg {
@@ -38,15 +42,19 @@ export interface Walker {
   speed: number;
   waiting: boolean;
   onCrosswalk: number;
+  /** Stopped (e.g. waving back at a guest) until this sim time. */
+  pausedUntil?: number;
 }
 
 export type TripStage =
-  | { kind: 'walk'; toNode: number; then: 'arrive' | 'stop' }
+  | { kind: 'walk'; toNode: number; then: 'arrive' | 'stop' | 'station' }
   | { kind: 'car'; vehicleId: string }
   | { kind: 'taxiWait'; requestedAt: number; vehicleId: string | null }
   | { kind: 'taxiRide'; vehicleId: string }
   | { kind: 'busWait'; stopId: string; lineId: string; alightStopId: string; since: number }
-  | { kind: 'busRide'; vehicleId: string; alightStopId: string };
+  | { kind: 'busRide'; vehicleId: string; alightStopId: string }
+  | { kind: 'railWait'; stationId: string; alightId: string; since: number }
+  | { kind: 'railRide'; train: number; alightId: string };
 
 export interface Trip {
   mode: TravelMode;
@@ -144,6 +152,15 @@ export interface EconomyInternal {
   lastDay: number;
 }
 
+export interface TrainRT {
+  /** Distance along the loop. */
+  s: number;
+  dwellUntil: number;
+  /** Index of the next station. */
+  next: number;
+  passengers: string[];
+}
+
 export interface SimState {
   version: 1;
   seed: number;
@@ -169,4 +186,10 @@ export interface SimState {
   cooldowns: Record<string, number>;
   /** Per-edge traffic load snapshot (updated each sim minute) used for congestion-aware routing. */
   edgeLoad: number[];
+  /** Agent lives (added in save format 1.1; created on load for older saves). */
+  life?: AgentLife[];
+  deeds?: Deed[];
+  ventures?: Venture[];
+  decisions?: LifeDecision[];
+  trains?: TrainRT[];
 }
