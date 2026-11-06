@@ -228,6 +228,9 @@ function GuestPrompt() {
     );
   }
   if (!hint) return null;
+  if (typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches) {
+    return <div className="guest-prompt guest-prompt--hint glass">Stick to walk · drag to look · tap the street to walk there</div>;
+  }
   return (
     <div className="guest-prompt guest-prompt--hint glass">
       <kbd>W</kbd>
