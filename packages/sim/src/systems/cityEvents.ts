@@ -24,6 +24,14 @@ const TEMPLATES: EventTemplate[] = [
   { name: 'Prism Design Exhibition', kind: 'exhibition', landmark: 'studio', days: [5, 6], start: 12, hours: 6 },
   { name: 'Holo-Ball Finals', kind: 'sports', landmark: 'arena', days: [6], start: 15, hours: 3 },
   { name: 'Park Concert', kind: 'concert', landmark: 'lumen_park', days: [6], start: 17, hours: 2.5 },
+  // something every day
+  { name: 'Morning Market', kind: 'market', landmark: 'market', days: [0, 1, 2, 5, 6], start: 8, hours: 3.5 },
+  { name: 'Sunrise Run', kind: 'sports', landmark: 'orbit_gardens', days: [0, 1, 2, 3, 4, 5, 6], start: 6.5, hours: 1.5 },
+  { name: 'Street Food Evening', kind: 'market', landmark: 'market', days: [0, 1], start: 18.5, hours: 3 },
+  { name: 'Poetry by Lamplight', kind: 'lecture', landmark: 'cybercafe', days: [0, 3], start: 20, hours: 2 },
+  { name: 'Edge-of-the-Island Stargazing', kind: 'exhibition', landmark: 'echo_green', days: [1, 6], start: 21, hours: 2 },
+  { name: 'Library Reading Hour', kind: 'lecture', landmark: 'library', days: [2, 4], start: 17, hours: 1.5 },
+  { name: 'Lunchtime Recital', kind: 'concert', landmark: 'synapse_gardens', days: [1, 3], start: 12.5, hours: 1.5 },
 ];
 
 export class CityEventSystem {
@@ -35,11 +43,11 @@ export class CityEventSystem {
     const day = dayOf(sim.time);
     const wd = weekdayOf(sim.time);
     const dayStart = (day - 1) * DAY_SECONDS;
-    for (const t of TEMPLATES) {
+    for (const [i, t] of TEMPLATES.entries()) {
       if (!t.days.includes(wd)) continue;
       const b = sim.landmark(t.landmark);
       if (!b) continue;
-      const id = `event_${day}_${t.landmark}`;
+      const id = `event_${day}_${t.landmark}_${i}`;
       if (sim.state.cityEvents.some((e) => e.id === id)) continue;
       sim.state.cityEvents.push({
         id,
