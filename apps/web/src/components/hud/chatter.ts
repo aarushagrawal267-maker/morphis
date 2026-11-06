@@ -34,6 +34,11 @@ export function chatterFor(p: CitizenProfile, d: CitizenDynamic, life: AgentLife
     if (helping) options.push(`Thanks for helping at ${helping.name}, ${f}.`);
     if (fl?.study) options.push(`${f}, how are the ${fl.study.field} classes?`);
     if (mine && mine.status === 'FITTING_OUT') options.push(`${f}, could you lend a hand at ${mine.name}?`);
+    if (h < 10) options.push(`Morning, ${f}! Sleep well?`);
+    else if (h >= 20) options.push(`${f}! Out late again?`, `Walk me home, ${f}?`);
+    if (ctx.weather === 'rain' || ctx.weather === 'storm') options.push(`${f}, share my umbrella?`);
+    const ev = ctx.events.find((e) => e.status === 'LIVE');
+    if (ev) options.push(`${f}, coming to ${ev.name}?`);
     return pick(options, seed);
   }
   if (life?.plan && seed % 3 !== 2) return life.plan;
