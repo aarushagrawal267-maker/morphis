@@ -3,6 +3,7 @@ import type { Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
 import { SOCKET_EVENTS, commandSchema } from '@morphis/shared';
 import type { SimulationHost } from '../simulation/host';
+import { Presence } from './presence';
 
 export const LOCKED = 'This town is run by its host: changing it needs the admin key (Settings → Admin key). You can still walk, wave and talk.';
 
@@ -12,7 +13,11 @@ export function attachSockets(http: HttpServer, host: SimulationHost, corsOrigin
     perMessageDeflate: { threshold: 2048 },
     maxHttpBufferSize: 1e6,
   });
+  const presence = new Presence(io);
+  io.on('close', () => presence.stop());
+  host.presence = presence;
   io.on('connection', (socket) => {
+    presence.attach(socket);
     const token = typeof socket.handshake.auth?.token === 'string' ? (socket.handshake.auth.token as string) : undefined;
     socket.emit(SOCKET_EVENTS.init, host.initPayload());
     socket.emit(SOCKET_EVENTS.access, { locked: host.locked, admin: host.isAdmin(token) });

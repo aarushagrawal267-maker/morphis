@@ -19,6 +19,7 @@ import { useUI } from '../state/uiStore';
 import { usePostcard } from './guest/actions';
 import { GuestController } from './guest/Guest';
 import { InteriorGuest } from './guest/InteriorGuest';
+import { OtherVisitors, PresenceSender } from './guest/Visitors';
 import { PostcardCapture } from './guest/PostcardCapture';
 import { Skyrail } from './rail/Skyrail';
 import { VentureSites } from './buildings/VentureSites';
@@ -57,6 +58,7 @@ export function CityScene() {
       {walking ? interior ? <InteriorGuest buildingId={interior.buildingId} /> : <GuestController /> : <CameraRig />}
       {postcard && <PostcardCapture />}
       <AudioDirector />
+      <PresenceSender />
       <CameraBridgeSync />
       <PerfProbe />
       {interior ? (
@@ -76,6 +78,7 @@ export function CityScene() {
           <Skyrail />
           <VentureSites />
           <Citizens />
+          <OtherVisitors />
           <Vehicles />
           <DistrictPins />
           <SelectionOverlay />

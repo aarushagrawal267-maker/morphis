@@ -11,6 +11,7 @@
 import type { AuthorityMessage, InitPayload, MotionFrame, RouteData, SimCommand, SimEvent } from '@morphis/shared';
 import { samplePolyline } from '@morphis/sim';
 import { useSim } from '../state/simStore';
+import { receivePresence } from '../state/presence';
 import type { ConnectionStatus, Transport } from './transport';
 
 const RENDER_DELAY = 110; // ms
@@ -94,6 +95,9 @@ export class SimClient {
         break;
       case 'access':
         useSim.setState({ access: m.access });
+        break;
+      case 'guests':
+        receivePresence(m.guests, this.transport?.selfId?.() ?? null);
         break;
     }
   }

@@ -26,6 +26,7 @@ export class SimulationHost {
   private last = performance.now();
   private loops = 0;
   io: Server | null = null;
+  presence: { count: number; stop(): void } | null = null;
   readonly sessionId = `server-${Date.now().toString(36)}`;
 
   constructor(
@@ -60,6 +61,7 @@ export class SimulationHost {
   }
 
   stop(): void {
+    this.presence?.stop();
     if (this.timer) clearInterval(this.timer);
     if (this.autosave) clearInterval(this.autosave);
     this.timer = null;

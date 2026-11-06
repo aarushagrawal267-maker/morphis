@@ -3,7 +3,7 @@
  * stream and accept the same validated commands.
  */
 import { io, type Socket } from 'socket.io-client';
-import type { ApprovalRequest, AuthorityMessage, InitPayload, MotionFrame, SimCommand, SimEvent, StateFrame, AccessInfo } from '@morphis/shared';
+import type { ApprovalRequest, AuthorityMessage, InitPayload, MotionFrame, SimCommand, SimEvent, StateFrame, AccessInfo, GuestPresence } from '@morphis/shared';
 import { SOCKET_EVENTS } from '@morphis/shared';
 
 export interface Transport {
@@ -11,6 +11,10 @@ export interface Transport {
   start(onMessage: (m: AuthorityMessage) => void, onStatus: (s: ConnectionStatus) => void): void;
   send(cmd: SimCommand): Promise<unknown>;
   close(): void;
+  /** Share this visitor's position with other visitors (server mode); null = left the street. */
+  presence?(pose: Omit<GuestPresence, 'id'> | null): void;
+  /** This connection's visitor id (server mode). */
+  selfId?(): string | null;
 }
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
@@ -86,6 +90,7 @@ export class SocketTransport implements Transport {
     s.on(SOCKET_EVENTS.events, (events: SimEvent[]) => onMessage({ t: 'events', events }));
     s.on(SOCKET_EVENTS.approvals, (approvals: ApprovalRequest[]) => onMessage({ t: 'approvals', approvals }));
     s.on(SOCKET_EVENTS.access, (access: AccessInfo) => onMessage({ t: 'access', access }));
+    s.on(SOCKET_EVENTS.guests, (guests: GuestPresence[]) => onMessage({ t: 'guests', guests }));
   }
 
   send(cmd: SimCommand): Promise<unknown> {
@@ -97,6 +102,16 @@ export class SocketTransport implements Transport {
         else reject(new Error(reply.error ?? 'command failed'));
       });
     });
+  }
+
+  presence(pose: Omit<GuestPresence, 'id'> | null): void {
+    if (!this.socket?.connected) return;
+    if (pose) this.socket.volatile.emit(SOCKET_EVENTS.guestPose, pose);
+    else this.socket.emit(SOCKET_EVENTS.guestLeave);
+  }
+
+  selfId(): string | null {
+    return this.socket?.id ? this.socket.id.slice(0, 12) : null;
   }
 
   close(): void {

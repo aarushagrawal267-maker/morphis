@@ -326,3 +326,27 @@ describe('agent tools: approvals and network safety', () => {
     expect(changes.length).toBeGreaterThan(0);
   });
 });
+
+describe('visitor presence', () => {
+  it('relays each walking visitor to the others, and forgets them when they leave', async () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), 'morphis-presence-'));
+    const ctx = await buildServer(loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '60', AI_PROVIDER: 'none', WEB_DIST: '' }));
+    await ctx.app.listen({ port: 0, host: '127.0.0.1' });
+    const port = (ctx.app.server.address() as { port: number }).port;
+    const a: Socket = connect(`http://127.0.0.1:${port}`, { transports: ['websocket'] });
+    const b: Socket = connect(`http://127.0.0.1:${port}`, { transports: ['websocket'] });
+    await Promise.all([new Promise((r) => a.on('connect', () => r(null))), new Promise((r) => b.on('connect', () => r(null)))]);
+    const seen = new Promise<{ name: string; x: number }[]>((resolve) => b.on('guests', (list) => resolve(list)));
+    const look = { coat: '#14b8a6', trousers: '#1f2937', hair: '#3b2416', skin: '#e0ac69', build: 1, height: 1 };
+    a.emit('guest.pose', { name: 'Asha', x: 4, y: 0, z: 5, yaw: 0, moving: true, waving: false, inside: null, look });
+    const list = await seen;
+    expect(list.map((g) => g.name)).toContain('Asha');
+    expect((await ctx.app.inject({ method: 'GET', url: '/api/health' })).json().visitors).toBe(1);
+    a.emit('guest.leave');
+    await wait(100);
+    expect((await ctx.app.inject({ method: 'GET', url: '/api/health' })).json().visitors).toBe(0);
+    a.close();
+    b.close();
+    await ctx.app.close();
+  });
+});
