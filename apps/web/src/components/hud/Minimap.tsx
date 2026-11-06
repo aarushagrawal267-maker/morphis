@@ -10,6 +10,11 @@ import { cameraBridge } from '../../scene/cameraBridge';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { focusPoint } from '../panels/actions';
+import { arrival, guestPose, useGuest } from '../../state/guestStore';
+import { visitors } from '../../state/presence';
+import { collidersFor } from '../../scene/guest/collision';
+import { sound } from '../../audio/engine';
+import { dropIn } from './GuestHud';
 
 const SIZE = 210;
 
@@ -17,7 +22,14 @@ export function Minimap() {
   const world = useSim((s) => s.world);
   const canvas = useRef<HTMLCanvasElement>(null);
   const interior = useUI((s) => s.interior);
-  const scale = world ? SIZE / (world.size + 8) : 1;
+  const extent = useMemo(() => {
+    if (!world) return 1;
+    if (!world.island) return world.size + 8;
+    let r = 0;
+    for (let i = 0; i < world.island.outline.length; i += 2) r = Math.max(r, Math.abs(world.island.outline[i]), Math.abs(world.island.outline[i + 1]));
+    return r * 2 + 14;
+  }, [world]);
+  const scale = world ? SIZE / extent : 1;
   const toPx = (x: number, z: number): [number, number] => [SIZE / 2 + x * scale, SIZE / 2 + z * scale];
 
   const base = useMemo(() => {
@@ -28,6 +40,27 @@ export function Minimap() {
     g.scale(2, 2);
     g.fillStyle = '#070a12';
     g.fillRect(0, 0, SIZE, SIZE);
+    if (world.island) {
+      // the island itself, with a soft glow at its edge
+      const o = world.island.outline;
+      g.beginPath();
+      g.moveTo(...toPx(o[0], o[1]));
+      for (let i = 2; i < o.length; i += 2) g.lineTo(...toPx(o[i], o[i + 1]));
+      g.closePath();
+      g.fillStyle = '#141a28';
+      g.shadowColor = '#6d5bd0';
+      g.shadowBlur = 8;
+      g.fill();
+      g.shadowBlur = 0;
+      g.strokeStyle = '#4c4f8f';
+      g.lineWidth = 1;
+      g.stroke();
+      g.fillStyle = '#22d3ee';
+      for (const l of world.island.lifts) {
+        const [x, y] = toPx(l.x, l.z);
+        g.fillRect(x - 2, y - 2, 4, 4);
+      }
+    }
     for (const d of world.districts) {
       if (d.type === 'central') continue;
       const [x, y] = toPx(d.center.x, d.center.z);
@@ -62,6 +95,16 @@ export function Minimap() {
       for (const p of pts.slice(1)) g.lineTo(...p);
       g.closePath();
       g.fill();
+    }
+    if (world.rail) {
+      const pts = world.rail.points;
+      g.strokeStyle = '#a78bfa';
+      g.lineWidth = 1.2;
+      g.beginPath();
+      g.moveTo(...toPx(pts[0], pts[1]));
+      for (let i = 2; i < pts.length; i += 2) g.lineTo(...toPx(pts[i], pts[i + 1]));
+      g.closePath();
+      g.stroke();
     }
     const hq = world.buildings.find((b) => b.id === world.hqId)!;
     const [hx, hy] = toPx(hq.position.x, hq.position.z);
@@ -99,6 +142,29 @@ export function Minimap() {
         if (!sample.vVisible[i]) continue;
         const [x, y] = toPx(sample.vX[i], sample.vZ[i]);
         g.fillRect(x - 1, y - 1, 2, 2);
+      }
+      // other visitors and you
+      g.fillStyle = '#f472b6';
+      for (const v of visitors.values()) {
+        if (v.inside) continue;
+        const [x, y] = toPx(v.rx, v.rz);
+        g.beginPath();
+        g.arc(x, y, 2.2, 0, Math.PI * 2);
+        g.fill();
+      }
+      if (useGuest.getState().active) {
+        const [x, y] = toPx(guestPose.x, guestPose.z);
+        const a = guestPose.yaw;
+        g.fillStyle = '#ffffff';
+        g.strokeStyle = '#0b1020';
+        g.beginPath();
+        g.moveTo(x + Math.sin(a) * 6, y + Math.cos(a) * 6);
+        g.lineTo(x + Math.sin(a + 2.5) * 4, y + Math.cos(a + 2.5) * 4);
+        g.lineTo(x + Math.sin(a - 2.5) * 4, y + Math.cos(a - 2.5) * 4);
+        g.closePath();
+        g.fill();
+        g.stroke();
+        return;
       }
       // camera view
       const cam = cameraBridge.camera;
@@ -144,7 +210,18 @@ export function Minimap() {
           const r = e.currentTarget.getBoundingClientRect();
           const x = (e.clientX - r.left - SIZE / 2) / scale;
           const z = (e.clientY - r.top - SIZE / 2) / scale;
-          focusPoint(x, z, 70);
+          // drop in there (or, when already walking, travel there)
+          if (useGuest.getState().active) {
+            const p = { x, z };
+            const col = collidersFor(world);
+            if (!col.onIsland(x, z)) return;
+            col.resolve(p, 0.6);
+            guestPose.x = p.x;
+            guestPose.z = p.z;
+            guestPose.path = [];
+            arrival.at = performance.now();
+            sound.whoosh();
+          } else if (!dropIn(x, z)) focusPoint(x, z, 70);
         }}
       />
       <div className="minimap__legend">
@@ -156,6 +233,9 @@ export function Minimap() {
         </span>
         <span>
           <i style={{ background: '#c084fc' }} /> landmarks
+        </span>
+        <span>
+          <i style={{ background: '#a78bfa' }} /> skyrail
         </span>
       </div>
     </section>
