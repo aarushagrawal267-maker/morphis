@@ -376,7 +376,7 @@ export class EconomySystem {
   /** Open a new company in an existing (vacant or construction) building. */
   foundCompany(name: string, building: BuildingDef, products: string[]): Business | null {
     const sim = this.sim;
-    let biz = this.bizByBuilding.get(building.id);
+    const biz = this.bizByBuilding.get(building.id);
     if (!biz) return null;
     biz.name = name;
     biz.category = 'company';

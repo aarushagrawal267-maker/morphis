@@ -372,7 +372,7 @@ export class CitySimulation {
 
   /** Accept a command and plan it (template planner unless a plan is supplied by an LLM planner). */
   jarvisCommand(text: string, plan: ProjectPlan | null): CommandReply {
-    const sim = this;
+    const sim = this as CitySimulation;
     const p = plan ?? templatePlan(text);
     const err = validatePlan(p);
     const record = {

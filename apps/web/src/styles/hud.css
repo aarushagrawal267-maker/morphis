@@ -1,6 +1,7 @@
 .hud { position: absolute; inset: 0; pointer-events: none; z-index: 10; font-size: 13px; }
 .hud > *, .col-left > *, .col-right > *, .col-wide > * { pointer-events: auto; }
 .hud > :not(.pin-layer) { z-index: 2; }
+.hud > .pin-layer, .hud > .fade { pointer-events: none; }
 .hud > .toast { z-index: 30; }
 .glass { background: linear-gradient(160deg, rgba(14, 20, 36, 0.78), rgba(6, 9, 18, 0.72)); border: 1px solid var(--line); border-radius: var(--radius); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); box-shadow: 0 10px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04); }
 button { color: var(--text); background: none; border: 0; cursor: pointer; }
@@ -50,7 +51,9 @@ code { font-family: var(--mono); font-size: 11px; color: var(--purple); }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px currentColor; }
 
 /* columns */
-.col-left { position: absolute; top: 128px; left: 12px; width: 300px; display: flex; flex-direction: column; gap: 10px; max-height: calc(100% - 340px); pointer-events: none; }
+.col-left { position: absolute; top: 128px; bottom: 86px; left: 12px; width: 330px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.col-left > .side-panel { flex: 0 1 auto; min-height: 120px; }
+.col-left > .cityinfo { flex: none; }
 .col-right { position: absolute; top: 128px; bottom: 86px; right: 12px; width: 320px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
 .col-right > .sel-panel, .col-right > .interior-panel { flex: 0 1 auto; min-height: 0; overflow: auto; scrollbar-width: thin; }
 .col-wide { position: absolute; top: 128px; right: 344px; width: 380px; max-height: calc(100% - 210px); display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
@@ -110,12 +113,12 @@ h4 { margin: 14px 0 6px; font-size: 10px; letter-spacing: 0.16em; color: var(--m
 .bar__track.small { height: 4px; margin-top: 6px; }
 
 /* stream */
-.stream { position: absolute; left: 12px; bottom: 86px; width: 360px; padding: 10px 12px; }
+.stream { margin-top: auto; flex: 0 1 auto; min-height: 44px; display: flex; flex-direction: column; padding: 10px 12px; }
 .stream header { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; cursor: pointer; }
 .stream header small { margin-left: auto; font-weight: 500; letter-spacing: 0.04em; color: var(--muted); }
 .live { width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 10px var(--red); animation: blink 1.4s infinite; }
 @keyframes blink { 50% { opacity: 0.3; } }
-.stream ul { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 6px; max-height: 270px; overflow: auto; }
+.stream ul { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 6px; max-height: 270px; min-height: 0; overflow: auto; }
 .stream li { display: flex; gap: 9px; align-items: flex-start; padding: 6px; border-radius: 8px; cursor: pointer; animation: slidein .35s ease; }
 .stream li:hover { background: rgba(255,255,255,0.04); }
 .stream li.empty { color: var(--muted); cursor: default; }
@@ -268,7 +271,6 @@ input[type='range'] { width: 100%; accent-color: var(--cyan); }
 @media (max-width: 1280px) {
   .brand__tag { display: none; }
   .col-wide { right: 12px; top: 128px; }
-  .stream { width: 300px; }
   .bottombar button { min-width: 84px; padding: 7px 8px; }
   .debug { right: 12px; bottom: 330px; }
 }

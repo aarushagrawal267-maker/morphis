@@ -27,6 +27,7 @@ export function Hud() {
         <ClockPanel />
         <SettingsPanel />
         <SavesPanel />
+        <AgentStream />
       </div>
       <div className="col-right">
         <SelectionPanel />
@@ -39,7 +40,6 @@ export function Hud() {
         <ProfileModal />
         <TaskModal />
       </div>
-      <AgentStream />
       <DebugOverlay />
       <BottomBar />
       <Toasts />

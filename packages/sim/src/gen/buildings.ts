@@ -21,7 +21,6 @@ import type {
 import { BUILDING_TYPES } from '@morphis/shared';
 import { Rng } from '../core/rng';
 import { type OBB, norm, obbOverlap, obbSegmentDistance, perp, sub } from '../core/geom';
-import { districtAt } from './districts';
 import type { CornerSet } from './roads';
 
 export interface LandmarkSpec {
