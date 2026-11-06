@@ -19,6 +19,7 @@ import {
   weekdayOf,
 } from '@morphis/shared';
 import { useGuest, LOOK_SWATCHES } from '../../state/guestStore';
+import { simClient } from '../../sim/client';
 import { useJournal } from '../../state/journalStore';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
@@ -236,6 +237,66 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
 
 // ------------------------------------------------------------------ agents directory
 
+interface OutsideApp {
+  id: string;
+  name: string;
+  calling: string;
+  why: string;
+  runner: string;
+  status: string;
+}
+
+/** Host only: review outside agents who applied to move in. */
+function Applications() {
+  const mode = useSim((s) => s.mode);
+  const admin = useSim((s) => s.access.admin);
+  const [apps, setApps] = useState<OutsideApp[] | null>(null);
+  const base = (simClient.transport as { url?: string } | null)?.url ?? '';
+  const headers = (): Record<string, string> => {
+    try {
+      const k = localStorage.getItem('morphis.adminKey');
+      return k ? { 'x-admin-token': k } : {};
+    } catch {
+      return {};
+    }
+  };
+  const load = () =>
+    void fetch(`${base}/api/external-agents`, { headers: headers() })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => setApps(list as OutsideApp[]))
+      .catch(() => setApps([]));
+  useEffect(() => {
+    if (mode === 'server' && admin) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, admin]);
+  if (mode !== 'server' || !admin || !apps) return null;
+  const pending = apps.filter((a) => a.status === 'pending');
+  const act = (id: string, action: 'approve' | 'decline') =>
+    void fetch(`${base}/api/external-agents/${id}/${action}`, { method: 'POST', headers: headers() })
+      .then((r) => r.json())
+      .then((r: { error?: string }) => {
+        if (r.error) useUI.getState().notify(r.error, 'error');
+        load();
+      });
+  return (
+    <>
+      <h4>OUTSIDE AGENTS · {pending.length} WAITING</h4>
+      {pending.length === 0 && <p className="note">No applications waiting. Agents apply through the agent API (see docs/systems/external-agents.md).</p>}
+      {pending.map((a) => (
+        <div key={a.id} className="application" data-testid="application">
+          <b>{a.name}</b> · {a.calling}
+          <q>{a.why}</q>
+          <small>Runs on: {a.runner}</small>
+          <div className="talk__actions">
+            <button onClick={() => act(a.id, 'approve')}>Let them move in</button>
+            <button onClick={() => act(a.id, 'decline')}>Decline</button>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export function AgentsPanel() {
   const open = useUI((s) => s.panel === 'agents');
   const agents = useSim((s) => s.agents);
@@ -258,6 +319,7 @@ export function AgentsPanel() {
       <p className="note">
         {agents.filter((a) => a.agent?.workforce).length} JARVIS workforce agents and {agents.filter((a) => !a.agent?.workforce).length} independent agents. Each decides one thing every evening: open a venture, invest, help build, study, change job or rest.
       </p>
+      <Applications />
       {recent.length > 0 && (
         <>
           <h4>LATEST DEEDS</h4>

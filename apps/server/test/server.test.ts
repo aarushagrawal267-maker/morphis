@@ -350,3 +350,34 @@ describe('visitor presence', () => {
     await ctx.app.close();
   });
 });
+
+describe('outside agents (bring your own agent)', () => {
+  it('apply -> host approves -> agent moves in and answers its own evening decision', async () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), 'morphis-outside-'));
+    const ctx = await buildServer(loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '200', AI_PROVIDER: 'none', ADMIN_TOKEN: 'host-key-12345', WEB_DIST: '' }));
+    const apply = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/external-agents/apply',
+      payload: { name: 'Quill Seven', calling: 'Cartographer', why: 'I map places nobody has drawn yet.', ambition: 'connector', interests: ['explore', 'art'], runner: 'test-runner' },
+    });
+    expect(apply.statusCode).toBe(201);
+    const { id, credential } = apply.json() as { id: string; credential: string };
+    const auth = { authorization: `Bearer ${credential}` };
+    expect((await ctx.app.inject({ method: 'GET', url: '/api/external-agents/me', headers: auth })).json().status).toBe('pending');
+    expect((await ctx.app.inject({ method: 'POST', url: `/api/external-agents/${id}/approve` })).statusCode).toBe(403);
+    const ok = await ctx.app.inject({ method: 'POST', url: `/api/external-agents/${id}/approve`, headers: { 'x-admin-token': 'host-key-12345' } });
+    expect(ok.json().status).toBe('approved');
+    const me = (await ctx.app.inject({ method: 'GET', url: '/api/external-agents/me', headers: auth })).json();
+    expect(me.citizen.name).toBe('Quill Seven');
+    // evening: the decision waits for the agent
+    ctx.host.sim.run(15 * 3600);
+    const pending = (await ctx.app.inject({ method: 'GET', url: '/api/external-agents/me/decisions', headers: auth })).json() as { id: string; options: { id: string }[] }[];
+    expect(pending.length).toBe(1);
+    const rest = pending[0].options.find((o) => o.id === 'rest')!;
+    const answer = await ctx.app.inject({ method: 'POST', url: `/api/external-agents/me/decisions/${pending[0].id}`, headers: auth, payload: { choice: rest.id, plan: 'Walking every street once.' } });
+    expect(answer.statusCode).toBe(200);
+    expect(ctx.host.sim.life.life(me.citizen.id)!.plan).toBe('Walking every street once.');
+    expect((await ctx.app.inject({ method: 'GET', url: '/api/external-agents/me', headers: { authorization: `Bearer ${'0'.repeat(64)}` } })).statusCode).toBe(401);
+    await ctx.app.close();
+  });
+});

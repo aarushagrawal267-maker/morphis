@@ -20,6 +20,8 @@ export interface AgentPersona {
   why: string;
   /** Member of the JARVIS workforce (the 25 core citizens). */
   workforce: boolean;
+  /** An outside AI agent that moved in through the agent API and makes its own decisions. */
+  external?: boolean;
   /** Venture kind this agent dreams of opening (founders). */
   dream: VentureKind | null;
 }

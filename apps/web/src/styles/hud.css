@@ -487,3 +487,7 @@ kbd { display: inline-block; min-width: 18px; padding: 1px 5px; border-radius: 4
 .hud > .visitor-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
 .visitor-tag { position: absolute; left: 0; top: 0; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; color: #0b1020; background: rgba(103,232,249,0.92); white-space: nowrap; }
 .name-input { flex: 1; min-width: 0; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--line); background: rgba(0,0,0,0.25); color: var(--text); }
+
+.application { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(251,191,36,0.35); background: rgba(251,191,36,0.05); margin-bottom: 6px; font-size: 12px; }
+.application q { color: #fdf3d0; font-style: italic; }
+.application small { color: var(--muted); }
