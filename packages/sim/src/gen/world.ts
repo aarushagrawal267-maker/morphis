@@ -276,7 +276,9 @@ export function generateWorld(config: CityConfig): GeneratedWorld {
           continue;
         }
         let type = chooseType(rng, district, e.cls);
-        let { w, d } = sizeFor(rng, type);
+        const size = sizeFor(rng, type);
+        let w = size.w;
+        const d = size.d;
         const remaining = t1 - s;
         if (remaining < w) {
           if (remaining < 4) break;

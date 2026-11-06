@@ -8,7 +8,7 @@
  *   their exact sidewalk / lane polyline, never cutting corners.
  * - Low-frequency state and discrete events feed the React UI store.
  */
-import type { AuthorityMessage, InitPayload, MotionFrame, RouteData, SimCommand, SimEvent, StateFrame } from '@morphis/shared';
+import type { AuthorityMessage, InitPayload, MotionFrame, RouteData, SimCommand, SimEvent } from '@morphis/shared';
 import { samplePolyline } from '@morphis/sim';
 import { useSim } from '../state/simStore';
 import type { ConnectionStatus, Transport } from './transport';

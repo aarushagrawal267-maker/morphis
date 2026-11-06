@@ -1,0 +1,23 @@
+# Local infrastructure for the MORPHIS server.
+#   docker compose up -d
+#   cd apps/server && cp .env.example .env && npx prisma db push
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: morphis
+      POSTGRES_DB: morphis
+    ports: ['5432:5432']
+    volumes: ['morphis-pg:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      retries: 10
+  # Not used yet: reserved for task/event queues once multiple agent workers run (see docs).
+  redis:
+    image: redis:7-alpine
+    profiles: ['queues']
+    ports: ['6379:6379']
+volumes:
+  morphis-pg:

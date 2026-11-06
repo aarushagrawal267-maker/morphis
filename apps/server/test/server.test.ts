@@ -29,7 +29,7 @@ describe('server: websocket protocol + file persistence', () => {
   });
 
   it('reports health honestly', async () => {
-    const res = await fetch(`${url}/api/health`).then((r) => r.json());
+    const res = await fetch(`${url}/api/health`).then((r) => r.json() as Promise<any>);
     expect(res.ok).toBe(true);
     expect(res.persistence.backend).toBe('file');
     expect(res.ai.connected).toBe(false);
@@ -59,9 +59,9 @@ describe('server: websocket protocol + file persistence', () => {
   it('saves, lists and loads a city through the REST API', async () => {
     ctx.host.sim.run(1200);
     const t = ctx.host.sim.time;
-    const saved = await fetch(`${url}/api/commands`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'city.save', name: 'test save' }) }).then((r) => r.json());
+    const saved = await fetch(`${url}/api/commands`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'city.save', name: 'test save' }) }).then((r) => r.json() as Promise<any>);
     expect(saved.ok).toBe(true);
-    const list = await fetch(`${url}/api/saves`).then((r) => r.json());
+    const list = await fetch(`${url}/api/saves`).then((r) => r.json() as Promise<any>);
     expect(list[0].name).toBe('test save');
     ctx.host.sim.run(600);
     const reinit = new Promise<InitPayload>((resolve) => socket.once(SOCKET_EVENTS.init, resolve));
@@ -100,7 +100,7 @@ describe.runIf(!!process.env.TEST_DATABASE_URL)('server: PostgreSQL persistence'
 
 describe('AI agents against a mock OpenAI-compatible provider', () => {
   let mock: HttpServer;
-  let calls: { system: string; user: string }[] = [];
+  const calls: { system: string; user: string }[] = [];
   let base = '';
 
   beforeAll(async () => {
