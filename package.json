@@ -2,7 +2,7 @@
   "name": "morphis",
   "private": true,
   "version": "0.1.0",
-  "description": "MORPHIS — a living 3D cyberpunk city and AI workforce simulation",
+  "description": "MORPHIS \u2014 a living 3D cyberpunk city and AI workforce simulation",
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -14,7 +14,7 @@
     "dev:all": "node scripts/dev-all.mjs",
     "build": "npm run build --workspace @morphis/web",
     "start:server": "npm run start --workspace @morphis/server",
-    "typecheck": "tsc -b packages/shared packages/sim apps/server apps/web",
+    "typecheck": "tsc -p packages/shared && tsc -p packages/sim && tsc -p apps/server && tsc -p apps/web",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

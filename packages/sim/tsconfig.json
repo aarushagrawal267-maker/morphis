@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "src", "outDir": "../../node_modules/.tsc/sim", "tsBuildInfoFile": "../../node_modules/.tsc/sim.tsbuildinfo" },
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts"],
-  "references": [{ "path": "../shared" }]
+  "include": [
+    "src"
+  ]
 }

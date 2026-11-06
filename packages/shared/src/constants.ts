@@ -72,17 +72,17 @@ export function smoothstep(a: number, b: number, x: number): number {
 
 // ---------------------------------------------------------------- roads
 
-export const LANE_WIDTH = 1.6;
+export const LANE_WIDTH = 1.4;
 
 export const ROAD_CLASSES: Record<
   RoadClass,
   { lanes: number; sidewalk: number; median: number; speed: number; label: string; capacity: number }
 > = {
-  // speeds in world units / sim second (1u = 2m): highway ~70km/h, avenue ~50km/h ...
-  highway: { lanes: 3, sidewalk: 0, median: 1.2, speed: 9.5, label: 'Expressway', capacity: 1.0 },
-  avenue: { lanes: 2, sidewalk: 1.8, median: 0.8, speed: 7.0, label: 'Avenue', capacity: 0.7 },
-  street: { lanes: 1, sidewalk: 1.5, median: 0, speed: 5.5, label: 'Street', capacity: 0.4 },
-  local: { lanes: 1, sidewalk: 1.2, median: 0, speed: 4.2, label: 'Lane', capacity: 0.3 },
+  // speeds in world units per *motion second* (see MOTION_SECONDS_PER_TICK)
+  highway: { lanes: 3, sidewalk: 0, median: 1.0, speed: 8, label: 'Expressway', capacity: 1.0 },
+  avenue: { lanes: 2, sidewalk: 1.6, median: 0.6, speed: 5.5, label: 'Avenue', capacity: 0.7 },
+  street: { lanes: 1, sidewalk: 1.3, median: 0, speed: 4.4, label: 'Street', capacity: 0.4 },
+  local: { lanes: 1, sidewalk: 1.1, median: 0, speed: 3.6, label: 'Lane', capacity: 0.3 },
 };
 
 export function roadWidth(cls: RoadClass): number {
@@ -90,8 +90,24 @@ export function roadWidth(cls: RoadClass): number {
   return c.lanes * 2 * LANE_WIDTH + c.median;
 }
 
-/** Pedestrian walking speed in world units per sim second (≈1.3 m/s). */
+/**
+ * Motion time compression. The city is a compressed model of a metropolis: one
+ * tick advances the clock by one simulated second, but street-level motion
+ * (walking, driving, signal cycles, dwell times) advances by 1/18 of a "motion
+ * second". At 1x this makes a pedestrian walk at a natural pace on screen while
+ * a cross-town walk still takes a realistic 30-60 clock minutes.
+ */
+export const MOTION_SECONDS_PER_TICK = 1 / 18;
+export const SIM_SECONDS_PER_MOTION_SECOND = 18;
+
+/** Pedestrian walking speed in world units per motion second (≈1.3 m/s). */
 export const WALK_SPEED = 0.65;
+
+/** Signal timing in motion seconds. */
+export const SIGNAL_GREEN = 15;
+export const SIGNAL_YELLOW = 2.5;
+export const SIGNAL_ALL_RED = 1.5;
+export const SIGNAL_CYCLE = 2 * (SIGNAL_GREEN + SIGNAL_YELLOW + SIGNAL_ALL_RED);
 
 // ---------------------------------------------------------------- districts
 
