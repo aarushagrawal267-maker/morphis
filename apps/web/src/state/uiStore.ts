@@ -56,7 +56,7 @@ interface UIState {
   debug: boolean;
   debugLayers: DebugLayers;
   quality: Quality;
-  interior: { buildingId: string; room: number } | null;
+  interior: { buildingId: string; room: number; floor: number } | null;
   activeTab: string;
   toast: { id: number; text: string; tone: 'info' | 'error' } | null;
   fading: boolean;
@@ -74,6 +74,7 @@ interface UIState {
   setQuality(q: Partial<Quality>): void;
   enterInterior(buildingId: string): void;
   setRoom(i: number): void;
+  setFloor(f: number): void;
   exitInterior(): void;
   setTab(t: string): void;
   notify(text: string, tone?: 'info' | 'error'): void;
@@ -119,7 +120,11 @@ export const useUI = create<UIState>((set, get) => ({
   setDebug: (debug) => set({ debug }),
   setDebugLayer: (k, v) => set({ debugLayers: { ...get().debugLayers, [k]: v } }),
   setQuality: (q) => set({ quality: { ...get().quality, ...q } }),
-  enterInterior: (buildingId) => set({ interior: { buildingId, room: 0 }, cameraMode: 'interior', follow: null }),
+  enterInterior: (buildingId) => set({ interior: { buildingId, room: 0, floor: 0 }, cameraMode: 'interior', follow: null }),
+  setFloor: (floor) => {
+    const i = get().interior;
+    if (i) set({ interior: { ...i, floor, room: 0 } });
+  },
   setRoom: (room) => {
     const i = get().interior;
     if (i) set({ interior: { ...i, room } });

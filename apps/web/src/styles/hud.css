@@ -476,3 +476,10 @@ kbd { display: inline-block; min-width: 18px; padding: 1px 5px; border-radius: 4
   .hud--walking .col-left { top: 190px; }
   .hud--walking .col-right { bottom: 170px; }
 }
+
+.floors { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.floors button { width: 30px; height: 28px; border-radius: 7px; border: 1px solid var(--line); font-weight: 800; font-size: 12px; }
+.floors button.on { border-color: var(--cyan); color: var(--cyan); }
+.floors small { margin-left: 6px; color: var(--muted); font-size: 11px; }
+
+.floor-now { color: var(--muted); font-size: 11px; margin-left: 4px; }

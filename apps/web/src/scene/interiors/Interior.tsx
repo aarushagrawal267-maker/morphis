@@ -14,7 +14,8 @@ import { characterGeometry, citizenMaterial } from '../citizens/Citizens';
 import { env } from '../env';
 import { hash01 } from '../positions';
 import { waveAmount, waves } from '../waves';
-import { layoutFor, placeOccupants, type Furniture, type Layout, type Room } from './layouts';
+import { placeOccupants, type Furniture, type Layout, type Room } from './layouts';
+import { floorOfOccupant, planFor } from './plan';
 
 const WALL_H = 2.6;
 
@@ -229,7 +230,7 @@ function RoomShell({ room, index, active }: { room: Room; index: number; active:
 }
 
 /** Real occupants of the building, seated or standing according to their activity. */
-function Occupants({ buildingId, layout }: { buildingId: string; layout: Layout }) {
+function Occupants({ buildingId, layout, floor }: { buildingId: string; layout: Layout; floor: number }) {
   const state = useSim((s) => s.state);
   const profiles = useSim((s) => s.citizens);
   const occupants = useMemo(() => {
@@ -238,8 +239,9 @@ function Occupants({ buildingId, layout }: { buildingId: string; layout: Layout 
     state.citizens.forEach((d, i) => {
       if (d.location.kind === 'building' && d.location.id === buildingId) out.push({ p: profiles[i], activity: d.activity });
     });
-    return out.slice(0, 120);
-  }, [state, profiles, buildingId]);
+    const b = useSim.getState().buildingsById.get(buildingId);
+    return (b ? out.filter((o) => floorOfOccupant(b, o.p.index, o.activity) === floor) : out).slice(0, 120);
+  }, [state, profiles, buildingId, floor]);
   const key = occupants.map((o) => `${o.p.id}:${o.activity}`).join(',');
 
   const placements = useMemo(() => placeOccupants(layout, occupants, hash01), [key]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -315,7 +317,8 @@ function Occupants({ buildingId, layout }: { buildingId: string; layout: Layout 
 export function Interior({ buildingId }: { buildingId: string }) {
   const b = useSim((s) => s.buildingsById.get(buildingId));
   const roomIndex = useUI((s) => s.interior?.room ?? 0);
-  const layout = useMemo(() => (b ? layoutFor(b.interior ?? 'office', b.name) : null), [b]);
+  const floor = useUI((s) => s.interior?.floor ?? 0);
+  const layout = useMemo(() => (b ? planFor(b, floor, b.name) : null), [b, floor]);
 
   // camera: start at the entrance, glide to the floor-plan overview / selected room
   const entered = useRef(false);
@@ -354,7 +357,7 @@ export function Interior({ buildingId }: { buildingId: string }) {
           ))}
         </group>
       ))}
-      <Occupants buildingId={buildingId} layout={layout} />
+      <Occupants key={floor} buildingId={buildingId} layout={layout} floor={floor} />
     </group>
   );
 }

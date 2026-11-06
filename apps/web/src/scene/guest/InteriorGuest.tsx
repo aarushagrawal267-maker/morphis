@@ -11,7 +11,7 @@ import { guestInput, guestPose, useGuest } from '../../state/guestStore';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { characterGeometry, citizenMaterial } from '../citizens/Citizens';
-import { layoutFor } from '../interiors/layouts';
+import { planFor } from '../interiors/plan';
 import { guestWave, takePostcard } from './actions';
 
 const SCALE = 1.9; // interior plans are drawn at a larger scale than the street
@@ -31,7 +31,8 @@ export function leaveInterior(): void {
 export function InteriorGuest({ buildingId }: { buildingId: string }) {
   const b = useSim((s) => s.buildingsById.get(buildingId));
   const look = useGuest((s) => s.look);
-  const layout = useMemo(() => (b ? layoutFor(b.interior ?? 'office', b.name) : null), [b]);
+  const floor = useUI((s) => s.interior?.floor ?? 0);
+  const layout = useMemo(() => (b ? planFor(b, floor, b.name) : null), [b, floor]);
   const { camera, gl, raycaster, pointer } = useThree();
   const pose = useRef({ x: 0, z: 0, yaw: Math.PI, target: null as null | { x: number; z: number }, camYaw: 0 });
   const leaving = useRef(false);
