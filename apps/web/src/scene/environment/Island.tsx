@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import type { IslandShape, SkylineBlock, StaticWorld } from '@morphis/shared';
 import { useSim } from '../../state/simStore';
 import { GLSL_HASH, env } from '../env';
+import { DriftClouds } from './DriftClouds';
 
 function hash(n: number): number {
   const x = Math.sin(n * 91.345 + 47.853) * 43758.5453;
@@ -378,6 +379,7 @@ export function IslandWorld() {
       <IslandEdge island={world.island} />
       <SkyLifts island={world.island} />
       <Islets islets={world.skyline} />
+      <DriftClouds />
       <CloudSea />
     </>
   );
