@@ -69,7 +69,7 @@ export class SocketTransport implements Transport {
   readonly kind = 'server' as const;
   private socket: Socket | null = null;
 
-  constructor(private url: string) {}
+  constructor(readonly url: string) {}
 
   start(onMessage: (m: AuthorityMessage) => void, onStatus: (s: ConnectionStatus) => void): void {
     onStatus('connecting');

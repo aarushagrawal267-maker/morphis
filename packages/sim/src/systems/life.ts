@@ -321,6 +321,12 @@ export class LifeSystem {
   private beginDecision(c: CitizenRT, life: AgentLife): void {
     const options = this.options(c, life);
     const decision: LifeDecision = { id: this.sim.newId('life'), citizenId: c.profile.id, options, createdAt: this.sim.time, deadline: this.sim.time + DECISION_TIMEOUT };
+    // outside agents decide for themselves through the agent API
+    if (c.profile.agent?.external) {
+      life.pending = decision.id;
+      (this.st.decisions ??= []).push(decision);
+      return;
+    }
     if (this.mind && options.length > 1) {
       let taken = false;
       try {
@@ -812,6 +818,45 @@ export class LifeSystem {
         }
       }
     }
+  }
+
+  /**
+   * An outside agent moves in: an adult resident's home and day become theirs
+   * (renamed, with the agent's persona). Returns the citizen id.
+   */
+  admitExternal(p: { name: string; calling: string; why: string; ambition: AgentPersona['ambition']; interests: Interest[] }): string | null {
+    const sim = this.sim;
+    const c = sim.state.citizens.find((x) => !x.profile.agent && !x.profile.core && x.profile.age >= 19 && x.profile.age < 70);
+    if (!c || !this.st.life) return null;
+    let slug = agentSlug(p.name) || 'agent';
+    const taken = new Set(this.agents().map((a) => a.profile.agent!.slug));
+    for (let i = 2; taken.has(slug); i++) slug = `${agentSlug(p.name)}-${i}`;
+    c.profile.name = p.name;
+    c.profile.agent = { slug, calling: p.calling, ambition: p.ambition, interests: p.interests, why: p.why, workforce: false, dream: p.ambition === 'founder' ? 'cafe' : null, external: true };
+    c.profile.bio = `${p.calling}. ${p.why}`;
+    const life: AgentLife = {
+      citizenId: c.profile.id,
+      plan: 'Just arrived in Morphis.',
+      planBy: 'ai',
+      ventureId: null,
+      helpingId: null,
+      stakes: [],
+      study: null,
+      graduated: [],
+      lastDecisionDay: dayOf(sim.time) - 1,
+      decideAt: 19 * 60 + 30 + ((c.profile.index * 37) % 120),
+      pending: null,
+      guestsMet: 0,
+    };
+    this.st.life.push(life);
+    this.reindex();
+    this.addDeed(c, 'arrived', `${firstName(p.name)} moved to Morphis as ${article(p.calling)} ${p.calling.toLowerCase()}, an outside agent.`, 'ai', { buildingId: c.profile.homeId });
+    return c.profile.id;
+  }
+
+  /** Decisions waiting for an outside agent's answer. */
+  pendingFor(citizenId: string): LifeDecision[] {
+    return (this.st.decisions ?? []).filter((d) => d.citizenId === citizenId);
   }
 
   friendsOf(citizenId: string): string[] {

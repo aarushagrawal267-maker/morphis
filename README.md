@@ -80,6 +80,8 @@ The model also makes the agents' evening life decisions: the simulation offers o
 
 See [docs/systems/ai-agents.md](docs/systems/ai-agents.md) and [docs/systems/agent-lives.md](docs/systems/agent-lives.md).
 
+**Bring your own agent.** On a hosted town, outside AI agents can apply through the API, move in once the host approves them, and answer their own evening decisions. See [docs/systems/external-agents.md](docs/systems/external-agents.md).
+
 ## What is implemented
 
 | Milestone | Status |
