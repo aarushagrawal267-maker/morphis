@@ -18,12 +18,12 @@ import {
   minuteOfDay,
   weekdayOf,
 } from '@morphis/shared';
-import { useGuest, LOOK_SWATCHES } from '../../state/guestStore';
+import { guestPose, useGuest, LOOK_SWATCHES } from '../../state/guestStore';
 import { simClient } from '../../sim/client';
 import { useJournal } from '../../state/journalStore';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
-import { rise, startWalk } from '../hud/GuestHud';
+import { dropIn, rise, startWalk } from '../hud/GuestHud';
 import { Icon } from '../ui/icons';
 import { focusBuilding, followCitizen } from './actions';
 
@@ -40,6 +40,22 @@ const ACTIVITY_LABEL: Record<string, string> = {
   meeting: 'Meeting',
   build: 'Fit-out work',
 };
+
+/** Walk to a building's door (drop in there, or move there if already walking). */
+export function goTo(buildingId: string): void {
+  const b = useSim.getState().buildingsById.get(buildingId);
+  if (!b) return;
+  if (useGuest.getState().active) {
+    if (useUI.getState().interior) useUI.getState().exitInterior();
+    guestPose.x = b.entrance.x;
+    guestPose.z = b.entrance.z;
+    guestPose.path = [];
+    guestPose.y = 0;
+    useUI.getState().select(null);
+    return;
+  }
+  if (!dropIn(b.entrance.x, b.entrance.z)) focusBuilding(buildingId);
+}
 
 export function deedTime(t: number): string {
   return `Day ${dayOf(t)} ${WEEKDAYS[weekdayOf(t)]} ${formatClock(t)}`;
@@ -105,8 +121,8 @@ export function AgentSections({ p }: { p: CitizenProfile }) {
             </div>
           )}
           <div className="rows">
-            {venture && <Row k="Owns" v={<a onClick={() => focusBuilding(venture.buildingId)}>{venture.name} · {venture.status === 'OPEN' ? 'open' : `fit-out ${Math.round((venture.progress / venture.work) * 100)}%`}</a>} />}
-            {helping && <Row k="Helping build" v={<a onClick={() => focusBuilding(helping.buildingId)}>{helping.name}</a>} />}
+            {venture && <Row k="Owns" v={<a onClick={() => goTo(venture.buildingId)}>{venture.name} · {venture.status === 'OPEN' ? 'open' : `fit-out ${Math.round((venture.progress / venture.work) * 100)}%`}</a>} />}
+            {helping && <Row k="Helping build" v={<a onClick={() => goTo(helping.buildingId)}>{helping.name}</a>} />}
             {life?.study && <Row k="Studying" v={`${life.study.field} · ${Math.round((life.study.minutes / life.study.required) * 100)}%`} />}
             {!!life?.graduated.length && <Row k="Graduated" v={life.graduated.join(', ')} />}
             {!!life?.stakes.length && <Row k="Invested" v={formatCredits(life.stakes.reduce((a, s) => a + s.amount, 0))} />}
@@ -166,8 +182,8 @@ function DeedItem({ d, self }: { d: Deed; self: string }) {
       </span>
       {d.reason && <q className="deed__reason">{d.reason}</q>}
       {d.buildingId && (
-        <button className="deed__go" onClick={() => focusBuilding(d.buildingId!)} title="Show on the map">
-          <Icon name="focus" size={12} />
+        <button className="deed__go" onClick={() => goTo(d.buildingId!)} title="Go there">
+          <Icon name="walk" size={12} />
         </button>
       )}
     </li>
