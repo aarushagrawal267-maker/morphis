@@ -70,6 +70,7 @@ function displayNameOf(id: string): string {
 }
 
 export function rise(): void {
+  if (useUI.getState().interior) useUI.getState().exitInterior();
   useGuest.getState().exit();
   useUI.getState().requestCamera({ kind: 'overview' }, 'overview');
 }
