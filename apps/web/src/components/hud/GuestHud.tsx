@@ -354,7 +354,22 @@ function Chatter() {
           return;
         }
         const prof = sim.citizens[i];
-        const full = chatterFor(prof, sim.state!.citizens[i], sim.life.get(prof.id), ctx);
+        const life = sim.life.get(prof.id);
+        // a friend within a few steps? agents greet and talk to them
+        let friend: { name: string; life?: typeof life } | undefined;
+        const px = p.x; // citizenPosition reuses one vector: keep a copy
+        const pz = p.z;
+        if (life?.friends?.length) {
+          for (const fid of life.friends) {
+            const fp = sim.citizensById.get(fid);
+            const q = fp ? citizenPosition(fp.index) : null;
+            if (fp && q && Math.hypot(q.x - px, q.z - pz) < 7) {
+              friend = { name: fp.name, life: sim.life.get(fid) };
+              break;
+            }
+          }
+        }
+        const full = chatterFor(prof, sim.state!.citizens[i], life, { ...ctx, friend });
         const text = mode === 'mini' && full.length > 20 ? `${full.slice(0, 18).trimEnd()}…` : full;
         if (el.textContent !== text) el.textContent = text;
         el.classList.toggle('chatter--agent', !!prof.agent);

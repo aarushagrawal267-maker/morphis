@@ -10,6 +10,8 @@ import { hourOf } from '@morphis/shared';
 const pick = (arr: string[], seed: number) => arr[Math.abs(Math.floor(seed)) % arr.length];
 
 export interface ChatterContext {
+  /** A friend standing close by (agents greet and talk to their friends). */
+  friend?: { name: string; life?: AgentLife };
   time: number;
   weather: WeatherKind;
   events: CityEvent[];
@@ -21,6 +23,19 @@ export function chatterFor(p: CitizenProfile, d: CitizenDynamic, life: AgentLife
   const slot = Math.floor(ctx.time / 600);
   const seed = p.index * 7 + slot;
   const h = hourOf(ctx.time);
+  if (ctx.friend && seed % 4 !== 3) {
+    const f = ctx.friend.name.split(' ')[0];
+    const fl = ctx.friend.life;
+    const theirs = fl?.ventureId ? ctx.ventures.find((v) => v.id === fl.ventureId) : undefined;
+    const helping = fl?.helpingId ? ctx.ventures.find((v) => v.id === fl.helpingId) : undefined;
+    const mine = life?.ventureId ? ctx.ventures.find((v) => v.id === life.ventureId) : undefined;
+    const options = [`Good to see you, ${f}!`, `${f}! Coffee later?`];
+    if (theirs) options.push(theirs.status === 'OPEN' ? `${f}, ${theirs.name} looks busy tonight.` : `${f}, how is ${theirs.name} coming along?`);
+    if (helping) options.push(`Thanks for helping at ${helping.name}, ${f}.`);
+    if (fl?.study) options.push(`${f}, how are the ${fl.study.field} classes?`);
+    if (mine && mine.status === 'FITTING_OUT') options.push(`${f}, could you lend a hand at ${mine.name}?`);
+    return pick(options, seed);
+  }
   if (life?.plan && seed % 3 !== 2) return life.plan;
   if (d.satiety < 0.28) return pick(['Starving. Where is the nearest café?', 'I could eat a whole noodle bar.', 'Lunch. Now.'], seed);
   if (d.energy < 0.2) return pick(['I need about twelve hours of sleep.', 'Running on fumes.', 'Bed. Soon.'], seed);
