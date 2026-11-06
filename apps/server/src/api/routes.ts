@@ -13,6 +13,7 @@ export function registerRoutes(app: FastifyInstance, host: SimulationHost): void
     ai: host.agents.info,
     simTime: host.sim.time,
     population: host.sim.state.citizens.length,
+    visitors: host.presence?.count ?? 0,
   }));
 
   app.get('/api/city', async () => {

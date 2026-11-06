@@ -98,6 +98,21 @@ export interface InitPayload {
   ventures?: Venture[];
 }
 
+/** A visitor walking the town, as other visitors see them (server mode only). */
+export interface GuestPresence {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  moving: boolean;
+  waving: boolean;
+  /** Inside this building (not shown on the street), or null. */
+  inside: string | null;
+  look: { coat: string; trousers: string; hair: string; skin: string; build: number; height: number };
+}
+
 /** Whether this connection may change the town (hosted towns lock control commands behind an admin key). */
 export interface AccessInfo {
   locked: boolean;
@@ -121,6 +136,7 @@ export type AuthorityMessage =
   | { t: 'events'; events: SimEvent[] }
   | { t: 'approvals'; approvals: ApprovalRequest[] }
   | { t: 'access'; access: AccessInfo }
+  | { t: 'guests'; guests: GuestPresence[] }
   | { t: 'reply'; id: number; ok: boolean; data?: unknown; error?: string };
 
 /** Socket.IO event names. */
@@ -131,5 +147,8 @@ export const SOCKET_EVENTS = {
   events: 'sim.events',
   approvals: 'ai.approvals',
   access: 'access',
+  guestPose: 'guest.pose',
+  guestLeave: 'guest.leave',
+  guests: 'guests',
   command: 'sim.command',
 } as const;

@@ -45,6 +45,21 @@ export const commandSchema = z.discriminatedUnion('type', [
 
 export type SimCommand = z.infer<typeof commandSchema>;
 
+const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+
+/** A visitor's position, sent a few times a second while walking (server mode). */
+export const guestPoseSchema = z.object({
+  name: z.string().trim().min(1).max(24),
+  x: z.number().finite().min(-600).max(600),
+  y: z.number().finite().min(-5).max(60),
+  z: z.number().finite().min(-600).max(600),
+  yaw: z.number().finite(),
+  moving: z.boolean(),
+  waving: z.boolean(),
+  inside: z.string().max(40).nullable(),
+  look: z.object({ coat: color, trousers: color, hair: color, skin: color, build: z.number().min(0.8).max(1.3), height: z.number().min(0.8).max(1.2) }),
+});
+
 /** Commands any visitor may send to a hosted town. Everything else needs the host's admin key when one is set. */
 export const PUBLIC_COMMANDS: readonly string[] = ['guest.wave', 'guest.talk', 'city.list'];
 export type SimCommandType = SimCommand['type'];

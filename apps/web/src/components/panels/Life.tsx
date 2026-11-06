@@ -428,6 +428,10 @@ export function LookPanel() {
         </button>
       </div>
       <div className="look-row">
+        <label>Name</label>
+        <input className="name-input" defaultValue={useGuest.getState().name} maxLength={24} onBlur={(e) => useGuest.getState().setName(e.target.value)} data-testid="guest-name" />
+      </div>
+      <div className="look-row">
         <label>Body</label>
         <input type="range" min={0.9} max={1.15} step={0.01} value={look.build} onChange={(e) => g.setLook({ build: Number(e.target.value) })} />
       </div>

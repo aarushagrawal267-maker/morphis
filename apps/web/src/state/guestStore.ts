@@ -62,6 +62,9 @@ export interface RideState {
 
 interface GuestState {
   active: boolean;
+  /** Shown to other visitors in hosted towns. */
+  name: string;
+  setName(n: string): void;
   look: Look;
   chatter: ChatterMode;
   place: Place | null;
@@ -111,8 +114,30 @@ function loadString<T extends string>(key: string, allowed: readonly T[], fallba
 
 const pick = <T,>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)];
 
+function defaultName(): string {
+  try {
+    const n = localStorage.getItem('morphis.name');
+    if (n) return n;
+    const fresh = `Visitor ${Math.floor(1000 + Math.random() * 9000)}`;
+    localStorage.setItem('morphis.name', fresh);
+    return fresh;
+  } catch {
+    return `Visitor ${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+}
+
 export const useGuest = create<GuestState>((set, get) => ({
   active: false,
+  name: defaultName(),
+  setName: (n) => {
+    const name = n.trim().slice(0, 24) || get().name;
+    try {
+      localStorage.setItem('morphis.name', name);
+    } catch {
+      /* ignore */
+    }
+    set({ name });
+  },
   look: load('morphis.look', DEFAULT_LOOK),
   chatter: loadString('morphis.chatter', ['off', 'mini', 'full'] as const, 'mini'),
   place: null,
