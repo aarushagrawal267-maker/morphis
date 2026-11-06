@@ -47,6 +47,8 @@ export function chatterFor(p: CitizenProfile, d: CitizenDynamic, life: AgentLife
   if (ctx.weather === 'storm') return pick(['This storm is no joke.', 'Stay off the skyways tonight.', 'Did you see that lightning?'], seed);
   if (ctx.weather === 'rain') return pick(['Should have brought an umbrella.', 'Rain makes the neon look better.', 'Wet streets again.'], seed);
   if (ctx.weather === 'fog') return pick(["Can't even see the towers today.", 'This fog is thick.', 'Feels like walking through a cloud.'], seed);
+  if (ctx.weather === 'clear' && h >= 18 && h < 20 && seed % 2 === 0) return pick(['Look at that sunset over the cloud sea.', 'Golden hour on the island. Best time of day.', 'The sky lifts glow at dusk.'], seed);
+  if (ctx.weather === 'clear' && h >= 6 && h < 8 && seed % 2 === 0) return pick(['Fresh morning air up here.', 'First light over the clouds. Never gets old.', 'Early start, quiet streets.'], seed);
   const live = ctx.events.find((e) => e.status === 'LIVE');
   if (live && seed % 4 === 0) return pick([`Are you going to ${live.name}?`, `${live.name} is on right now.`, `Heard ${live.name} is packed.`], seed);
   const open = ctx.ventures.filter((v) => v.status === 'OPEN');
