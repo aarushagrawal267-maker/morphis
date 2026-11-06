@@ -150,9 +150,20 @@ async function idb<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
   });
 }
 
+/** Set by the UI: called when a daily goal is completed. */
+let onGoalDone: (g: Goal) => void = () => undefined;
+export function setGoalListener(fn: (g: Goal) => void): void {
+  onGoalDone = fn;
+}
+
 export const useJournal = create<JournalState>((set, get) => {
   const bump = (kind: GoalKind, n = 1, place?: string) => {
     const goals = get().goals.map((g) => (g.kind === kind && (!place || g.place === place) ? { ...g, progress: Math.min(g.target, g.progress + n) } : g));
+    // celebrate goals that were just completed
+    goals.forEach((g, i) => {
+      const before = get().goals[i];
+      if (before && before.progress < before.target && g.progress >= g.target) onGoalDone(g);
+    });
     return goals;
   };
   const commit = (patch: Partial<JournalData>) => {

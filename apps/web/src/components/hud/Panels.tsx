@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { SaveSummary, WeatherKind } from '@morphis/shared';
 import { SIM_SPEEDS, dayOf, daylight, formatClock, formatCredits, formatSimDateTime } from '@morphis/shared';
 import { run } from '../../sim/commands';
+import { sound } from '../../audio/engine';
 import { simClient } from '../../sim/client';
 import { perf } from '../../scene/perf';
 import { useSim } from '../../state/simStore';
@@ -83,6 +84,36 @@ export function ClockPanel() {
 }
 
 /** Hosted towns: the host unlocks control commands with the admin key (kept in this browser). */
+function SoundSettingsBlock() {
+  const [s, setS] = useState(sound.settings);
+  const update = (patch: Partial<typeof s>) => {
+    const next = { ...s, ...patch };
+    setS(next);
+    sound.setSettings(next);
+    if (next.enabled) sound.unlock();
+  };
+  const slider = (label: string, key: 'music' | 'ambience' | 'effects') => (
+    <>
+      <label className="lbl">
+        {label}: {Math.round(s[key] * 100)}%
+      </label>
+      <input type="range" min={0} max={1} step={0.05} value={s[key]} onChange={(e) => update({ [key]: Number(e.target.value) })} data-testid={`vol-${key}`} />
+    </>
+  );
+  return (
+    <>
+      <h4>Sound</h4>
+      <label className="toggle" data-testid="set-sound">
+        <input type="checkbox" checked={s.enabled} onChange={(e) => update({ enabled: e.target.checked })} />
+        <span>Music and sound (made live in your browser)</span>
+      </label>
+      {slider('Music', 'music')}
+      {slider('Ambience', 'ambience')}
+      {slider('Effects', 'effects')}
+    </>
+  );
+}
+
 function AdminKey() {
   const mode = useSim((s) => s.mode);
   const access = useSim((s) => s.access);
@@ -138,6 +169,7 @@ export function SettingsPanel() {
     <section className="side-panel glass" data-testid="settings-panel">
       <PanelHeader title="SETTINGS" />
       <AdminKey />
+      <SoundSettingsBlock />
       <h4>Graphics</h4>
       <Toggle label="Bloom (neon glow)" on={q.bloom} set={(v) => ui.setQuality({ bloom: v })} id="set-bloom" />
       <Toggle label="Shadows" on={q.shadows} set={(v) => ui.setQuality({ shadows: v })} id="set-shadows" />

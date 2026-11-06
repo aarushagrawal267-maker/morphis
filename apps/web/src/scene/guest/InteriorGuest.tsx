@@ -157,6 +157,7 @@ export function InteriorGuest({ buildingId }: { buildingId: string }) {
       p.yaw = Math.atan2(mx, mz);
       moving = 1;
     }
+    guestPose.speed = moving;
     const grp = group.current;
     const m = mesh.current;
     if (grp && m) {
