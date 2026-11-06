@@ -36,6 +36,7 @@ import { CityEventSystem } from './systems/cityEvents';
 import { EconomySystem, createBusinesses } from './systems/economy';
 import { LifeSystem } from './systems/life';
 import { RailSystem } from './systems/rail';
+import { talk } from './systems/talk';
 import { buildSchedule, generatePopulation } from './systems/population';
 import { templatePlan, validatePlan } from './systems/planner';
 import { TrafficSystem } from './systems/traffic';
@@ -332,6 +333,7 @@ export class CitySimulation {
         this.weather.hourly();
         this.economy.hourly();
         this.workforce.hourly();
+        this.life.hourly();
         this.bus.emit('city.time.updated', time, { time, day: dayOf(time), hour });
       }
     }
@@ -376,6 +378,10 @@ export class CitySimulation {
       }
       case 'jarvis.command':
         return this.jarvisCommand(cmd.text, null, cmd.urgent ?? false);
+      case 'guest.talk': {
+        const r = talk(this, cmd.citizenId, cmd.topic);
+        return r ? { ok: true, data: { reply: r.reply, by: r.by } } : { ok: false, error: 'unknown citizen' };
+      }
       case 'guest.wave':
         return { ok: true, data: { waved: this.citizens.waveAt(cmd.x, cmd.z, cmd.citizens, cmd.buildingId) } };
       default:

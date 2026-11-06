@@ -232,6 +232,48 @@ describe('AI life decisions (mock provider)', () => {
   });
 });
 
+describe('AI conversations (mock provider)', () => {
+  let mock: HttpServer;
+  let base = '';
+  const prompts: string[] = [];
+  beforeAll(async () => {
+    mock = createServer((req, res) => {
+      let body = '';
+      req.on('data', (c) => (body += c));
+      req.on('end', () => {
+        const json = JSON.parse(body) as { messages: { role: string; content: string }[] };
+        const user = json.messages.find((m) => m.role === 'user')?.content ?? '';
+        prompts.push(user);
+        const content = user.includes('single word: ready') ? 'ready' : '<think>who am I</think>"Just heading home, it has been a long day."';
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ choices: [{ message: { content } }], usage: { prompt_tokens: 10, completion_tokens: 20 } }));
+      });
+    });
+    await new Promise<void>((r) => mock.listen(0, '127.0.0.1', r));
+    base = `http://127.0.0.1:${(mock.address() as { port: number }).port}/v1`;
+  });
+  afterAll(() => mock.close());
+
+  it('answers in the citizen\'s voice from simulation facts, and falls back to the simulation without a model', async () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), 'morphis-talk-'));
+    const ctx = await buildServer(loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '120', AI_PROVIDER: 'openai-compatible', AI_BASE_URL: base, AI_MODEL: 'mock-model', AI_REQUESTS_PER_MINUTE: '6000' }));
+    const id = ctx.host.sim.life.agents()[0].profile.id;
+    const r = await ctx.host.command({ type: 'guest.talk', citizenId: id, topic: 'chat', text: 'How are you?' });
+    expect(r.ok).toBe(true);
+    expect(r.data).toEqual({ reply: 'Just heading home, it has been a long day.', by: 'ai' });
+    const last = prompts[prompts.length - 1];
+    expect(last).toContain('"doing"');
+    expect(last).toContain('The visitor says: "How are you?"');
+    await ctx.app.close();
+    const plain = await buildServer(loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '120', AI_PROVIDER: 'none' }));
+    const r2 = await plain.host.command({ type: 'guest.talk', citizenId: id, topic: 'upto' });
+    expect(r2.ok).toBe(true);
+    expect((r2.data as { by: string }).by).toBe('sim');
+    expect((r2.data as { reply: string }).reply.length).toBeGreaterThan(5);
+    await plain.app.close();
+  });
+});
+
 describe('agent tools: approvals and network safety', () => {
   it('pauses an approval-gated tool until the commander decides', async () => {
     const { ToolManager, assertPublicUrl } = await import('../src/ai/tools');

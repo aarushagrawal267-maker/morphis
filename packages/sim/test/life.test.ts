@@ -119,3 +119,21 @@ describe('skyrail and waving', () => {
     expect(sim.bus.drain().some((e) => e.type === 'citizen.waved')).toBe(true);
   });
 });
+
+describe('agent friendships', () => {
+  it('agents who spend time together meet and become friends, saved with the city', () => {
+    const sim = CitySimulation.create({});
+    sim.run(4 * 86400);
+    const deeds = sim.state.deeds!;
+    const met = deeds.filter((d) => d.kind === 'met');
+    const friends = deeds.filter((d) => d.kind === 'friends');
+    expect(met.length).toBeGreaterThan(0);
+    expect(friends.length).toBeGreaterThan(0);
+    const f = friends[0];
+    const other = f.others![0];
+    expect(sim.life.friendsOf(f.citizenId)).toContain(other);
+    expect(sim.life.friendsOf(other)).toContain(f.citizenId);
+    const restored = CitySimulation.fromSave(JSON.parse(JSON.stringify(sim.serialize('f'))));
+    expect(restored.life.friendsOf(f.citizenId)).toContain(other);
+  });
+});

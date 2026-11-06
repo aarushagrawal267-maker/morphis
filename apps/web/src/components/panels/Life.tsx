@@ -111,6 +111,7 @@ export function AgentSections({ p }: { p: CitizenProfile }) {
             {!!life?.stakes.length && <Row k="Invested" v={formatCredits(life.stakes.reduce((a, s) => a + s.amount, 0))} />}
             {!!life?.guestsMet && <Row k="Guests met" v={life.guestsMet} />}
           </div>
+          {!!life?.friends?.length && <Friends ids={life.friends} />}
         </div>
       )}
       {tab === 'deeds' && (
@@ -126,6 +127,25 @@ export function AgentSections({ p }: { p: CitizenProfile }) {
       )}
       {tab === 'today' && <Today p={p} />}
       {tab === 'share' && p.agent && <Share p={p} />}
+    </div>
+  );
+}
+
+function Friends({ ids }: { ids: string[] }) {
+  const citizens = useSim((s) => s.citizensById);
+  return (
+    <div className="friends" data-testid="friends">
+      <label>FRIENDS · {ids.length}</label>
+      <div className="tags">
+        {ids.map((id) => {
+          const f = citizens.get(id);
+          return f ? (
+            <button key={id} className="tag tag--friend" onClick={() => useUI.getState().select({ kind: 'citizen', id })}>
+              {f.name}
+            </button>
+          ) : null;
+        })}
+      </div>
     </div>
   );
 }
@@ -226,7 +246,7 @@ export function AgentsPanel() {
   const [filter, setFilter] = useState<'all' | 'workforce' | 'independent'>('all');
   if (!open) return null;
   const list = agents.filter((a) => (filter === 'all' || (filter === 'workforce') === !!a.agent?.workforce) && (!q || `${a.name} ${a.agent?.calling}`.toLowerCase().includes(q.toLowerCase())));
-  const recent = deeds.filter((d) => !['arrived', 'hired'].includes(d.kind)).slice(-6).reverse();
+  const recent = deeds.filter((d) => !['arrived', 'hired', 'met'].includes(d.kind)).slice(-6).reverse();
   return (
     <section className="side-panel glass agents-panel" data-testid="agents-panel">
       <div className="panel-head">

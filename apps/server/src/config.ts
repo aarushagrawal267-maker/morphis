@@ -27,6 +27,8 @@ const schema = z.object({
   AI_APPROVAL_TIMEOUT_MS: z.coerce.number().int().min(10_000).default(600_000),
   /** Agents' daily life decisions made by the model (per real hour; 0 = always simulated). */
   AI_LIFE_DECISIONS_PER_HOUR: z.coerce.number().int().min(0).max(600).default(20),
+  /** Visitor conversations voiced by the model, per minute (0 = always simulated). */
+  AI_TALK_PER_MINUTE: z.coerce.number().int().min(0).max(120).default(12),
 });
 
 export type ServerConfig = z.infer<typeof schema>;

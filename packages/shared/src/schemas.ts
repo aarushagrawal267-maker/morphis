@@ -34,6 +34,13 @@ export const commandSchema = z.discriminatedUnion('type', [
     /** Waving inside a building: the people in that building can wave back. */
     buildingId: z.string().min(1).max(40).optional(),
   }),
+  z.object({
+    type: z.literal('guest.talk'),
+    citizenId: z.string().min(1).max(40),
+    topic: z.enum(['upto', 'where', 'chat']),
+    /** What the visitor said (free text, chat topic only). */
+    text: z.string().trim().max(240).optional(),
+  }),
 ]);
 
 export type SimCommand = z.infer<typeof commandSchema>;

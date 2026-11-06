@@ -125,6 +125,13 @@ export class SimulationHost {
           this.broadcastPending();
           return reply.ok ? { ok: true, data: { ...(reply.data as object), note } } : { ok: false, error: reply.error };
         }
+        case 'guest.talk': {
+          if (this.agents.talker && this.agents.live) {
+            const r = await this.agents.talker.reply(this.sim, cmd.citizenId, cmd.topic, cmd.text);
+            return r ? { ok: true, data: r } : { ok: false, error: 'unknown citizen' };
+          }
+          return this.sim.command(cmd);
+        }
         case 'guest.wave': {
           const r = this.sim.command(cmd);
           this.broadcastPending();

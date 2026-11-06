@@ -444,3 +444,15 @@ kbd { display: inline-block; min-width: 18px; padding: 1px 5px; border-radius: 4
 .talk__actions { display: flex; flex-wrap: wrap; gap: 5px; }
 .talk__actions button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 8px; font-size: 11.5px; border: 1px solid var(--line-strong); background: rgba(255,255,255,0.03); }
 .talk__actions button:hover { border-color: var(--amber); color: #fde68a; }
+
+.talk__ai { font-style: normal; margin-left: 6px; font-size: 9px; font-weight: 800; padding: 0 5px; border-radius: 4px; background: rgba(232,121,249,0.15); color: var(--magenta); vertical-align: middle; }
+.talk__typing { opacity: 0.6; }
+.talk__say { display: flex; gap: 6px; margin-top: 8px; }
+.talk__say input { flex: 1; min-width: 0; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line); background: rgba(0,0,0,0.25); color: var(--text); font-size: 12px; }
+.talk__say button { padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(251,191,36,0.5); font-size: 11.5px; font-weight: 700; }
+.talk__say button:disabled, .talk__actions button:disabled { opacity: 0.5; }
+
+.friends { margin-top: 10px; }
+.friends label { display: block; font-size: 9px; letter-spacing: 0.16em; color: var(--muted); font-weight: 800; margin-bottom: 5px; }
+.tag--friend { cursor: pointer; background: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.3); color: #c8f7d8; }
+.deed--met, .deed--friends { border-left-color: var(--green); }

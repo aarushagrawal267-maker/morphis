@@ -94,6 +94,7 @@ export class LlmLifeMind implements LifeMind {
       helping ? `Currently helping to build: ${helping.name}.` : '',
       life.study ? `Studying ${life.study.field}: ${Math.round((life.study.minutes / life.study.required) * 100)}% of classes done.` : '',
       life.graduated.length ? `Graduated in: ${life.graduated.join(', ')}.` : '',
+      life.friends?.length ? `Friends: ${life.friends.map((id) => sim.citizenById(id)?.profile.name).filter(Boolean).join(', ')}.` : '',
       life.stakes.length ? `Investments: ${life.stakes.map((s) => `${formatCredits(s.amount)} in ${sim.life.venture(s.ventureId)?.name ?? '?'}`).join('; ')}.` : '',
       deeds.length ? `Recent deeds:\n${deeds.map((x) => `- ${formatSimDateTime(x.time)}: ${x.text}`).join('\n')}` : '',
       '',
