@@ -6,6 +6,7 @@ import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { Icon } from '../ui/icons';
 import { enterBuilding, focusBuilding, focusPoint, followCitizen, followVehicle } from './actions';
+import { AgentSections } from './Life';
 
 export function SelectionPanel() {
   const sel = useUI((s) => s.selection);
@@ -128,13 +129,14 @@ function CitizenPanel({ id }: { id: string }) {
   if (!p) return null;
   return (
     <>
-      <div className="sel-panel__kicker" style={{ color: p.role ? CORE_ROLES[p.role].color : undefined }}>
-        {p.core ? 'CORE WORKFORCE CITIZEN' : 'CITIZEN'}
+      <div className="sel-panel__kicker" style={{ color: p.role ? CORE_ROLES[p.role].color : p.agent ? '#f59e0b' : undefined }}>
+        {p.agent ? `AGENT · ${p.agent.workforce ? 'JARVIS WORKFORCE' : 'INDEPENDENT'} · ${p.agent.calling.toUpperCase()}` : p.core ? 'CORE WORKFORCE CITIZEN' : 'RESIDENT'}
       </div>
       <h2 data-testid="panel-title">{p.name.toUpperCase()}</h2>
       <div className={`badge badge--${(d?.status ?? 'idle').toLowerCase()}`} data-testid="citizen-status">
         {d?.status ?? '—'}
       </div>
+      {p.agent && <AgentSections key={p.id} p={p} />}
       <div className="rows">
         <Row k="Occupation" v={p.occupation} />
         <Row k="Location" v={locationLabel(d, buildings, vehicles)} testid="citizen-location" />
@@ -145,17 +147,18 @@ function CitizenPanel({ id }: { id: string }) {
       <Bar label="Energy" value={d?.energy ?? 0} color="linear-gradient(90deg,#22d3ee,#38bdf8)" />
       <Bar label="Happiness" value={d?.happiness ?? 0} color="linear-gradient(90deg,#a78bfa,#e879f9)" />
       <Bar label="Satiety" value={d?.satiety ?? 0} color="linear-gradient(90deg,#fbbf24,#fb923c)" />
-      <div className="actions">
+      <div className="actions actions--row">
         <button onClick={() => followCitizen(p.id)} data-testid="btn-follow">
-          <Icon name="walk" /> FOLLOW CITIZEN
+          <Icon name="walk" /> FOLLOW
         </button>
         <button onClick={() => useUI.getState().setPanel('profile')} data-testid="btn-profile">
-          <Icon name="user" /> VIEW PROFILE
+          <Icon name="user" /> PROFILE
         </button>
         <button disabled={!task} title={task ? 'Open task' : 'No current task'} onClick={() => useUI.getState().setPanel('task')} data-testid="btn-task">
-          <Icon name="task" /> VIEW TASK
+          <Icon name="task" /> TASK
         </button>
       </div>
+      {!p.agent && <AgentSections key={p.id} p={p} />}
     </>
   );
 }

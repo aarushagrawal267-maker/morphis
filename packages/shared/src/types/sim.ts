@@ -2,6 +2,7 @@
  * Dynamic simulation state as published by the authority (server or local worker).
  */
 import type { BuildingType, Vec2 } from './world';
+import type { AgentPersona } from './life';
 
 export type CitizenStatus =
   | 'SLEEPING'
@@ -26,7 +27,9 @@ export type ActivityKind =
   | 'leisure'
   | 'park'
   | 'event'
-  | 'meeting';
+  | 'meeting'
+  /** Helping fit out an agent's new venture. */
+  | 'build';
 
 export interface ScheduleBlock {
   /** Minute of day the block starts. */
@@ -95,15 +98,19 @@ export interface CitizenProfile {
   bio: string;
   /** Present only once a real AI agent is bound to this citizen. */
   agentId?: string;
+  /** One of the 50 agents (25 JARVIS workforce + 25 independent agents). */
+  agent?: AgentPersona;
 }
 
-export type TravelMode = 'walk' | 'car' | 'taxi' | 'bus';
+export type TravelMode = 'walk' | 'car' | 'taxi' | 'bus' | 'rail';
 
 export type CitizenLocation =
   | { kind: 'building'; id: string }
   | { kind: 'street' }
   | { kind: 'vehicle'; id: string }
-  | { kind: 'stop'; id: string };
+  | { kind: 'stop'; id: string }
+  /** On the skyrail: waiting at a station (station id) or riding (train id). */
+  | { kind: 'rail'; id: string };
 
 export interface CitizenDynamic {
   status: CitizenStatus;

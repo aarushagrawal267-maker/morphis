@@ -7,6 +7,8 @@ import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { Icon, Logo } from '../ui/icons';
 import { focusBuilding } from '../panels/actions';
+import { useGuest } from '../../state/guestStore';
+import { rise, startWalk } from './GuestHud';
 
 export function TopHeader() {
   const pins = useUI((s) => s.pins);
@@ -15,6 +17,8 @@ export function TopHeader() {
   const mode = useSim((s) => s.mode);
   const connection = useSim((s) => s.connection);
   const ai = useSim((s) => s.ai);
+  const walking = useGuest((s) => s.active);
+  const agents = useSim((s) => s.agents.length);
   const ui = useUI.getState();
   return (
     <header className="topbar glass" data-testid="top-header">
@@ -26,6 +30,12 @@ export function TopHeader() {
         </div>
       </div>
       <div className="topbar__controls">
+        <button className={`chip walk ${walking ? 'on' : ''}`} onClick={() => (walking ? rise() : startWalk())} data-testid="btn-walk" title={walking ? 'Rise back to the overview' : 'Walk the streets as a guest'}>
+          <Icon name={walking ? 'rise' : 'walk'} /> {walking ? 'RISE' : 'WALK IN'}
+        </button>
+        <button className={`chip ${panel === 'agents' ? 'on' : ''}`} onClick={() => ui.togglePanel('agents')} data-testid="btn-agents">
+          <Icon name="user" /> AGENTS <span className="chip__state">{agents}</span>
+        </button>
         <button className={`chip ${pins ? 'on' : ''}`} onClick={() => ui.setPins(!pins)} data-testid="toggle-pins">
           <Icon name="pin" /> DISTRICT PINS <span className="chip__state">{pins ? 'ON' : 'OFF'}</span>
         </button>

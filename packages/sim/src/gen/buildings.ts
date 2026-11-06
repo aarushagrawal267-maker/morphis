@@ -716,8 +716,13 @@ export function capacityFor(type: BuildingType, w: number, d: number, floors: nu
 }
 
 export function interiorFor(type: BuildingType, important: boolean): InteriorKind | null {
+  void important;
+  // every door opens: dedicated layouts for HQ / labs / university / offices / homes,
+  // shared layouts for cafés, shops and public halls
+  if (type === 'park' || type === 'plaza') return null;
   const k = BUILDING_TYPES[type].interior;
-  if (!k) return null;
-  // every HQ/lab/university/landmark office is enterable; generic apartments/offices too
-  return important || k === 'apartment' || k === 'office' ? k : null;
+  if (k) return k;
+  if (type === 'cafe' || type === 'restaurant') return 'cafe';
+  if (type === 'shop') return 'shop';
+  return 'hall';
 }

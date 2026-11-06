@@ -13,7 +13,13 @@
  *  └── Selection, debug, effects
  */
 import { Suspense } from 'react';
+import { useGuest } from '../state/guestStore';
 import { useUI } from '../state/uiStore';
+import { usePostcard } from './guest/actions';
+import { GuestController } from './guest/Guest';
+import { PostcardCapture } from './guest/PostcardCapture';
+import { Skyrail } from './rail/Skyrail';
+import { VentureSites } from './buildings/VentureSites';
 import { Buildings } from './buildings/Buildings';
 import { HQ } from './buildings/HQ';
 import { CameraRig } from './camera/CameraRig';
@@ -34,12 +40,15 @@ import { Vehicles } from './vehicles/Vehicles';
 
 export function CityScene() {
   const interior = useUI((s) => s.interior);
+  const walking = useGuest((s) => s.active);
+  const postcard = usePostcard((s) => s.pending);
   return (
     <>
       <Suspense fallback={null}>
         <EnvironmentController />
       </Suspense>
-      <CameraRig />
+      {walking && !interior ? <GuestController /> : <CameraRig />}
+      {postcard && <PostcardCapture />}
       <CameraBridgeSync />
       <PerfProbe />
       {interior ? (
@@ -54,6 +63,8 @@ export function CityScene() {
           <Signs />
           <Props />
           <Skyline />
+          <Skyrail />
+          <VentureSites />
           <Citizens />
           <Vehicles />
           <DistrictPins />

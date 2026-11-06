@@ -5,6 +5,9 @@
 import { create } from 'zustand';
 import type {
   ActivityEntry,
+  AgentLife,
+  Deed,
+  Venture,
   ApprovalRequest,
   AiProviderInfo,
   AuthorityMode,
@@ -51,6 +54,13 @@ interface SimData {
   persistence: PersistenceInfo | null;
   ai: AiProviderInfo | null;
   approvals: ApprovalRequest[];
+  /** Logged deeds (newest last). */
+  deeds: Deed[];
+  life: Map<string, AgentLife>;
+  ventures: Venture[];
+  /** Agents (persona present), in profile order. */
+  agents: CitizenProfile[];
+  agentsBySlug: Map<string, CitizenProfile>;
   eventCount: number;
   /** Bumped when profiles change (hiring etc.). */
   revision: number;
@@ -84,6 +94,11 @@ export const useSim = create<SimData>((set, get) => ({
   persistence: null,
   ai: null,
   approvals: [],
+  deeds: [],
+  life: new Map(),
+  ventures: [],
+  agents: [],
+  agentsBySlug: new Map(),
   eventCount: 0,
   revision: 0,
 
@@ -114,6 +129,11 @@ export const useSim = create<SimData>((set, get) => ({
       persistence: p.persistence,
       ai: p.ai,
       approvals: p.approvals ?? [],
+      deeds: p.deeds ?? [],
+      life: new Map((p.life ?? []).map((l) => [l.citizenId, l])),
+      ventures: p.ventures ?? [],
+      agents: p.citizens.filter((c) => c.agent),
+      agentsBySlug: new Map(p.citizens.filter((c) => c.agent).map((c) => [c.agent!.slug, c])),
       revision: get().revision + 1,
     });
   },
@@ -125,6 +145,8 @@ export const useSim = create<SimData>((set, get) => ({
       patch.businessByBuilding = new Map(s.businesses.map((b) => [b.buildingId, b]));
     }
     if (s.buildings) patch.buildingDyn = s.buildings;
+    if (s.life) patch.life = new Map(s.life.map((l) => [l.citizenId, l]));
+    if (s.ventures) patch.ventures = s.ventures;
     set(patch);
   },
 
@@ -138,6 +160,9 @@ export const useSim = create<SimData>((set, get) => ({
     let commands = st.commands;
     let buildingDyn = st.buildingDyn;
     let vehicles = st.vehicles;
+    let deeds = st.deeds;
+    let ventures = st.ventures;
+    let life = st.life;
     let changed = false;
     for (const e of events) {
       switch (e.type) {
@@ -182,9 +207,28 @@ export const useSim = create<SimData>((set, get) => ({
           break;
         case 'vehicle.moved':
           break;
+        case 'citizen.deed':
+          deeds = [...deeds.slice(-799), e.payload.deed];
+          changed = true;
+          break;
+        case 'venture.updated': {
+          const v = e.payload.venture;
+          ventures = [...ventures.filter((x) => x.id !== v.id), v];
+          changed = true;
+          break;
+        }
+        case 'agent.plan': {
+          const cur = life.get(e.payload.citizenId);
+          if (cur) {
+            life = new Map(life);
+            life.set(e.payload.citizenId, { ...cur, plan: e.payload.plan, planBy: e.payload.by });
+            changed = true;
+          }
+          break;
+        }
       }
     }
     if (vehicles.length !== st.vehicles.length) vehicles = st.vehicles;
-    set({ eventCount: st.eventCount + events.length, ...(changed ? { news, activity, projects, tasks, cityEvents, commands, buildingDyn } : {}) });
+    set({ eventCount: st.eventCount + events.length, ...(changed ? { news, activity, projects, tasks, cityEvents, commands, buildingDyn, deeds, ventures, life } : {}) });
   },
 }));

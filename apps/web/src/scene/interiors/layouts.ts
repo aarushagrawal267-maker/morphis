@@ -154,6 +154,46 @@ export function layoutFor(kind: InteriorKind, name: string): Layout {
         ],
       };
     }
+    case 'cafe': {
+      const tables: Furniture[] = [];
+      const seats: Slot[] = [];
+      for (const [x, z] of [[-6, -1], [-2, -1], [2, -1], [-6, 3], [-2, 3], [2, 3]] as const) {
+        tables.push({ kind: 'table', x, z });
+        seats.push({ x: x - 0.9, z, r: Math.PI / 2, pose: 'sit' }, { x: x + 0.9, z, r: -Math.PI / 2, pose: 'sit' });
+      }
+      return {
+        title: name,
+        entrance: { x: 0, z: 9 },
+        rooms: [
+          { name: 'Dining Room', purpose: 'Tables by the window', x: -2, z: 1, w: 13, d: 9, floor: '#2a211c', light: '#fbbf24', hosts: ['eat', 'leisure', 'event'], furniture: [...tables, { kind: 'plant', x: -8, z: 5 }, { kind: 'plant', x: 4, z: 5 }], slots: seats },
+          { name: 'Counter', purpose: 'Orders and the espresso machine', x: 8, z: 1, w: 6, d: 9, floor: '#231d19', light: '#fb923c', hosts: ['work', 'build', 'shop'], furniture: [{ kind: 'counter', x: 7, z: 0, r: Math.PI / 2 }, { kind: 'shelf', x: 10.2, z: 0, r: -Math.PI / 2 }, { kind: 'screen', x: 10.2, z: 3.5, r: -Math.PI / 2 }], slots: standing([[8.6, -1.5], [8.6, 1.5], [5.6, 3.5]]) },
+          { name: 'Kitchen', purpose: 'Prep and storage', x: 1, z: -6, w: 13, d: 5, floor: '#262626', light: '#fde68a', hosts: ['work', 'build'], furniture: [{ kind: 'counter', x: -2, z: -7.4 }, { kind: 'counter', x: 4, z: -7.4 }, { kind: 'shelf', x: 1, z: -4.6 }], slots: standing([[-2, -6.2], [4, -6.2], [1, -5.6]]) },
+        ],
+      };
+    }
+    case 'shop':
+      return {
+        title: name,
+        entrance: { x: 0, z: 9 },
+        rooms: [
+          { name: 'Shop Floor', purpose: 'Aisles and displays', x: -2, z: 1, w: 14, d: 10, floor: '#1d2230', light: '#67e8f9', hosts: ['shop', 'leisure', 'eat', 'event'], furniture: [...[-7, -3.5, 0, 3.5].flatMap((x) => [{ kind: 'shelf' as const, x, z: -1, r: Math.PI / 2 }, { kind: 'shelf' as const, x, z: 3, r: Math.PI / 2 }]), { kind: 'plant', x: -8, z: 5.5 }], slots: standing([[-5.2, 0], [-1.7, 2], [1.8, 0], [-5.2, 4], [1.8, 4.6]]) },
+          { name: 'Checkout', purpose: 'Tills', x: 8, z: 3, w: 6, d: 6, floor: '#1a1f2a', light: '#a5b4fc', hosts: ['work', 'build'], furniture: [{ kind: 'counter', x: 7.5, z: 3, r: Math.PI / 2 }, { kind: 'screen', x: 10.3, z: 3, r: -Math.PI / 2 }], slots: standing([[8.8, 2], [8.8, 4]]) },
+          { name: 'Stockroom', purpose: 'Deliveries and storage', x: 8, z: -4, w: 6, d: 6, floor: '#181818', light: '#d4d4d8', hosts: ['work', 'build'], furniture: [{ kind: 'rack', x: 6.5, z: -5.5 }, { kind: 'rack', x: 9.5, z: -5.5 }, { kind: 'shelf', x: 8, z: -2.2 }], slots: standing([[8, -3.8]]) },
+        ],
+      };
+    case 'hall': {
+      const desks = merge(deskRow(-11, -4, 4, 2.3), deskRow(-11, -0.5, 4, 2.3, Math.PI));
+      const meet = meeting(9, -3, 6);
+      return {
+        title: name,
+        entrance: { x: 0, z: 11 },
+        rooms: [
+          { name: 'Hall', purpose: 'Public entrance and waiting area', x: 0, z: 6.5, w: 12, d: 8, floor: '#1c2230', light: '#93c5fd', hosts: ['leisure', 'event', 'eat', 'shop', 'park'], furniture: [{ kind: 'reception', x: 0, z: 5 }, { kind: 'bench', x: -4, z: 8.5 }, { kind: 'bench', x: 4, z: 8.5 }, { kind: 'plant', x: -5.5, z: 3.5 }, { kind: 'plant', x: 5.5, z: 3.5 }], slots: standing([[-4, 9.6], [4, 9.6], [-2, 7], [2, 7]]) },
+          { name: 'Work Floor', purpose: 'Staff desks and stations', x: -7.5, z: -2, w: 13, d: 8, floor: '#171c27', light: '#a78bfa', hosts: ['work', 'study', 'build'], furniture: [...desks.furniture, { kind: 'screen', x: -7.5, z: -5.6 }], slots: desks.slots },
+          { name: 'Briefing Room', purpose: 'Meetings', x: 9, z: -3, w: 10, d: 7, floor: '#1d1a2c', light: '#e879f9', hosts: ['meeting', 'work'], furniture: [...meet.furniture, { kind: 'board', x: 9, z: -6.2 }], slots: meet.slots },
+        ],
+      };
+    }
     case 'apartment':
     default:
       return {

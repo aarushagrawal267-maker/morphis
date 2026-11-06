@@ -5,7 +5,7 @@
  *
  * Citizens never teleport: every change of building happens through a trip.
  */
-import type { ActivityKind, BuildingDef, CitizenStatus, TravelMode } from '@morphis/shared';
+import type { ActivityKind, BuildingDef, CitizenStatus, RailStation, TravelMode } from '@morphis/shared';
 import {
   BUILDING_TYPES,
   MOTION_SECONDS_PER_TICK,
@@ -33,6 +33,7 @@ const STATUS_FOR: Record<ActivityKind, CitizenStatus> = {
   park: 'RESTING',
   event: 'SOCIALIZING',
   meeting: 'WORKING',
+  build: 'WORKING',
 };
 
 /** How long (sim seconds) an errand lasts before the citizen re-plans. */
@@ -42,6 +43,7 @@ const DURATION: Partial<Record<ActivityKind, number>> = {
   leisure: 100 * 60,
   park: 70 * 60,
   event: 120 * 60,
+  build: 110 * 60,
 };
 
 const PURPOSE: Record<ActivityKind, string> = {
@@ -55,6 +57,7 @@ const PURPOSE: Record<ActivityKind, string> = {
   park: 'for a walk in the park',
   event: 'for an event',
   meeting: 'for a meeting',
+  build: 'to help build',
 };
 
 export class CitizenSystem {
@@ -179,6 +182,9 @@ export class CitizenSystem {
     else if (d.satiety < 0.22 && activity !== 'sleep' && activity !== 'eat' && h > 6.5 && h < 23) activity = 'eat';
     if ((activity === 'work' || activity === 'study') && !c.profile.workplaceId) activity = h < 18 ? 'park' : 'home';
 
+    // agents: fit-out work on a venture, evening classes
+    activity = sim.life.override(c, activity);
+
     // urgent JARVIS work calls the assignee in now (overtime), unless they are exhausted
     const urgent = sim.workforce.urgentTaskFor(c);
     if (urgent && d.energy > 0.15 && activity !== 'eat') activity = urgent.buildingId === c.profile.workplaceId ? 'work' : 'meeting';
@@ -208,6 +214,8 @@ export class CitizenSystem {
     const p = c.profile;
     const hour = hourOf(sim.time);
     const here = c.insideId ? sim.building(c.insideId) : sim.building(p.homeId);
+    const special = sim.life.target(c, activity);
+    if (special !== undefined) return special;
     const near = (types: string[], maxD = 90): BuildingDef | null => {
       const cands = sim.buildingsOfType(types).filter((b) => {
         if (b.construction) return false;
@@ -241,6 +249,8 @@ export class CitizenSystem {
         return near(['shop'], 90) ?? near(['shop'], 220);
       case 'park':
         return near(['park'], 140) ?? near(['park'], 300);
+      case 'build':
+        return null;
       case 'leisure':
       case 'event': {
         const ev = sim.cityEvents.attractiveEvent(here);
@@ -273,13 +283,21 @@ export class CitizenSystem {
 
   // ---------------------------------------------------------------- trips
 
-  private chooseMode(c: CitizenRT, from: BuildingDef, to: BuildingDef): { mode: TravelMode; bus?: { line: string; a: string; b: string } } {
+  private chooseMode(
+    c: CitizenRT,
+    from: BuildingDef,
+    to: BuildingDef,
+  ): { mode: TravelMode; bus?: { line: string; a: string; b: string }; rail?: { a: string; b: string } } {
     const sim = this.sim;
     const dist = Math.hypot(from.position.x - to.position.x, from.position.z - to.position.z);
     const wet = sim.state.weather.kind === 'rain' || sim.state.weather.kind === 'storm';
     if (c.carId && dist > 50) {
       const car = sim.traffic.byId(c.carId);
       if (car && car.dyn.status === 'PARKED' && car.dyn.parkedAt === from.id) return { mode: 'car' };
+    }
+    if (dist > 80) {
+      const rail = sim.rail.option(from, to);
+      if (rail && sim.rng.chance(wet ? 0.75 : 0.6)) return { mode: 'rail', rail };
     }
     if (dist > 75) {
       const bus = sim.transitOption(from, to);
@@ -329,6 +347,19 @@ export class CitizenSystem {
       c.trip.mode = 'walk';
       c.dyn.travelMode = 'walk';
     }
+    if (choice.mode === 'rail' && choice.rail) {
+      const st = sim.rail.station(choice.rail.a)!;
+      c.trip.mode = 'rail';
+      c.trip.stage = { kind: 'walk', toNode: st.pedNode, then: 'station' };
+      c.trip.queue = [{ kind: 'railWait', stationId: choice.rail.a, alightId: choice.rail.b, since: 0 }];
+      this.leaveBuilding(c);
+      if (this.beginWalk(c, from.entranceNode, st.pedNode)) return;
+      this.enterBuilding(c, from.id);
+      c.trip.mode = 'walk';
+      c.dyn.travelMode = 'walk';
+      c.trip.queue = [];
+      c.trip.stage = { kind: 'walk', toNode: dest.entranceNode, then: 'arrive' };
+    }
     if (choice.mode === 'bus' && choice.bus) {
       const stopA = sim.world.busStops.find((s) => s.id === choice.bus!.a)!;
       c.trip.mode = 'bus';
@@ -367,6 +398,10 @@ export class CitizenSystem {
 
   private stepWalker(c: CitizenRT): void {
     const w = c.walker!;
+    if (w.pausedUntil !== undefined) {
+      if (w.pausedUntil > this.sim.time) return;
+      delete w.pausedUntil;
+    }
     const traffic = this.sim.traffic;
     // crosswalk handling
     let next = w.s + w.speed * DT;
@@ -413,6 +448,15 @@ export class CitizenSystem {
       c.dyn.location = { kind: 'stop', id: wait.stopId };
       this.setStatus(c, 'IDLE');
       this.schedule(c, this.sim.time + 90 * 60); // give up waiting after 90 min
+      return;
+    }
+    if (trip.stage.kind === 'walk' && trip.stage.then === 'station') {
+      const wait = trip.queue.shift() as Extract<TripStage, { kind: 'railWait' }>;
+      wait.since = this.sim.time;
+      trip.stage = wait;
+      c.dyn.location = { kind: 'rail', id: wait.stationId };
+      this.setStatus(c, 'IDLE');
+      this.schedule(c, this.sim.time + 60 * 60);
       return;
     }
     this.arrive(c, trip.destId);
@@ -509,6 +553,55 @@ export class CitizenSystem {
     return moved;
   }
 
+  /** A skyrail train stopped at the citizen's platform. */
+  boardRail(c: CitizenRT, train: number, alightId: string): void {
+    const sim = this.sim;
+    c.trip!.stage = { kind: 'railRide', train, alightId };
+    c.trip!.cost += 3;
+    c.dyn.location = { kind: 'rail', id: `train_${train}` };
+    this.setStatus(c, 'TRAVELING');
+    sim.state.economy.summary.transitRidersToday++;
+  }
+
+  /** The citizen got off at their station: walk the rest of the way. */
+  alightRail(c: CitizenRT, st: RailStation): void {
+    const sim = this.sim;
+    const trip = c.trip!;
+    trip.stage = { kind: 'walk', toNode: sim.building(trip.destId).entranceNode, then: 'arrive' };
+    if (!this.beginWalk(c, st.pedNode, sim.building(trip.destId).entranceNode)) this.arrive(c, trip.destId);
+  }
+
+  /**
+   * A guest at (x, z) waved. Each listed citizen who is really outdoors and
+   * close by stops (walkers pause), turns and waves back.
+   */
+  waveAt(x: number, z: number, ids: string[]): string[] {
+    const sim = this.sim;
+    const waved: string[] = [];
+    const pos = { x: 0, z: 0 };
+    for (const id of ids) {
+      if (waved.length >= 12) break;
+      const c = this.byId.get(id);
+      if (!c) continue;
+      let ok = false;
+      if (c.walker) {
+        routePoint(c.walker.route.points, c.walker.route.cum, c.walker.s, pos);
+        ok = Math.hypot(pos.x - x, pos.z - z) < 18;
+        if (ok && c.walker.onCrosswalk < 0) c.walker.pausedUntil = sim.time + 160;
+      } else if (c.insideId) {
+        const b = sim.building(c.insideId);
+        ok = (b.type === 'park' || b.type === 'plaza') && Math.hypot(b.position.x - x, b.position.z - z) < Math.max(b.width, b.depth) / 2 + 18;
+      } else if (c.dyn.location.kind === 'stop' || (c.dyn.location.kind === 'rail' && c.dyn.location.id.startsWith('rail_st'))) {
+        ok = true;
+      }
+      if (!ok) continue;
+      waved.push(id);
+      sim.life.metGuest(id);
+      sim.bus.emit('citizen.waved', sim.time, { citizenId: id, x, z });
+    }
+    return waved;
+  }
+
   /** Scheduled re-check for citizens stuck waiting (taxi never came, bus too late). */
   handleTimeouts(): void {
     const sim = this.sim;
@@ -526,6 +619,13 @@ export class CitizenSystem {
           this.enterBuilding(c, here.id);
           c.trip = null;
         }
+      } else if (t.stage.kind === 'railWait' && sim.time - t.stage.since > 60 * 60) {
+        const st = sim.rail.station(t.stage.stationId);
+        if (!st) continue;
+        t.mode = 'walk';
+        t.stage = { kind: 'walk', toNode: sim.building(t.destId).entranceNode, then: 'arrive' };
+        t.queue = [];
+        if (!this.beginWalk(c, st.pedNode, sim.building(t.destId).entranceNode)) this.arrive(c, t.destId);
       } else if (t.stage.kind === 'busWait' && sim.time - t.stage.since > 90 * 60) {
         const stop = sim.world.busStops.find((s) => s.id === (t.stage as { stopId: string }).stopId)!;
         t.mode = 'walk';
@@ -545,6 +645,15 @@ export class CitizenSystem {
   isCategoryOpen(b: BuildingDef): boolean {
     return isOpenAt(b.type, hourOf(this.sim.time)) && BUILDING_TYPES[b.type].category !== 'residential';
   }
+}
+
+function routePoint(points: number[], cum: number[], s: number, out: { x: number; z: number }): void {
+  let i = 0;
+  while (i < cum.length - 2 && cum[i + 1] < s) i++;
+  const seg = cum[i + 1] - cum[i] || 1;
+  const t = Math.max(0, Math.min(1, (s - cum[i]) / seg));
+  out.x = points[i * 2] + (points[i * 2 + 2] - points[i * 2]) * t;
+  out.z = points[i * 2 + 1] + (points[i * 2 + 3] - points[i * 2 + 1]) * t;
 }
 
 function clamp01(v: number): number {

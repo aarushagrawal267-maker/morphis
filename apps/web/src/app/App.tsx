@@ -7,7 +7,20 @@ import { simClient } from '../sim/client';
 import { chooseTransport } from '../sim/transport';
 import { useSim } from '../state/simStore';
 import { useUI } from '../state/uiStore';
+import { followCitizen } from '../components/panels/actions';
+import { useGuest } from '../state/guestStore';
 import { TestHooks } from './TestHooks';
+
+/** "#citizen=<slug or id>" opens that citizen's card and follows them. */
+function openHashLink(): void {
+  const m = /citizen=([\w-]+)/.exec(location.hash);
+  if (!m) return;
+  const sim = useSim.getState();
+  const p = sim.agentsBySlug.get(m[1]) ?? sim.citizensById.get(m[1]);
+  if (!p) return;
+  useGuest.getState().dismissWelcome();
+  followCitizen(p.id);
+}
 
 export function App() {
   const ready = useSim((s) => s.ready);
@@ -24,6 +37,16 @@ export function App() {
       simClient.transport?.close();
     };
   }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    const t = setTimeout(openHashLink, 400);
+    window.addEventListener('hashchange', openHashLink);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('hashchange', openHashLink);
+    };
+  }, [ready]);
 
   return (
     <div className="app">

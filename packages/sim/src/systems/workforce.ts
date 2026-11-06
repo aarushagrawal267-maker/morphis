@@ -462,6 +462,8 @@ export class WorkforceSystem {
     if (c) {
       c.dyn.currentTaskId = null;
       this.activity(c, `Completed "${t.title}" → ${t.artifact}`, 'task', t.buildingId);
+      const proj0 = this.project(t.projectId);
+      sim.life.addDeed(c, 'task', `Finished "${t.title}" for ${proj0?.name ?? 'a JARVIS project'}.`, this.executor.mode === 'live' ? 'ai' : 'sim', { buildingId: t.buildingId });
       if (c.profile.agentId) sim.bus.emit('agent.completed', sim.time, { agentId: c.profile.agentId, citizenId: c.profile.id, taskId });
       if (!c.trip && !c.walker) sim.citizens.schedule(c, sim.time + 60);
     }
@@ -486,6 +488,9 @@ export class WorkforceSystem {
       ...tasks.map((t) => `- **${t.title}** (${CORE_ROLES[t.role].label}): ${t.output ?? 'n/a'}`),
     ].join('\n');
     sim.bus.emit('project.completed', sim.time, { project: p });
+    const team = [...new Set(tasks.map((t) => t.assigneeId).filter((x): x is string => !!x))];
+    const lead = team.length ? sim.citizenById(team[0]) : undefined;
+    if (lead) sim.life.addDeed(lead, 'project', team.length > 1 ? `Delivered "${p.name}" with ${team.length - 1} other agent${team.length === 2 ? '' : 's'}.` : `Delivered "${p.name}".`, live ? 'ai' : 'sim', { buildingId: p.buildingId, others: team.slice(1) });
     sim.cityEvents.news('project', `Project complete: ${p.name}`, `${tasks.length} tasks delivered by the Morphis workforce.`, 'info', p.buildingId);
     const biz = p.companyId ? sim.economy.byId(p.companyId) : undefined;
     if (biz) {

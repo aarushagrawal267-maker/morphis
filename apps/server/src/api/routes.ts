@@ -36,6 +36,33 @@ export function registerRoutes(app: FastifyInstance, host: SimulationHost): void
     return { profile: c.profile, state: c.dyn };
   });
 
+  /** The 50 agents: persona, life (plan, venture, studies) and latest deeds. */
+  app.get('/api/agents', async () =>
+    host.sim.life.agents().map((c) => ({
+      id: c.profile.id,
+      name: c.profile.name,
+      agent: c.profile.agent,
+      status: c.dyn.status,
+      life: host.sim.life.life(c.profile.id) ?? null,
+    })),
+  );
+
+  app.get('/api/agents/:slug', async (req, reply) => {
+    const slug = (req.params as { slug: string }).slug;
+    const c = host.sim.life.agents().find((x) => x.profile.agent?.slug === slug || x.profile.id === slug);
+    if (!c) return reply.code(404).send({ error: 'not found' });
+    const life = host.sim.life.life(c.profile.id) ?? null;
+    return {
+      profile: c.profile,
+      state: c.dyn,
+      life,
+      venture: life?.ventureId ? host.sim.life.venture(life.ventureId) : null,
+      deeds: host.sim.life.deedsOf(c.profile.id, 60),
+    };
+  });
+
+  app.get('/api/ventures', async () => host.sim.life.ventures);
+
   app.get('/api/buildings/:id', async (req, reply) => {
     const id = (req.params as { id: string }).id;
     try {

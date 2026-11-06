@@ -39,6 +39,8 @@ export interface MotionSample {
   vDZ: Float32Array;
   vSpeed: Float32Array;
   signals: number[];
+  /** Skyrail trains: interpolated distance along the loop. */
+  rail: number[];
 }
 
 export class SimClient {
@@ -114,6 +116,7 @@ export class SimClient {
       vDZ: new Float32Array(nv),
       vSpeed: new Float32Array(nv),
       signals: [],
+      rail: [],
     };
     useSim.getState().applyInit(p);
   }
@@ -188,6 +191,15 @@ export class SimClient {
     const t = span > 0 ? Math.min(1, Math.max(0, (rt - f0.at) / span)) : 1;
     s.time = f0.frame.time + (f1.frame.time - f0.frame.time) * t;
     s.signals = f1.frame.signals;
+    const r0 = f0.frame.rail ?? [];
+    const r1 = f1.frame.rail ?? [];
+    const L = this.init?.world.rail?.length ?? 1;
+    s.rail = r1.map((b, i) => {
+      const a = r0[i] ?? b;
+      let d = b - a;
+      if (d < -L / 2) d += L; // wrapped past the loop start
+      return (((a + d * t) % L) + L) % L;
+    });
     const tmp = this.tmp;
 
     s.cVisible.fill(0);
