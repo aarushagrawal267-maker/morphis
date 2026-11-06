@@ -170,7 +170,7 @@ export const DISTRICT_TEMPLATES: DistrictTemplate[] = [
     populationDensity: 0.5,
     buildingDensity: 0.65,
     trafficDensity: 0.5,
-    heightRange: [6, 22],
+    heightRange: [8, 26],
     buildingTypes: ['school', 'library', 'apartment', 'cafe', 'shop', 'office'],
   },
   {
@@ -185,7 +185,7 @@ export const DISTRICT_TEMPLATES: DistrictTemplate[] = [
     populationDensity: 0.3,
     buildingDensity: 0.7,
     trafficDensity: 0.5,
-    heightRange: [8, 30],
+    heightRange: [10, 34],
     buildingTypes: ['research_lab', 'office', 'cafe', 'data_center'],
   },
   {
@@ -200,7 +200,7 @@ export const DISTRICT_TEMPLATES: DistrictTemplate[] = [
     populationDensity: 0.4,
     buildingDensity: 0.85,
     trafficDensity: 0.7,
-    heightRange: [14, 54],
+    heightRange: [16, 62],
     buildingTypes: ['office', 'corporate_tower', 'data_center', 'cafe', 'shop', 'apartment'],
   },
   {
@@ -245,7 +245,7 @@ export const DISTRICT_TEMPLATES: DistrictTemplate[] = [
     populationDensity: 0.4,
     buildingDensity: 0.7,
     trafficDensity: 0.6,
-    heightRange: [10, 36],
+    heightRange: [12, 40],
     buildingTypes: ['office', 'apartment', 'cafe', 'shop', 'research_lab'],
   },
   {
@@ -260,7 +260,7 @@ export const DISTRICT_TEMPLATES: DistrictTemplate[] = [
     populationDensity: 0.6,
     buildingDensity: 0.8,
     trafficDensity: 0.5,
-    heightRange: [6, 24],
+    heightRange: [10, 30],
     buildingTypes: ['office', 'apartment', 'cafe', 'shop', 'restaurant'],
   },
   {
@@ -275,7 +275,7 @@ export const DISTRICT_TEMPLATES: DistrictTemplate[] = [
     populationDensity: 1,
     buildingDensity: 0.85,
     trafficDensity: 0.45,
-    heightRange: [10, 40],
+    heightRange: [14, 46],
     buildingTypes: ['apartment', 'apartment', 'luxury_apartment', 'shop', 'cafe', 'school'],
   },
   {
@@ -290,7 +290,7 @@ export const DISTRICT_TEMPLATES: DistrictTemplate[] = [
     populationDensity: 0.5,
     buildingDensity: 0.85,
     trafficDensity: 0.6,
-    heightRange: [6, 26],
+    heightRange: [8, 30],
     buildingTypes: ['restaurant', 'cafe', 'shop', 'entertainment', 'apartment'],
   },
   {
@@ -305,7 +305,7 @@ export const DISTRICT_TEMPLATES: DistrictTemplate[] = [
     populationDensity: 0.3,
     buildingDensity: 0.6,
     trafficDensity: 0.9,
-    heightRange: [5, 16],
+    heightRange: [6, 20],
     buildingTypes: ['parking', 'warehouse', 'office', 'cafe', 'apartment'],
   },
   {
@@ -320,7 +320,7 @@ export const DISTRICT_TEMPLATES: DistrictTemplate[] = [
     populationDensity: 0.15,
     buildingDensity: 0.7,
     trafficDensity: 0.7,
-    heightRange: [5, 14],
+    heightRange: [6, 16],
     buildingTypes: ['factory', 'warehouse', 'warehouse', 'office'],
   },
   {

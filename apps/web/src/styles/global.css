@@ -1,0 +1,41 @@
+:root {
+  --bg: #05070d;
+  --panel: rgba(9, 13, 24, 0.72);
+  --panel-strong: rgba(8, 11, 20, 0.88);
+  --line: rgba(120, 200, 255, 0.16);
+  --line-strong: rgba(120, 220, 255, 0.35);
+  --text: #e6edf7;
+  --muted: #8b98ad;
+  --cyan: #22d3ee;
+  --purple: #a78bfa;
+  --magenta: #e879f9;
+  --amber: #fbbf24;
+  --green: #4ade80;
+  --red: #f87171;
+  --radius: 12px;
+  --font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); overflow: hidden; }
+button { font-family: inherit; }
+.app { position: fixed; inset: 0; }
+.city-canvas { position: absolute !important; inset: 0; }
+
+.loading { position: absolute; inset: 0; display: grid; place-content: center; gap: 18px; text-align: center; background: radial-gradient(ellipse at center, #0b1530 0%, #05070d 70%); z-index: 50; }
+.loading__logo { font-size: 44px; letter-spacing: 0.45em; font-weight: 800; background: linear-gradient(90deg, var(--cyan), var(--magenta)); -webkit-background-clip: text; background-clip: text; color: transparent; padding-left: 0.45em; }
+.loading__bar { width: 260px; height: 3px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin: 0 auto; }
+.loading__bar span { display: block; height: 100%; width: 40%; background: linear-gradient(90deg, var(--cyan), var(--magenta)); animation: load 1.2s ease-in-out infinite; }
+@keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+.loading__text { color: var(--muted); font-size: 13px; letter-spacing: 0.08em; }
+
+/* district pins */
+.pin-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+.pin-layer .district-pin { position: absolute; left: 0; top: 0; pointer-events: auto; }
+.district-pin { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 7px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--pin) 55%, transparent); background: linear-gradient(135deg, rgba(8,12,22,0.86), rgba(8,12,22,0.66)); box-shadow: 0 0 18px color-mix(in srgb, var(--pin) 30%, transparent), inset 0 0 12px color-mix(in srgb, var(--pin) 12%, transparent); color: var(--text); cursor: pointer; white-space: nowrap; backdrop-filter: blur(6px); transition: box-shadow .15s, border-color .15s; }
+.district-pin:hover, .district-pin.active { box-shadow: 0 0 28px color-mix(in srgb, var(--pin) 65%, transparent); border-color: var(--pin); }
+.district-pin__icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; color: var(--pin); background: color-mix(in srgb, var(--pin) 16%, transparent); }
+.district-pin__text { display: flex; flex-direction: column; text-align: left; line-height: 1.15; }
+.district-pin__text strong { font-size: 11px; letter-spacing: 0.08em; }
+.district-pin__text small { font-size: 10px; color: var(--muted); }
