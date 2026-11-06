@@ -498,7 +498,7 @@ export function Welcome() {
         </div>
         <ul className="welcome__list">
           <li>
-            <b>Walk anywhere.</b> WASD or click, drag to look, or use the stick on a phone.
+            <b>Drop in anywhere.</b> Click any spot on the island to land there, then walk with WASD (Shift to run), click to walk, drag to look, or use the stick on a phone.
           </li>
           <li>
             <b>Wave.</b> People nearby stop, turn and wave back.

@@ -4,7 +4,7 @@ import { useUI } from '../../state/uiStore';
 import { useGuest } from '../../state/guestStore';
 import { InteriorPanel } from '../panels/InteriorPanel';
 import { AgentsPanel, JournalPanel, LookPanel, Welcome } from '../panels/Life';
-import { GuestHud } from './GuestHud';
+import { DropHint, GuestHud } from './GuestHud';
 import { SelectionPanel } from '../panels/SelectionPanel';
 import { JarvisConsole, ProfileModal, ProjectsPanel, TaskModal } from '../panels/Workforce';
 import { AgentStream, BottomBar, KeyFeatures, NewsFeed, Toasts } from './Feeds';
@@ -24,6 +24,7 @@ export function Hud() {
       <TopHeader />
       {!walking && <NavBar />}
       <GuestHud />
+      <DropHint />
       <div className="col-left">
         {!walking && <CityInfo />}
         <JournalPanel />

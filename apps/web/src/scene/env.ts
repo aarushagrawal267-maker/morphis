@@ -32,3 +32,39 @@ export const FACADE_INDEX: Record<string, number> = { glass: 0, grid: 1, ribbon:
 export const GLSL_HASH = /* glsl */ `
 float mHash12(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 `;
+
+/**
+ * Make a material fade out (dithered) where it is very close to the camera,
+ * so trees and posts never block the walking view. Far away it is unchanged.
+ */
+export function fadeNearCamera<T extends THREE.Material>(m: T, near = 2.2, far = 5.5): T {
+  const prev = m.onBeforeCompile;
+  m.onBeforeCompile = (shader, renderer) => {
+    prev?.call(m, shader, renderer);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vFadeWorld;')
+      .replace(
+        '#include <project_vertex>',
+        `#include <project_vertex>
+        vec4 fadeWp = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+          fadeWp = instanceMatrix * fadeWp;
+        #endif
+        vFadeWorld = (modelMatrix * fadeWp).xyz;`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vFadeWorld;')
+      .replace(
+        '#include <clipping_planes_fragment>',
+        `#include <clipping_planes_fragment>
+        float fadeD = distance(vFadeWorld, cameraPosition);
+        if (fadeD < ${far.toFixed(2)}) {
+          float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+          if (fadeD < ${near.toFixed(2)} || dither > (fadeD - ${near.toFixed(2)}) / ${(far - near).toFixed(2)}) discard;
+        }`,
+      );
+  };
+  const key = m.customProgramCacheKey?.bind(m);
+  m.customProgramCacheKey = () => `${key ? key() : ''}-fadeNear`;
+  return m;
+}

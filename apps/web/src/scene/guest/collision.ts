@@ -16,12 +16,31 @@ interface Box {
 
 const CELL = 16;
 
+const cache = new WeakMap<StaticWorld, Colliders>();
+
+/** One collider set per world (shared by the walk controller and drop-in clicks). */
+export function collidersFor(world: StaticWorld): Colliders {
+  let c = cache.get(world);
+  if (!c) {
+    c = new Colliders(world);
+    cache.set(world, c);
+  }
+  return c;
+}
+
 export class Colliders {
   private grid = new Map<string, Box[]>();
   readonly half: number;
+  /** Island edge radius by angle (the walkable ground ends at the railing). */
+  private edge: number[] | null = null;
 
   constructor(world: StaticWorld) {
     this.half = world.size / 2 + 20;
+    if (world.island) {
+      const o = world.island.outline;
+      this.edge = [];
+      for (let i = 0; i < o.length; i += 2) this.edge.push(Math.hypot(o[i], o[i + 1]));
+    }
     for (const b of world.buildings) {
       if (b.type === 'park' || b.type === 'plaza') continue;
       // tiers can overhang the base footprint slightly; use the widest tier extent
@@ -83,6 +102,33 @@ export class Colliders {
         moved = true;
       }
       if (!moved) break;
+    }
+    this.keepOnIsland(p);
+  }
+
+  /** Radius of the walkable ground in the direction of (x, z). */
+  edgeRadius(x: number, z: number): number {
+    if (!this.edge) return Infinity;
+    const n = this.edge.length;
+    const a = ((Math.atan2(z, x) + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2) * n;
+    const i = Math.floor(a) % n;
+    const t = a - Math.floor(a);
+    return this.edge[i] * (1 - t) + this.edge[(i + 1) % n] * t - 2.2; // stay inside the railing
+  }
+
+  onIsland(x: number, z: number): boolean {
+    return Math.hypot(x, z) <= this.edgeRadius(x, z);
+  }
+
+  keepOnIsland(p: { x: number; z: number }): void {
+    if (this.edge) {
+      const r = Math.hypot(p.x, p.z);
+      const max = this.edgeRadius(p.x, p.z);
+      if (r > max && r > 0) {
+        p.x *= max / r;
+        p.z *= max / r;
+      }
+      return;
     }
     p.x = Math.max(-this.half, Math.min(this.half, p.x));
     p.z = Math.max(-this.half, Math.min(this.half, p.z));

@@ -263,3 +263,28 @@ test('the town floats on an island; you can walk into a building and talk to peo
   await expect(page.getByTestId('talk').locator('.talk__line--them')).toHaveCount(3);
   expect(errors).toEqual([]);
 });
+
+test('clicking the island from above drops the visitor in at that spot; they cannot walk off the edge', async ({ page }) => {
+  await open(page, '&hour=10');
+  await expect(page.getByTestId('drop-hint')).toBeVisible();
+  const target = await page.evaluate(() => {
+    const w = (window as any).__morphis.sim.getState().world;
+    const e = w.roads.edges.find((x: any) => x.cls === 'street' && Math.hypot(w.roads.nodes[x.a].x, w.roads.nodes[x.a].z) > 60);
+    const a = w.roads.nodes[e.a];
+    const b = w.roads.nodes[e.b];
+    return { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
+  });
+  await page.waitForTimeout(1500);
+  const scr = await page.evaluate((t) => (window as any).__morphis.project(t.x, 0, t.z), target);
+  await page.mouse.click(scr.x, scr.y);
+  await expect(page.getByTestId('guest-bar')).toBeVisible();
+  const pos = await page.evaluate(() => ({ x: (window as any).__morphis.guestPose.x, z: (window as any).__morphis.guestPose.z }));
+  expect(Math.hypot(pos.x - target.x, pos.z - target.z)).toBeLessThan(3);
+  // put the visitor beyond the railing: the next step brings them back onto the island
+  await page.evaluate(() => { const g = (window as any).__morphis.guestPose; g.x = 0; g.z = -400; });
+  await page.keyboard.down('w');
+  await page.waitForTimeout(600);
+  await page.keyboard.up('w');
+  const r = await page.evaluate(() => { const g = (window as any).__morphis.guestPose; return Math.hypot(g.x, g.z); });
+  expect(r).toBeLessThan(175);
+});
