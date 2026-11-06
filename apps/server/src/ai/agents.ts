@@ -293,7 +293,9 @@ export class LiveTaskExecutor implements TaskExecutor {
             `Tools:\n${toolDocs}`,
             'Put your main deliverable in "final" (it is saved for you as the task file). Use workspace.write only for short supporting notes.',
             'Only use web.fetch for specific, relevant public URLs; the commander may deny it, then continue without it.',
-            'State assumptions explicitly. Never claim to have done things you did not do (you cannot email, buy, deploy or run code).',
+            'Data honesty: use city.data for any Morphis figures. Never invent sources, surveys, studies, citations or measured data. If you estimate, label it clearly as an assumption.',
+            'Morphis money is fictional: express costs in simulated credits (§), never in real currencies.',
+            'Never claim to have done things you did not do (you cannot email, buy, deploy or run code).',
             isReview ? 'You are the reviewer: check the deliverables for gaps and contradictions, then write the final synthesis with clear next steps.' : '',
           ].join('\n'),
         },
@@ -310,6 +312,7 @@ export class LiveTaskExecutor implements TaskExecutor {
         },
       ];
       let final: string | null = null;
+      const written = new Set<string>();
       const maxSteps = ctl.maxSteps;
       for (let step = 0; step < maxSteps && final === null; step++) {
         const res = await ctl.provider!.complete(messages);
@@ -329,6 +332,7 @@ export class LiveTaskExecutor implements TaskExecutor {
           if (action === 'web.fetch') activity(`Requesting approval to read ${parsed.args?.url ?? 'a web page'}`);
           observation = await ctl.tools.invoke(ctx, action, parsed.args ?? {});
           if (action === 'web.fetch') activity(`Reading ${parsed.args?.url}`);
+          if (action === 'workspace.write' && parsed.args?.path) written.add(parsed.args.path.split('/').pop()!);
         } catch (e) {
           observation = `ERROR: ${e instanceof Error ? e.message : String(e)}`;
         }
@@ -344,8 +348,15 @@ export class LiveTaskExecutor implements TaskExecutor {
       }
       sim.workforce.reportProgress(task.id, 0.9);
       const header = `<!-- ${task.title} · ${citizen.name} (${role.label}) · model ${ctl.provider!.model} · ${new Date().toISOString()} -->\n`;
+      // If the agent already wrote its task file during the loop and the hand-in is
+      // just a short summary, keep the full document instead of overwriting it.
+      const fileName = task.artifact?.split('/').pop();
+      if (fileName && written.has(fileName)) {
+        const existing = await ctl.workspace.read(task.artifact!);
+        if (existing && existing.length > final.length) final = existing.replace(/^<!--[^\n]*-->\n/, '');
+      }
       // hand-in goes through the audited workspace tool
-      if (task.artifact) await ctl.tools.invoke(ctx, 'workspace.write', { path: task.artifact.split('/').pop()!, content: header + final });
+      if (fileName) await ctl.tools.invoke(ctx, 'workspace.write', { path: fileName, content: header + final });
       const summary = final.replace(/[#*`>_]/g, '').replace(/\s+/g, ' ').trim().slice(0, 260);
       ctl.memory.add(citizen.id, { time: new Date().toISOString(), project: project.name, task: task.title, summary: summary.slice(0, 160) });
       ctl.usage.tasks++;
