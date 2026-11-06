@@ -1,0 +1,129 @@
+/**
+ * Transports to the simulation authority. Both deliver the same AuthorityMessage
+ * stream and accept the same validated commands.
+ */
+import { io, type Socket } from 'socket.io-client';
+import type { AuthorityMessage, InitPayload, MotionFrame, SimCommand, SimEvent, StateFrame } from '@morphis/shared';
+import { SOCKET_EVENTS } from '@morphis/shared';
+
+export interface Transport {
+  readonly kind: 'local' | 'server';
+  start(onMessage: (m: AuthorityMessage) => void, onStatus: (s: ConnectionStatus) => void): void;
+  send(cmd: SimCommand): Promise<unknown>;
+  close(): void;
+}
+
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+
+export class WorkerTransport implements Transport {
+  readonly kind = 'local' as const;
+  private worker: Worker | null = null;
+  private seq = 1;
+  private pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+
+  constructor(private opts: { seed?: number; population?: number; hour?: number } = {}) {}
+
+  start(onMessage: (m: AuthorityMessage) => void, onStatus: (s: ConnectionStatus) => void): void {
+    onStatus('connecting');
+    this.worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+    this.worker.onmessage = (ev: MessageEvent<AuthorityMessage>) => {
+      const m = ev.data;
+      if (m.t === 'reply') {
+        const p = this.pending.get(m.id);
+        if (p) {
+          this.pending.delete(m.id);
+          if (m.ok) p.resolve(m.data);
+          else p.reject(new Error(m.error ?? 'command failed'));
+        }
+        return;
+      }
+      if (m.t === 'init') onStatus('connected');
+      onMessage(m);
+    };
+    this.worker.onerror = (e) => {
+      console.error('simulation worker error', e);
+      onStatus('error');
+    };
+    this.worker.postMessage({ t: 'start', ...this.opts });
+  }
+
+  send(cmd: SimCommand): Promise<unknown> {
+    const id = this.seq++;
+    return new Promise((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      this.worker?.postMessage({ t: 'command', id, cmd });
+    });
+  }
+
+  close(): void {
+    this.worker?.terminate();
+    this.worker = null;
+  }
+}
+
+export class SocketTransport implements Transport {
+  readonly kind = 'server' as const;
+  private socket: Socket | null = null;
+
+  constructor(private url: string) {}
+
+  start(onMessage: (m: AuthorityMessage) => void, onStatus: (s: ConnectionStatus) => void): void {
+    onStatus('connecting');
+    const s = io(this.url, { transports: ['websocket'], reconnection: true });
+    this.socket = s;
+    s.on('connect', () => onStatus('connected'));
+    s.on('disconnect', () => onStatus('disconnected'));
+    s.on('connect_error', () => onStatus('error'));
+    s.on(SOCKET_EVENTS.init, (payload: InitPayload) => onMessage({ t: 'init', payload }));
+    s.on(SOCKET_EVENTS.frame, (frame: MotionFrame) => onMessage({ t: 'frame', frame }));
+    s.on(SOCKET_EVENTS.state, (state: StateFrame) => onMessage({ t: 'state', state }));
+    s.on(SOCKET_EVENTS.events, (events: SimEvent[]) => onMessage({ t: 'events', events }));
+  }
+
+  send(cmd: SimCommand): Promise<unknown> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket) return reject(new Error('not connected'));
+      this.socket.timeout(120_000).emit(SOCKET_EVENTS.command, cmd, (err: Error | null, reply: { ok: boolean; data?: unknown; error?: string }) => {
+        if (err) return reject(err);
+        if (reply.ok) resolve(reply.data);
+        else reject(new Error(reply.error ?? 'command failed'));
+      });
+    });
+  }
+
+  close(): void {
+    this.socket?.disconnect();
+    this.socket = null;
+  }
+}
+
+/** Server URL: ?server=… query, VITE_SERVER_URL, or same host on port 8787. */
+export function serverUrl(): string {
+  const q = new URLSearchParams(location.search).get('server');
+  if (q) return q;
+  const env = import.meta.env.VITE_SERVER_URL as string | undefined;
+  if (env) return env;
+  return `${location.protocol}//${location.hostname}:8787`;
+}
+
+/** Decide which authority to use. `?mode=local|server` forces a mode. */
+export async function chooseTransport(): Promise<Transport> {
+  const params = new URLSearchParams(location.search);
+  const mode = params.get('mode');
+  const population = Number(params.get('population')) || undefined;
+  const seed = params.get('seed') ? Number(params.get('seed')) : undefined;
+  const hour = params.get('hour') ? Number(params.get('hour')) : undefined;
+  if (mode === 'local') return new WorkerTransport({ population, seed, hour });
+  const url = serverUrl();
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 1200);
+    const res = await fetch(`${url}/api/health`, { signal: ctrl.signal });
+    clearTimeout(t);
+    if (res.ok) return new SocketTransport(url);
+  } catch {
+    // no server reachable -> local mode
+  }
+  if (mode === 'server') return new SocketTransport(url);
+  return new WorkerTransport({ population, seed, hour });
+}

@@ -60,3 +60,9 @@ describe('city generation', () => {
     for (const s of w.busStops) expect(s.pedNode).toBeGreaterThanOrEqual(0);
   });
 });
+
+describe('config', () => {
+  it('ignores undefined overrides', () => {
+    expect(defaultConfig({ population: undefined, seed: undefined }).population).toBe(400);
+  });
+});

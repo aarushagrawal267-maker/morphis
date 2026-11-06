@@ -372,10 +372,11 @@ export function heightFor(rng: Rng, type: BuildingType, district: District, pos:
   switch (type) {
     case 'shop':
     case 'cafe':
-      h = rng.range(3.4, 7);
+      // street-level units, often with floors above
+      h = rng.chance(0.55) ? rng.range(4.5, 8) : rng.range(9, 18);
       break;
     case 'restaurant':
-      h = rng.range(3.4, 8);
+      h = rng.chance(0.55) ? rng.range(4.5, 9) : rng.range(9, 16);
       break;
     case 'warehouse':
       h = rng.range(5, 9);

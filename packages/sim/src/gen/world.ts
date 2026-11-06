@@ -38,6 +38,7 @@ import { buildPedGraph, type PedAttachment } from './pedestrian';
 import { finaliseIntersections, generateStrokes, planarise, sidewalkOffset } from './roads';
 
 export function defaultConfig(overrides: Partial<CityConfig> = {}): CityConfig {
+  const clean = Object.fromEntries(Object.entries(overrides).filter(([, v]) => v !== undefined && !Number.isNaN(v))) as Partial<CityConfig>;
   return {
     seed: DEFAULT_SEED,
     size: 256,
@@ -48,7 +49,7 @@ export function defaultConfig(overrides: Partial<CityConfig> = {}): CityConfig {
     trafficDensity: 1,
     parkFrequency: 0.5,
     heightScale: 1,
-    ...overrides,
+    ...clean,
   };
 }
 
@@ -671,17 +672,17 @@ function generateProps(
 function generateSkyline(rng: Rng, size: number): SkylineBlock[] {
   const out: SkylineBlock[] = [];
   const half = size / 2;
-  for (let i = 0; i < 520; i++) {
+  for (let i = 0; i < 560; i++) {
     const ang = rng.range(0, Math.PI * 2);
-    const r = half + 26 + Math.pow(rng.float(), 0.7) * 300;
+    const r = half + 170 + Math.pow(rng.float(), 0.8) * 420;
     const x = Math.cos(ang) * r;
     const z = Math.sin(ang) * r;
     // keep expressway corridors clear
     if (Math.abs(x) < 9 && Math.abs(z) > half) continue;
     if (Math.abs(z - 6) < 9 && Math.abs(x) > half) continue;
-    const far = (r - half) / 300;
-    const w = rng.range(8, 20) * (1 + far);
-    out.push({ x: r3(x), z: r3(z), w: r3(w), d: r3(w * rng.range(0.7, 1.3)), h: r3(rng.range(12, 50) * (1 + far * 2.4) * (rng.chance(0.1) ? 1.8 : 1)) });
+    const far = (r - half - 170) / 420;
+    const w = rng.range(10, 24) * (1 + far);
+    out.push({ x: r3(x), z: r3(z), w: r3(w), d: r3(w * rng.range(0.7, 1.3)), h: r3(rng.range(18, 60) * (1 + far * 2.2) * (rng.chance(0.1) ? 1.7 : 1)) });
   }
   return out;
 }
