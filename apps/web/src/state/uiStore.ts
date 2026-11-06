@@ -59,6 +59,8 @@ interface UIState {
   interior: { buildingId: string; room: number } | null;
   activeTab: string;
   toast: { id: number; text: string; tone: 'info' | 'error' } | null;
+  fading: boolean;
+  setFading(v: boolean): void;
   select(s: Selection): void;
   setHovered(s: Selection): void;
   requestCamera(r: Omit<CameraRequest, 'id'>, mode?: CameraMode): void;
@@ -103,6 +105,8 @@ export const useUI = create<UIState>((set, get) => ({
   interior: null,
   activeTab: 'overview',
   toast: null,
+  fading: false,
+  setFading: (fading) => set({ fading }),
   select: (selection) => set({ selection }),
   setHovered: (hovered) => set({ hovered }),
   requestCamera: (r, mode) =>

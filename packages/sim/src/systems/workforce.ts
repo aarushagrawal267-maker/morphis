@@ -345,12 +345,25 @@ export class WorkforceSystem {
     }
   }
 
+  /** Live (AI) execution applies to JARVIS projects; company backlog work stays simulated. */
+  isLive(task: SimTask): boolean {
+    return this.executor.mode === 'live' && this.project(task.projectId)?.source === 'jarvis';
+  }
+
+  /** A citizen whose AI task is in flight stays at their desk until the agent finishes. */
+  holdsCitizen(c: CitizenRT): boolean {
+    const id = c.dyn.currentTaskId;
+    if (!id) return false;
+    const t = this.task(id);
+    return !!t && t.status === 'ACTIVE' && this.isLive(t) && this.liveBegun.has(t.id) && c.insideId === t.buildingId;
+  }
+
   private maybeBegin(task: SimTask, c: CitizenRT): void {
     if (task.startedAt === null) {
       task.startedAt = this.sim.time;
       this.sim.bus.emit('task.started', this.sim.time, { task });
     }
-    if (this.executor.mode === 'live' && !this.liveBegun.has(task.id)) {
+    if (this.isLive(task) && !this.liveBegun.has(task.id)) {
       this.liveBegun.add(task.id);
       const project = this.project(task.projectId)!;
       const inputs = task.dependsOn.map((d) => this.task(d)!).filter(Boolean);
@@ -361,12 +374,16 @@ export class WorkforceSystem {
 
   /** Per sim minute: simulated progress for tasks whose assignee is working in place. */
   minute(): void {
-    if (this.executor.mode === 'live') return;
     const sim = this.sim;
     for (const t of sim.state.tasks) {
       if (t.status !== 'ACTIVE' || !t.assigneeId) continue;
       const c = sim.citizenById(t.assigneeId);
       if (!c || c.dyn.status !== 'WORKING' || c.insideId !== t.buildingId) continue;
+      if (this.isLive(t)) {
+        // real agents report their own progress; (re)start them if needed (e.g. after a restore)
+        this.maybeBegin(t, c);
+        continue;
+      }
       if (t.startedAt === null) this.maybeBegin(t, c);
       const skills = Object.values(c.profile.skills);
       const skill = skills.length ? skills.reduce((a, b) => a + b, 0) / skills.length : 0.7;
@@ -396,6 +413,7 @@ export class WorkforceSystem {
   reportFailure(taskId: string, reason: string): void {
     const t = this.task(taskId);
     if (!t) return;
+    this.liveBegun.delete(taskId);
     const c = t.assigneeId ? this.sim.citizenById(t.assigneeId) : undefined;
     if (c) {
       c.dyn.currentTaskId = null;
@@ -403,13 +421,14 @@ export class WorkforceSystem {
     }
     t.assigneeId = null;
     t.status = 'PENDING';
-    this.liveBegun.delete(taskId);
+    this.assign();
   }
 
   complete(taskId: string, output: string): void {
     const sim = this.sim;
     const t = this.task(taskId);
     if (!t || t.status === 'COMPLETED') return;
+    this.liveBegun.delete(taskId);
     t.status = 'COMPLETED';
     t.progress = 1;
     t.completedAt = sim.time;

@@ -10,7 +10,7 @@ import { enterBuilding, focusBuilding, focusPoint, followCitizen, followVehicle 
 export function SelectionPanel() {
   const sel = useUI((s) => s.selection);
   const interior = useUI((s) => s.interior);
-  if (!sel || interior) return null;
+  if (!sel || (interior && sel.kind !== 'citizen')) return null;
   return (
     <aside className="sel-panel glass" data-testid="selection-panel">
       <button className="close" onClick={() => useUI.getState().select(null)} aria-label="Close">

@@ -51,10 +51,28 @@ export function focusCitizen(id: string): void {
   if (p) ui.requestCamera({ kind: 'street', x: p.x, z: p.z }, 'street');
 }
 
+/** Fly to the entrance, fade, then switch to the interior scene. */
 export function enterBuilding(id: string): void {
   const b = useSim.getState().buildingsById.get(id);
   if (!b || !b.enterable) return;
   const ui = useUI.getState();
   ui.select({ kind: 'building', id });
-  ui.enterInterior(id);
+  ui.requestCamera({ kind: 'street', x: b.entrance.x, z: b.entrance.z }, 'street');
+  setTimeout(() => useUI.getState().setFading(true), 650);
+  setTimeout(() => {
+    useUI.getState().enterInterior(id);
+    useUI.getState().select(null);
+  }, 1000);
+  setTimeout(() => useUI.getState().setFading(false), 1250);
+}
+
+export function exitBuilding(): void {
+  const ui = useUI.getState();
+  const id = ui.interior?.buildingId;
+  ui.setFading(true);
+  setTimeout(() => {
+    useUI.getState().exitInterior();
+    if (id) focusBuilding(id);
+  }, 300);
+  setTimeout(() => useUI.getState().setFading(false), 650);
 }

@@ -144,7 +144,7 @@ export function EnvironmentController() {
     skyColors.cloud = cloud;
     skyColors.fog.copy(hor).lerp(zen, 0.35).multiplyScalar(0.9);
     fog.color.copy(skyColors.fog);
-    fog.density = 0.0010 + night * 0.0004 + env.uRain.value * 0.0022 + env.uFog.value * 0.0105;
+    fog.density = useUI.getState().interior ? 0 : 0.0010 + night * 0.0004 + env.uRain.value * 0.0022 + env.uFog.value * 0.0105;
 
     // lightning flashes during storms
     if (storm > 0.5 && Math.random() < dt * 0.25) lightning.current = 1;

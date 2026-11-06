@@ -1,5 +1,6 @@
 /** 2D product interface layered over the 3D city. */
 import { useSim } from '../../state/simStore';
+import { useUI } from '../../state/uiStore';
 import { InteriorPanel } from '../panels/InteriorPanel';
 import { SelectionPanel } from '../panels/SelectionPanel';
 import { JarvisConsole, ProfileModal, ProjectsPanel, TaskModal } from '../panels/Workforce';
@@ -11,6 +12,7 @@ import { CityInfo, NavBar, TopHeader } from './TopBar';
 
 export function Hud() {
   const ready = useSim((s) => s.ready);
+  const fading = useUI((s) => s.fading);
   if (!ready) return null;
   return (
     <div className="hud">
@@ -41,6 +43,7 @@ export function Hud() {
       <DebugOverlay />
       <BottomBar />
       <Toasts />
+      <div className={`fade ${fading ? 'on' : ''}`} />
     </div>
   );
 }

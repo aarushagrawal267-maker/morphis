@@ -15,7 +15,7 @@ import { hash01, parkSpot, stopSpot } from '../positions';
 
 const K = 0.82; // overall scale: ~1.8 m tall (1 unit = 2 m)
 
-function characterGeometry(): THREE.BufferGeometry {
+export function characterGeometry(): THREE.BufferGeometry {
   const parts: { size: [number, number, number]; pos: [number, number, number]; part: number }[] = [
     { size: [0.36, 0.42, 0.22], pos: [0, 0.66, 0], part: 0 },
     { size: [0.2, 0.22, 0.2], pos: [0, 0.99, 0], part: 1 },
@@ -54,7 +54,7 @@ function characterGeometry(): THREE.BufferGeometry {
   return out;
 }
 
-function citizenMaterial(): THREE.MeshStandardMaterial {
+export function citizenMaterial(): THREE.MeshStandardMaterial {
   const m = new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: 0.05 });
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = env.uTime;

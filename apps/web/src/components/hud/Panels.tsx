@@ -107,6 +107,24 @@ export function SettingsPanel() {
       <Toggle label="Ambient occlusion (slower)" on={q.ao} set={(v) => ui.setQuality({ ao: v })} id="set-ao" />
       <label className="lbl">Resolution scale: {q.pixelRatio.toFixed(1)}x</label>
       <input type="range" min={0.6} max={2} step={0.1} value={q.pixelRatio} onChange={(e) => ui.setQuality({ pixelRatio: Number(e.target.value) })} />
+      <h4>Camera</h4>
+      <div className="speeds wide">
+        <button onClick={() => ui.requestCamera({ kind: 'overview' }, 'overview')} data-testid="cam-overview">OVERVIEW</button>
+        <button
+          onClick={() => {
+            const w = useSim.getState().world;
+            const hq = w?.buildings.find((b) => b.id === w.hqId);
+            if (hq) ui.requestCamera({ kind: 'street', x: hq.entrance.x + 6, z: hq.entrance.z + 10 }, 'street');
+          }}
+          data-testid="cam-street"
+        >
+          STREET
+        </button>
+        <button onClick={() => ui.requestCamera({ kind: 'cinematic' }, 'cinematic')} data-testid="cam-cinematic">
+          CINEMATIC
+        </button>
+      </div>
+      <p className="note">Left-drag pans, right-drag orbits, wheel zooms toward the cursor. Selecting a citizen and pressing FOLLOW tracks them.</p>
       <h4>Interface</h4>
       <Toggle label="District pins" on={pins} set={(v) => ui.setPins(v)} id="set-pins" />
       <Toggle label="Developer debug overlay" on={debug} set={(v) => ui.setDebug(v)} id="set-debug" />

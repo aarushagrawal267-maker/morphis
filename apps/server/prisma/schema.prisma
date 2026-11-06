@@ -1,0 +1,219 @@
+// MORPHIS persistent data model (PostgreSQL).
+// SimulationSnapshot.state is the authoritative restore source; the structured
+// tables mirror the city for querying, analytics and the future AI layer.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model City {
+  id         String   @id
+  name       String
+  seed       Int
+  config     Json
+  worldHash  String
+  simTime    Int
+  population Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  snapshots  SimulationSnapshot[]
+  districts  District[]
+  buildings  Building[]
+  roads      Road[]
+  citizens   Citizen[]
+  businesses Business[]
+  projects   Project[]
+  tasks      Task[]
+  events     CityEventLog[]
+  economy    EconomyRecord[]
+  agents     AgentProfile[]
+}
+
+model SimulationSnapshot {
+  id        String   @id @default(cuid())
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  simTime   Int
+  tick      Int
+  state     Json
+  createdAt DateTime @default(now())
+
+  @@index([cityId, createdAt])
+}
+
+model District {
+  cityId String
+  id     String
+  name   String
+  type   String
+  center Json
+  radius Float
+  color  String
+  data   Json
+  city   City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@id([cityId, id])
+}
+
+model Building {
+  cityId     String
+  id         String
+  name       String
+  type       String
+  districtId String
+  x          Float
+  z          Float
+  height     Float
+  capacity   Int
+  jobs       Int
+  status     String
+  occupants  Int
+  energy     Float
+  ownerId    String?
+  city       City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@id([cityId, id])
+  @@index([cityId, type])
+}
+
+model Road {
+  cityId String
+  id     Int
+  a      Int
+  b      Int
+  cls    String
+  name   String
+  length Float
+  city   City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@id([cityId, id])
+}
+
+model Citizen {
+  cityId      String
+  id          String
+  name        String
+  age         Int
+  occupation  String
+  department  String
+  core        Boolean
+  role        String?
+  homeId      String
+  workplaceId String?
+  status      String
+  energy      Float
+  happiness   Float
+  money       Float
+  currentTask String?
+  agentId     String?
+  profile     Json
+  city        City    @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@id([cityId, id])
+  @@index([cityId, core])
+}
+
+model Business {
+  cityId     String
+  id         String
+  name       String
+  type       String
+  category   String
+  buildingId String
+  employees  Int
+  revenue    Float
+  expenses   Float
+  cash       Float
+  status     String
+  city       City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@id([cityId, id])
+}
+
+model Project {
+  cityId      String
+  id          String
+  name        String
+  source      String
+  status      String
+  progress    Float
+  workspace   String
+  report      String?
+  createdAt   Int
+  completedAt Int?
+  city        City    @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@id([cityId, id])
+}
+
+model Task {
+  cityId     String
+  id         String
+  projectId  String
+  title      String
+  role       String
+  assigneeId String?
+  status     String
+  progress   Float
+  output     String?
+  artifact   String?
+  city       City    @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@id([cityId, id])
+  @@index([cityId, projectId])
+}
+
+model CityEventLog {
+  cityId   String
+  id       String
+  time     Int
+  category String
+  headline String
+  body     String
+  severity String
+  city     City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@id([cityId, id])
+}
+
+model EconomyRecord {
+  cityId    String
+  day       Int
+  gdp       Float
+  budget    Float
+  happiness Float
+  employed  Int
+  city      City  @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@id([cityId, day])
+}
+
+/// AI agent identity bound to a core citizen (Milestone 11). Memory holds task summaries.
+model AgentProfile {
+  cityId    String
+  citizenId String
+  role      String
+  provider  String?
+  model     String?
+  memory    Json
+  updatedAt DateTime @updatedAt
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@id([cityId, citizenId])
+}
+
+/// Append-only audit trail for AI tool use and approvals.
+model AuditLog {
+  id        String   @id @default(cuid())
+  time      DateTime @default(now())
+  actor     String
+  action    String
+  detail    Json
+  approved  Boolean  @default(true)
+}
