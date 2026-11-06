@@ -5,7 +5,7 @@ import type { AmbitionKind, Interest, VentureKind } from './types/life';
 export const CITY_NAME = 'MORPHIS';
 export const CITY_TAGLINE = 'EMERGENT AI CITY • YEAR 2126 • THE COMPLEX';
 export const DEFAULT_SEED = 2126;
-export const WORLD_VERSION = 1;
+export const WORLD_VERSION = 2;
 
 /** Simulation tick length in simulated seconds (fixed timestep). */
 export const TICK_SECONDS = 1;

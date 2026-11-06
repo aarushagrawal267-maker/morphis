@@ -63,6 +63,9 @@ test('navigation tabs focus places and select landmarks', async ({ page }) => {
 
 test('district pins toggle and focus a district', async ({ page }) => {
   await open(page);
+  // pins start hidden on the island overview
+  await expect(page.getByTestId('pin-finance')).toHaveCount(0);
+  await page.getByTestId('toggle-pins').click();
   await expect(page.getByTestId('pin-finance')).toBeVisible();
   await page.getByTestId('pin-finance').click();
   await expect(page.getByTestId('panel-title')).toHaveText('FINANCE DISTRICT');
@@ -209,4 +212,50 @@ test('the skyrail runs trains between stations', async ({ page }) => {
   await page.waitForTimeout(3000);
   const s1 = await page.evaluate(() => (window as any).__morphis.simClient.sampleMotion().rail.slice());
   expect(s1.some((v: number, i: number) => v !== s0[i])).toBe(true);
+});
+
+test('the town floats on an island; you can walk into a building and talk to people', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await open(page, '&hour=12');
+  const world = await page.evaluate(() => { const w = (window as any).__morphis.sim.getState().world; return { island: !!w.island, lifts: w.island?.lifts.length, maxH: Math.max(...w.buildings.filter((b: any) => b.type !== 'hq').map((b: any) => b.height)) }; });
+  expect(world.island).toBe(true);
+  expect(world.lifts).toBeGreaterThan(0);
+  expect(world.maxH).toBeLessThan(20); // a low-rise town
+  await page.getByTestId('btn-walk').click();
+  await expect(page.getByTestId('guest-bar')).toBeVisible();
+  // stand at the nearest door and go in
+  const door = await page.evaluate(() => {
+    const m = (window as any).__morphis;
+    const g = m.guestPose;
+    let best: any = null;
+    let bd = Infinity;
+    for (const b of m.sim.getState().world.buildings) {
+      if (!b.enterable || b.type === 'hq') continue;
+      const d = Math.hypot(b.entrance.x - g.x, b.entrance.z - g.z);
+      if (d < bd) { bd = d; best = b; }
+    }
+    g.x = best.entrance.x;
+    g.z = best.entrance.z;
+    return best.id;
+  });
+  await expect(page.getByTestId('door-prompt')).toBeVisible();
+  await page.getByTestId('door-prompt').click();
+  await expect(page.getByTestId('inside-bar')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (window as any).__morphis.ui.getState().interior?.buildingId)).toBe(door);
+  await page.getByTestId('btn-out').click();
+  await expect(page.getByTestId('guest-bar')).toBeVisible();
+  // talk to someone walking by
+  const id = await page.evaluate(() => {
+    const m = (window as any).__morphis;
+    const s = m.simClient.sampleMotion();
+    for (let i = 0; i < s.cVisible.length; i++) if (s.cVisible[i]) { m.guestPose.x = s.cX[i] + 1; m.guestPose.z = s.cZ[i] + 1; return m.sim.getState().citizens[i].id; }
+    return null;
+  });
+  expect(id).not.toBeNull();
+  await page.evaluate((cid) => (window as any).__morphis.ui.getState().select({ kind: 'citizen', id: cid }), id);
+  await page.getByTestId('talk-upto').click();
+  await page.getByTestId('talk-where').click();
+  await expect(page.getByTestId('talk').locator('.talk__line--them')).toHaveCount(2);
+  expect(errors).toEqual([]);
 });

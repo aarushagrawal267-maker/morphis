@@ -7,6 +7,8 @@ import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { Icon } from '../ui/icons';
 import { exitBuilding } from './actions';
+import { leaveInterior } from '../../scene/guest/InteriorGuest';
+import { useGuest } from '../../state/guestStore';
 
 export function InteriorPanel() {
   const interior = useUI((s) => s.interior);
@@ -50,7 +52,7 @@ export function InteriorPanel() {
         </>
       )}
       <div className="actions">
-        <button onClick={exitBuilding} data-testid="btn-exit">
+        <button onClick={() => (useGuest.getState().active ? leaveInterior() : exitBuilding())} data-testid="btn-exit">
           <Icon name="exit" /> EXIT BUILDING
         </button>
       </div>

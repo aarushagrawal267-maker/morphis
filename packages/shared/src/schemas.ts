@@ -31,6 +31,8 @@ export const commandSchema = z.discriminatedUnion('type', [
     x: z.number().finite().min(-2000).max(2000),
     z: z.number().finite().min(-2000).max(2000),
     citizens: z.array(z.string().min(1).max(40)).max(30),
+    /** Waving inside a building: the people in that building can wave back. */
+    buildingId: z.string().min(1).max(40).optional(),
   }),
 ]);
 

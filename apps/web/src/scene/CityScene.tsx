@@ -17,9 +17,11 @@ import { useGuest } from '../state/guestStore';
 import { useUI } from '../state/uiStore';
 import { usePostcard } from './guest/actions';
 import { GuestController } from './guest/Guest';
+import { InteriorGuest } from './guest/InteriorGuest';
 import { PostcardCapture } from './guest/PostcardCapture';
 import { Skyrail } from './rail/Skyrail';
 import { VentureSites } from './buildings/VentureSites';
+import { Fireflies } from './props/Fireflies';
 import { Buildings } from './buildings/Buildings';
 import { HQ } from './buildings/HQ';
 import { CameraRig } from './camera/CameraRig';
@@ -31,6 +33,8 @@ import { DistrictPins } from './districts/DistrictPins';
 import { Effects } from './effects/Effects';
 import { EnvironmentController, Ground, Rain, SkyDome } from './environment/Environment';
 import { Skyline } from './environment/Skyline';
+import { IslandWorld } from './environment/Island';
+import { useSim } from '../state/simStore';
 import { Interior } from './interiors/Interior';
 import { Props } from './props/Props';
 import { Signs } from './props/Signs';
@@ -42,12 +46,13 @@ export function CityScene() {
   const interior = useUI((s) => s.interior);
   const walking = useGuest((s) => s.active);
   const postcard = usePostcard((s) => s.pending);
+  const island = useSim((s) => !!s.world?.island);
   return (
     <>
       <Suspense fallback={null}>
         <EnvironmentController />
       </Suspense>
-      {walking && !interior ? <GuestController /> : <CameraRig />}
+      {walking ? interior ? <InteriorGuest buildingId={interior.buildingId} /> : <GuestController /> : <CameraRig />}
       {postcard && <PostcardCapture />}
       <CameraBridgeSync />
       <PerfProbe />
@@ -62,7 +67,8 @@ export function CityScene() {
           <HQ />
           <Signs />
           <Props />
-          <Skyline />
+          <Fireflies />
+          {island ? <IslandWorld /> : <Skyline />}
           <Skyrail />
           <VentureSites />
           <Citizens />

@@ -377,7 +377,7 @@ export class CitySimulation {
       case 'jarvis.command':
         return this.jarvisCommand(cmd.text, null, cmd.urgent ?? false);
       case 'guest.wave':
-        return { ok: true, data: { waved: this.citizens.waveAt(cmd.x, cmd.z, cmd.citizens) } };
+        return { ok: true, data: { waved: this.citizens.waveAt(cmd.x, cmd.z, cmd.citizens, cmd.buildingId) } };
       default:
         return { ok: false, error: `${cmd.type} must be handled by the host (persistence)` };
     }

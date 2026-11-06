@@ -55,7 +55,7 @@ export function App() {
           className="city-canvas"
           shadows={shadows}
           dpr={dpr}
-          camera={{ fov: 40, near: 0.5, far: 2400, position: [170, 205, 235] }}
+          camera={{ fov: 40, near: 0.5, far: 2400, position: [330, 200, 430] }}
           gl={{ antialias: false, powerPreference: 'high-performance', stencil: false, preserveDrawingBuffer: false }}
           onCreated={({ gl }) => {
             gl.toneMapping = THREE.NoToneMapping;

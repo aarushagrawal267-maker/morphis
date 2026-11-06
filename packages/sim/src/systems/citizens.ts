@@ -575,7 +575,7 @@ export class CitizenSystem {
    * A guest at (x, z) waved. Each listed citizen who is really outdoors and
    * close by stops (walkers pause), turns and waves back.
    */
-  waveAt(x: number, z: number, ids: string[]): string[] {
+  waveAt(x: number, z: number, ids: string[], buildingId?: string): string[] {
     const sim = this.sim;
     const waved: string[] = [];
     const pos = { x: 0, z: 0 };
@@ -588,6 +588,8 @@ export class CitizenSystem {
         routePoint(c.walker.route.points, c.walker.route.cum, c.walker.s, pos);
         ok = Math.hypot(pos.x - x, pos.z - z) < 18;
         if (ok && c.walker.onCrosswalk < 0) c.walker.pausedUntil = sim.time + 160;
+      } else if (buildingId && c.insideId === buildingId) {
+        ok = true; // in the same room as the guest
       } else if (c.insideId) {
         const b = sim.building(c.insideId);
         ok = (b.type === 'park' || b.type === 'plaza') && Math.hypot(b.position.x - x, b.position.z - z) < Math.max(b.width, b.depth) / 2 + 18;

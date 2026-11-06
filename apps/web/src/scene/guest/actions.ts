@@ -16,6 +16,19 @@ export function guestWave(): void {
   if (guestPose.waveUntil > now) return;
   guestPose.waveUntil = now + 2200;
   const sim = useSim.getState();
+  const inside = useUI.getState().interior?.buildingId;
+  if (inside) {
+    // inside a building: everyone in it can see you
+    const b = sim.buildingsById.get(inside);
+    const ids = sim.citizens.filter((p, i) => { const loc = sim.state?.citizens[i]?.location; return loc?.kind === 'building' && loc.id === inside; }).map((p) => p.id);
+    useJournal.getState().waved();
+    if (!b || !ids.length) return;
+    void simClient
+      .command({ type: 'guest.wave', x: b.entrance.x, z: b.entrance.z, citizens: ids.slice(0, 30), buildingId: inside })
+      .then((data) => reportWaves((data as { waved?: string[] } | undefined)?.waved ?? []))
+      .catch(() => undefined);
+    return;
+  }
   const sample = simClient.sampleMotion();
   const near: { id: string; d: number }[] = [];
   const n = sim.citizens.length;
@@ -49,15 +62,16 @@ export function guestWave(): void {
   if (!near.length) return;
   void simClient
     .command({ type: 'guest.wave', x: Math.round(guestPose.x * 100) / 100, z: Math.round(guestPose.z * 100) / 100, citizens: near.slice(0, 30).map((x) => x.id) })
-    .then((data) => {
-      const waved = (data as { waved?: string[] } | undefined)?.waved ?? [];
-      if (!waved.length) return;
-      const s = useSim.getState();
-      useJournal.getState().meet(waved, (id) => !!s.citizensById.get(id)?.agent);
-      const agents = waved.map((id) => s.citizensById.get(id)).filter((p) => p?.agent);
-      useUI.getState().notify(agents.length ? `${agents.map((p) => p!.name.split(' ')[0]).slice(0, 3).join(', ')}${agents.length > 3 ? ` and ${agents.length - 3} more` : ''} waved back` : `${waved.length} ${waved.length === 1 ? 'person' : 'people'} waved back`);
-    })
+    .then((data) => reportWaves((data as { waved?: string[] } | undefined)?.waved ?? []))
     .catch(() => undefined);
+}
+
+function reportWaves(waved: string[]): void {
+  if (!waved.length) return;
+  const s = useSim.getState();
+  useJournal.getState().meet(waved, (id) => !!s.citizensById.get(id)?.agent);
+  const agents = waved.map((id) => s.citizensById.get(id)).filter((p) => p?.agent);
+  useUI.getState().notify(agents.length ? `${agents.map((p) => p!.name.split(' ')[0]).slice(0, 3).join(', ')}${agents.length > 3 ? ` and ${agents.length - 3} more` : ''} waved back` : `${waved.length} ${waved.length === 1 ? 'person' : 'people'} waved back`);
 }
 
 /** Request a postcard of the current view (PostcardCapture mounts for one frame). */

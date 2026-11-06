@@ -63,8 +63,8 @@ export function createBuildingMaterial(shape: ShapeKind): THREE.MeshStandardMate
         float storefront = step(9.5, ftRaw);
         float ft = ftRaw - storefront * 10.0;
         vec2 cs; vec2 wf;
-        if (ft < 0.5) { cs = vec2(1.3, 1.6); wf = vec2(0.8, 0.68); }
-        else if (ft < 1.5) { cs = vec2(1.5, 1.6); wf = vec2(0.52, 0.55); }
+        if (ft < 0.5) { cs = vec2(1.6, 1.6); wf = vec2(0.55, 0.52); }
+        else if (ft < 1.5) { cs = vec2(1.7, 1.6); wf = vec2(0.42, 0.5); }
         else if (ft < 2.5) { cs = vec2(3.6, 1.6); wf = vec2(0.97, 0.42); }
         else if (ft < 3.5) { cs = vec2(2.6, 3.2); wf = vec2(0.22, 0.3); }
         else if (ft < 4.5) { cs = vec2(3.2, 3.0); wf = vec2(0.6, 0.16); }
@@ -83,12 +83,12 @@ export function createBuildingMaterial(shape: ShapeKind): THREE.MeshStandardMate
         float h2 = mHash12(cell.yx * 1.7 + vBuild.x * 71.0);
         float slow = floor(uTime / 45.0 + vBuild.x * 9.0);
         float flick = mHash12(cell + slow);
-        float litRatio = mix(0.03, 0.3, uNight) * (0.5 + vBuild.y * 0.5) + vBuild.w * 0.6;
+        float litRatio = mix(0.04, 0.52, uNight) * (0.55 + vBuild.y * 0.45) + vBuild.w * 0.6;
         bLit = step(mix(h, flick, 0.15), litRatio);
         vec3 warm = vec3(1.0, 0.74, 0.42);
         vec3 cool = vec3(0.52, 0.78, 1.0);
         vec3 neonc = vec3(0.85, 0.35, 1.0);
-        bWinCol = h2 < 0.58 ? warm : (h2 < 0.93 ? cool : neonc);
+        bWinCol = h2 < 0.76 ? warm : (h2 < 0.96 ? cool : neonc);
         vec3 glassDay = mix(vec3(0.07, 0.11, 0.17), vec3(0.16, 0.24, 0.34), clamp(vFacade.y / 80.0, 0.0, 1.0));
         diffuseColor.rgb = mix(diffuseColor.rgb, glassDay, bWin * 0.85);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.05, 0.06, 0.08), shopMask);
@@ -114,7 +114,9 @@ export function createBuildingMaterial(shape: ShapeKind): THREE.MeshStandardMate
       .replace(
         '#include <emissivemap_fragment>',
         /* glsl */ `#include <emissivemap_fragment>
-        totalEmissiveRadiance += bWinCol * bWin * bLit * (0.08 + 1.15 * uNight) * (0.45 + 0.55 * h2);`,
+        totalEmissiveRadiance += bWinCol * bWin * bLit * (0.08 + 1.15 * uNight) * (0.45 + 0.55 * h2);
+        // pastel walls stay readable at night (street light and the sky glow)
+        totalEmissiveRadiance += diffuseColor.rgb * isWall * (1.0 - bWin) * uNight * 0.16;`,
       );
   };
   mat.customProgramCacheKey = () => `morphis-building-${shape}`;

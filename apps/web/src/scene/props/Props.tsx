@@ -117,12 +117,12 @@ export function Props() {
     place(poleRef, streetLights, flat);
     place(armRef, streetLights, flat);
     place(headRef, streetLights, flat);
-    place(poolRef, streetLights, (l) => ({ x: l.x + Math.sin(l.r) * 1.25, y: 0.16, z: l.z + Math.cos(l.r) * 1.25, r: l.r, sx: 7, sy: 1, sz: 7 }));
+    place(poolRef, streetLights, (l) => ({ x: l.x + Math.sin(l.r) * 1.25, y: 0.16, z: l.z + Math.cos(l.r) * 1.25, r: l.r, sx: 5, sy: 1, sz: 5 }));
     place(hwPoleRef, highwayLights, flat);
     place(hwHeadRef, highwayLights, (l) => ({ x: l.x, y: 0, z: l.z, r: l.r + Math.PI / 2, sx: 1, sy: 1, sz: 1 }));
     const trees = p.trees;
     place(trunkRef, trees, (t) => ({ x: t.x, y: 0.1, z: t.z, r: t.r, sx: t.s ?? 1, sy: t.s ?? 1, sz: t.s ?? 1 }));
-    const palette = [new THREE.Color('#1f5a3a'), new THREE.Color('#2a6b44'), new THREE.Color('#7a2e6b'), new THREE.Color('#1d4d4f')];
+    const palette = [new THREE.Color('#2b6b48'), new THREE.Color('#3a7d4f'), new THREE.Color('#8a3a7a'), new THREE.Color('#25615e')];
     place(
       crownRef,
       trees,

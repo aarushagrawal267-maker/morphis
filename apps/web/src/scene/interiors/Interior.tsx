@@ -8,10 +8,12 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { CitizenProfile } from '@morphis/shared';
 import { useSim } from '../../state/simStore';
+import { useGuest } from '../../state/guestStore';
 import { useUI } from '../../state/uiStore';
 import { characterGeometry, citizenMaterial } from '../citizens/Citizens';
 import { env } from '../env';
 import { hash01 } from '../positions';
+import { waveAmount, waves } from '../waves';
 import { layoutFor, placeOccupants, type Furniture, type Layout, type Room } from './layouts';
 
 const WALL_H = 2.6;
@@ -286,6 +288,14 @@ function Occupants({ buildingId, layout }: { buildingId: string; layout: Layout 
     m.computeBoundingSphere();
   }, [placements]);
 
+  useFrame(() => {
+    if (!waves.size) return;
+    const attr = geo.getAttribute('aWave') as THREE.InstancedBufferAttribute;
+    const now = performance.now();
+    placements.forEach((pl, i) => attr.setX(i, waveAmount(pl.o.p.index, now)));
+    attr.needsUpdate = true;
+  });
+
   return (
     <instancedMesh
       ref={ref}
@@ -311,7 +321,7 @@ export function Interior({ buildingId }: { buildingId: string }) {
   const entered = useRef(false);
   useEffect(() => {
     const cam = (window as unknown as { __morphisCamera?: { setLookAt: (...a: (number | boolean)[]) => Promise<void> } }).__morphisCamera;
-    if (!cam || !layout) return;
+    if (!cam || !layout || useGuest.getState().active) return; // a walking guest drives the camera
     if (!entered.current) {
       entered.current = true;
       void cam.setLookAt(layout.entrance.x, 2.2, layout.entrance.z + 10, layout.entrance.x, 1.2, layout.entrance.z - 4, false);

@@ -31,8 +31,9 @@ export function GuestController() {
   const ped = useMemo(() => new PedNav(world.ped.nodes, world.ped.edges), [world]);
   const group = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.InstancedMesh>(null);
-  const beacon = useRef<THREE.Mesh>(null);
   const lastProbe = useRef(0);
+  const mountedAt = useRef(performance.now());
+  const camPitchNow = useRef(guestPose.camPitch);
   const climb = useRef<{ from: THREE.Vector3; to: THREE.Vector3; t0: number; dur: number; then: 'wait' | 'street' } | null>(null);
 
   const geo = useMemo(() => {
@@ -297,29 +298,42 @@ export function GuestController() {
       const left = guestPose.waveUntil - now;
       wv.setX(0, left > 0 ? Math.min(1, (2200 - left) / 220, left / 260) : 0);
       wv.needsUpdate = true;
-      if (beacon.current) {
-        beacon.current.position.y = 1.42 * look.height + Math.sin(now * 0.003) * 0.05;
-        beacon.current.rotation.y = now * 0.002;
-      }
     }
 
     // ---------------- camera
-    const ty = guestPose.y + 1.5;
+    const ty = guestPose.y + 1.15;
     tmpTarget.set(guestPose.x, ty, guestPose.z);
-    const cp = Math.cos(guestPose.camPitch);
-    const dirx = Math.sin(guestPose.camYaw) * cp;
-    const diry = Math.sin(guestPose.camPitch);
-    const dirz = Math.cos(guestPose.camYaw) * cp;
-    let dist = guestPose.camDist;
-    for (let d = 1; d <= guestPose.camDist; d += 0.5) {
-      const y = ty + diry * d;
-      if (colliders.solidAt(guestPose.x + dirx * d, guestPose.z + dirz * d, y)) {
-        dist = Math.max(1.8, d - 0.6);
-        break;
+    // keep the camera out of walls: first try looking from higher up, then move closer
+    const clearDist = (pitch: number): number => {
+      const cp = Math.cos(pitch);
+      const dx = Math.sin(guestPose.camYaw) * cp;
+      const dy = Math.sin(pitch);
+      const dz = Math.cos(guestPose.camYaw) * cp;
+      for (let d = 1; d <= guestPose.camDist; d += 0.5) {
+        if (colliders.solidAt(guestPose.x + dx * d, guestPose.z + dz * d, ty + dy * d)) return Math.max(1.8, d - 0.6);
+      }
+      return guestPose.camDist;
+    };
+    let pitch = guestPose.camPitch;
+    let dist = clearDist(pitch);
+    for (const extra of [0.2, 0.4]) {
+      if (dist >= guestPose.camDist * 0.8) break;
+      const p2 = Math.min(1.35, guestPose.camPitch + extra);
+      const d2 = clearDist(p2);
+      if (d2 > dist) {
+        pitch = p2;
+        dist = d2;
       }
     }
+    camPitchNow.current += (pitch - camPitchNow.current) * Math.min(1, dt * 4);
+    const cp = Math.cos(camPitchNow.current);
+    const dirx = Math.sin(guestPose.camYaw) * cp;
+    const diry = Math.sin(camPitchNow.current);
+    const dirz = Math.cos(guestPose.camYaw) * cp;
     tmpCam.set(guestPose.x + dirx * dist, Math.max(0.6, ty + diry * dist), guestPose.z + dirz * dist);
-    camera.position.lerp(tmpCam, Math.min(1, dt * 10));
+    // fly down from wherever the camera was (overview) on entering, then follow closely
+    const intro = Math.min(1, (now - mountedAt.current) / 2200);
+    camera.position.lerp(tmpCam, Math.min(1, dt * (intro < 1 ? 1.6 + intro * 4 : 10)));
     camera.lookAt(tmpTarget);
 
     // ---------------- where am I (4 Hz)
@@ -389,16 +403,15 @@ export function GuestController() {
 
   return (
     <group ref={group} name="guest">
+      {/* a soft light that travels with the visitor so the street around them reads at night */}
+      <pointLight position={[0, 2.6, 0.6]} color="#ffd9a8" intensity={14} distance={16} decay={1.6} />
       <instancedMesh ref={mesh} args={[geo, mat, 1]} castShadow frustumCulled={false} />
       {/* visor: the guest's eyes */}
-      <mesh position={[0, 0.83 * look.height, 0.085 * look.build]}>
-        <boxGeometry args={[0.15, 0.035, 0.02]} />
+      <mesh position={[0, 0.925 * look.height, 0.086 * look.build]}>
+        <boxGeometry args={[0.12, 0.028, 0.02]} />
         <meshBasicMaterial color={look.eyes} toneMapped={false} />
       </mesh>
-      <mesh ref={beacon} position={[0, 1.42, 0]}>
-        <octahedronGeometry args={[0.09, 0]} />
-        <meshBasicMaterial color={new THREE.Color(look.eyes).multiplyScalar(2.2)} toneMapped={false} />
-      </mesh>
+
     </group>
   );
 }

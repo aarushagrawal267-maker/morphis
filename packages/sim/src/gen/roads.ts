@@ -62,7 +62,8 @@ export function generateStrokes(rng: Rng, size: number, roadDensity: number): { 
   }
   ring.push({ ...ring[0] });
   strokes.push({ pts: ring, cls: 'highway', name: 'Morphis Ring Expressway' });
-  const far = half + 70;
+  // expressways end at the island's sky-lift portals
+  const far = half + 9;
   strokes.push({ pts: [{ x: 0, z: -H }, { x: 0, z: -far }], cls: 'highway', name: 'North Expressway' });
   strokes.push({ pts: [{ x: 0, z: H }, { x: 0, z: far }], cls: 'highway', name: 'South Expressway' });
   strokes.push({ pts: [{ x: H, z: 6 }, { x: far, z: 6 }], cls: 'highway', name: 'East Expressway' });
@@ -258,7 +259,10 @@ export function planarise(strokes: Stroke[]): { nodes: RoadNode[]; edges: RoadEd
     }
   }
 
-  const isGate = (id: number): boolean => Math.max(Math.abs(nodes[id].x), Math.abs(nodes[id].z)) > 150;
+  // gates: the outermost stroke ends (expressway exits to the sky lifts)
+  let extent = 0;
+  for (const st of strokes) for (const p of st.pts) extent = Math.max(extent, Math.abs(p.x), Math.abs(p.z));
+  const isGate = (id: number): boolean => Math.max(Math.abs(nodes[id].x), Math.abs(nodes[id].z)) > extent - 1;
 
   // collapse very short edges (merge their endpoints) and prune dangling stubs
   for (let iter = 0; iter < 20; iter++) {

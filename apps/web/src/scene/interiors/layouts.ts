@@ -157,9 +157,10 @@ export function layoutFor(kind: InteriorKind, name: string): Layout {
     case 'cafe': {
       const tables: Furniture[] = [];
       const seats: Slot[] = [];
-      for (const [x, z] of [[-6, -1], [-2, -1], [2, -1], [-6, 3], [-2, 3], [2, 3]] as const) {
+      for (const [x, z] of [[-6.5, -1.5], [-2, -1.5], [2.5, -1.5], [-6.5, 3], [-2, 3], [2.5, 3]] as const) {
         tables.push({ kind: 'table', x, z });
-        seats.push({ x: x - 0.9, z, r: Math.PI / 2, pose: 'sit' }, { x: x + 0.9, z, r: -Math.PI / 2, pose: 'sit' });
+        // chairs on the long sides of the table (tables are 2.6 x 1.4)
+        seats.push({ x: x - 0.6, z: z - 1.15, r: 0, pose: 'sit' }, { x: x + 0.6, z: z + 1.15, r: Math.PI, pose: 'sit' });
       }
       return {
         title: name,

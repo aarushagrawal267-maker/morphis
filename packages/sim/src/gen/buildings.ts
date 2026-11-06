@@ -365,7 +365,59 @@ export function sizeFor(rng: Rng, type: BuildingType): { w: number; d: number } 
   }
 }
 
+/** Floor height in world units (1 unit = 2 m). */
+export const FLOOR = 1.6;
+
+/**
+ * Town-scale heights: whole floors, mostly two to four storeys, with taller
+ * blocks only in the centre. `district.heightRange` sets the local character.
+ */
 export function heightFor(rng: Rng, type: BuildingType, district: District, pos: Vec2, heightScale: number): number {
+  const [lo, hi] = district.heightRange;
+  const floors = (a: number, b: number) => rng.int(a, b) * FLOOR + 0.6;
+  const tall = Math.min(1, (hi - 16) / 70); // 0 for low districts, 1 for the old downtown
+  let h: number;
+  switch (type) {
+    case 'shop':
+    case 'cafe':
+    case 'restaurant':
+      h = floors(1, rng.chance(0.6) ? 2 : 3);
+      break;
+    case 'apartment':
+      h = floors(2, 4);
+      break;
+    case 'luxury_apartment':
+      h = floors(3, 5 + Math.round(tall * 2));
+      break;
+    case 'office':
+    case 'bank':
+    case 'government':
+      h = floors(2, 4 + Math.round(tall * 2));
+      break;
+    case 'corporate_tower':
+      h = floors(4, 6 + Math.round(tall * 2));
+      break;
+    case 'warehouse':
+    case 'factory':
+    case 'parking':
+      h = floors(1, 2) + 1;
+      break;
+    case 'data_center':
+    case 'school':
+    case 'library':
+    case 'entertainment':
+      h = floors(2, 3);
+      break;
+    default:
+      h = floors(2, 3);
+  }
+  void lo;
+  void pos;
+  return Math.max(2.2, h * Math.min(1, heightScale));
+}
+
+/** The original skyscraper-scale heights (kept for reference and custom configs). */
+export function cityHeightFor(rng: Rng, type: BuildingType, district: District, pos: Vec2, heightScale: number): number {
   const [lo, hi] = district.heightRange;
   let h: number;
   switch (type) {
@@ -485,7 +537,7 @@ export function massingFor(rng: Rng, type: BuildingType, w: number, d: number, h
       facade = rng.chance(0.65) ? 'glass' : 'ribbon';
       windowDensity = 0.92;
       palette = rng.pick([0, 1, 6, 7]);
-      const podiumH = rng.range(4, 7);
+      const podiumH = Math.min(rng.range(4, 7), h * 0.3);
       box(0, 0, w, d, 0, podiumH, 'glass');
       const tw = w * rng.range(0.62, 0.82);
       const td = d * rng.range(0.62, 0.82);
@@ -520,7 +572,7 @@ export function massingFor(rng: Rng, type: BuildingType, w: number, d: number, h
       } else {
         box(0, 0, w, d, 0, h, facade);
       }
-      rooftop = rng.pick(['hvac', 'hvac', 'antenna', 'garden', 'dish'] as const);
+      rooftop = tiers.length === 1 && rng.chance(0.3) ? 'hip' : rng.pick(['hvac', 'hvac', 'antenna', 'garden', 'dish'] as const);
       antennas = rooftop === 'antenna' ? rng.int(1, 2) : 0;
       if (type === 'government') {
         palette = 8;
@@ -548,7 +600,7 @@ export function massingFor(rng: Rng, type: BuildingType, w: number, d: number, h
       } else {
         box(0, 0, w, d, 0, h, facade);
       }
-      rooftop = rng.pick(['tanks', 'hvac', 'garden', 'antenna'] as const);
+      rooftop = tiers.length === 1 && rng.chance(type === 'apartment' ? 0.75 : 0.35) ? (rng.chance(0.6) ? 'gable' : 'hip') : rng.pick(['tanks', 'hvac', 'garden', 'antenna'] as const);
       antennas = rooftop === 'antenna' ? 1 : 0;
       if (rng.chance((neonChance[district.type] ?? 0.08) * 0.5)) neon = pickNeon('edge');
       break;
@@ -560,7 +612,7 @@ export function massingFor(rng: Rng, type: BuildingType, w: number, d: number, h
       windowDensity = 0.95;
       palette = rng.pick([1, 3, 4, 9]);
       box(0, 0, w, d, 0, h, rng.chance(0.5) ? 'glass' : 'grid');
-      rooftop = rng.pick(['hvac', 'flat', 'tanks'] as const);
+      rooftop = rng.chance(0.6) ? (rng.chance(0.65) ? 'gable' : 'hip') : rng.pick(['hvac', 'flat', 'tanks'] as const);
       neon = rng.chance(0.75) ? pickNeon('band') : null;
       break;
     }
@@ -601,7 +653,7 @@ export function massingFor(rng: Rng, type: BuildingType, w: number, d: number, h
         box(0, 0, w * 0.18, d * 0.4, h * 0.6, h * 0.95, 'ribbon');
         neon = { color: '#60a5fa', style: 'crown' };
       }
-      rooftop = type === 'university' ? 'spire' : 'garden';
+      rooftop = type === 'university' ? 'spire' : rng.chance(0.6) ? 'hip' : 'garden';
       break;
     }
     case 'factory': {
@@ -692,7 +744,8 @@ export function massingFor(rng: Rng, type: BuildingType, w: number, d: number, h
 export function capacityFor(type: BuildingType, w: number, d: number, floors: number): { capacity: number; jobs: number } {
   const meta = BUILDING_TYPES[type];
   const areaFactor = (w * d) / 120;
-  const residents = Math.round(meta.residentsPerFloor * floors * areaFactor);
+  // town scale: low buildings divided into compact flats
+  const residents = Math.round(meta.residentsPerFloor * floors * areaFactor * 4.8);
   const jobs = Math.round(meta.jobsPerFloor * Math.min(floors, 40) * areaFactor * 2.2);
   let capacity: number;
   switch (meta.category) {
