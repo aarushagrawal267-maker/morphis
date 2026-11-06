@@ -10,7 +10,7 @@ import type { BuildingDef, StaticWorld } from '@morphis/shared';
 import { localToWorld } from '@morphis/sim';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
-import { FACADE_INDEX, PALETTE, env } from '../env';
+import { AWNING_PALETTE, FACADE_INDEX, PALETTE, ROOF_PALETTE, env } from '../env';
 import { createBuildingMaterial, createNeonMaterial, type ShapeKind } from './buildingMaterial';
 
 interface TierInstance {
@@ -51,6 +51,9 @@ export function buildLayout(world: StaticWorld, constructionIds: Set<string>) {
   const neon: Detail[] = [];
   const scaffold: Detail[] = [];
   const cranes: Detail[] = [];
+  const gables: Detail[] = [];
+  const hips: Detail[] = [];
+  const awnings: Detail[] = [];
 
   for (const b of world.buildings) {
     if (!b.tiers.length) continue;
@@ -114,6 +117,15 @@ export function buildLayout(world: StaticWorld, constructionIds: Set<string>) {
       }
       if (b.rooftop === 'garden') gardens.push({ matrix: makeMatrix(tp.x, topY, tp.z, b.rotation, top.w * 0.8, 0.35, top.d * 0.8) });
       if (b.rooftop === 'helipad') pads.push({ matrix: makeMatrix(tp.x, topY, tp.z, 0, Math.min(top.w, top.d) * 0.7, 0.25, Math.min(top.w, top.d) * 0.7) });
+      if ((b.rooftop === 'gable' || b.rooftop === 'hip') && top.shape === 'box') {
+        const over = 0.7;
+        const along = top.w >= top.d; // ridge along the longer side
+        const rw = (along ? top.d : top.w) + over;
+        const rl = (along ? top.w : top.d) + over;
+        const rh = Math.min(4.5, Math.min(top.w, top.d) * (b.rooftop === 'gable' ? 0.42 : 0.34));
+        const color = ROOF_PALETTE[Math.floor(rr(31) * ROOF_PALETTE.length)];
+        (b.rooftop === 'gable' ? gables : hips).push({ matrix: makeMatrix(tp.x, topY, tp.z, b.rotation + (along ? Math.PI / 2 : 0), rw, rh, rl), color });
+      }
       if (b.rooftop === 'crown') neon.push({ matrix: makeMatrix(tp.x, topY - 0.6, tp.z, b.rotation, top.w + 0.25, 0.25, top.d + 0.25), color: new THREE.Color(b.neon?.color ?? '#94a3b8') });
     }
     if (b.rooftop === 'spire' || b.rooftop === 'antenna' || b.antennas > 0) {
@@ -125,6 +137,12 @@ export function buildLayout(world: StaticWorld, constructionIds: Set<string>) {
         (b.rooftop === 'spire' ? spires : antennas).push({ matrix: makeMatrix(w.x, topY, w.z, 0, 1, hh, 1) });
         beacons.push({ matrix: makeMatrix(w.x, topY + hh, w.z, 0, 1, 1, 1) });
       }
+    }
+    // striped awnings over the shopfront (front = local +z, the street side)
+    if (STOREFRONT.has(b.type) && b.type !== 'entertainment') {
+      const base = b.tiers[0];
+      const ap = localToWorld(b.position.x, b.position.z, b.rotation, base.ox, base.oz + base.d / 2 + 0.75);
+      awnings.push({ matrix: makeMatrix(ap.x, Math.min(2.7, base.h - 0.4), ap.z, b.rotation, base.w * 0.86, 0.5, 1.5), color: AWNING_PALETTE[Math.floor(rr(41) * AWNING_PALETTE.length)] });
     }
     // rooftop accent lights on tall towers (common in the skyline)
     if (!b.neon && b.height > 26 && top.shape === 'box' && rr(21) < 0.55) {
@@ -158,7 +176,7 @@ export function buildLayout(world: StaticWorld, constructionIds: Set<string>) {
       }
     }
   }
-  return { tiers, hvac, tanks, antennas, beacons, spires, pads, gardens, neon, scaffold, cranes };
+  return { tiers, hvac, tanks, antennas, beacons, spires, pads, gardens, neon, scaffold, cranes, gables, hips, awnings };
 }
 
 function useInstanced(ref: React.RefObject<THREE.InstancedMesh | null>, items: Detail[], defaultColor?: THREE.Color) {
@@ -182,6 +200,28 @@ const unitHex = new THREE.CylinderGeometry(0.5, 0.5, 1, 6, 1).translate(0, 0.5, 
 const unitCone = new THREE.ConeGeometry(0.5, 1, 8).translate(0, 0.5, 0);
 const thinCyl = new THREE.CylinderGeometry(0.08, 0.12, 1, 6).translate(0, 0.5, 0);
 const beaconGeo = new THREE.SphereGeometry(0.28, 8, 6);
+
+/** Unit gable roof: base 1 x 1 at y = 0, ridge along local z at height 1. */
+function gableGeometry(): THREE.BufferGeometry {
+  const v = [
+    // slopes
+    -0.5, 0, -0.5, -0.5, 0, 0.5, 0, 1, 0.5,
+    -0.5, 0, -0.5, 0, 1, 0.5, 0, 1, -0.5,
+    0.5, 0, 0.5, 0.5, 0, -0.5, 0, 1, -0.5,
+    0.5, 0, 0.5, 0, 1, -0.5, 0, 1, 0.5,
+    // gable ends
+    -0.5, 0, 0.5, 0.5, 0, 0.5, 0, 1, 0.5,
+    0.5, 0, -0.5, -0.5, 0, -0.5, 0, 1, -0.5,
+  ];
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+  g.computeVertexNormals();
+  return g;
+}
+const unitGable = gableGeometry();
+const unitHip = new THREE.ConeGeometry(Math.SQRT1_2, 1, 4, 1).rotateY(Math.PI / 4).translate(0, 0.5, 0);
+/** Awning: a slanted canopy, higher at the wall. */
+const unitAwning = new THREE.BoxGeometry(1, 0.12, 1).rotateX(0.32);
 
 export function TierMesh({ shape, items, onPick }: { shape: ShapeKind; items: TierInstance[]; onPick: (e: ThreeEvent<MouseEvent>, building: number) => void }) {
   const ref = useRef<THREE.InstancedMesh>(null);
@@ -287,6 +327,12 @@ export function Buildings() {
   const neonRef = useRef<THREE.InstancedMesh>(null);
   const scaffoldRef = useRef<THREE.InstancedMesh>(null);
   const craneRef = useRef<THREE.InstancedMesh>(null);
+  const gableRef = useRef<THREE.InstancedMesh>(null);
+  const hipRef = useRef<THREE.InstancedMesh>(null);
+  const awningRef = useRef<THREE.InstancedMesh>(null);
+  useInstanced(gableRef, layout.gables);
+  useInstanced(hipRef, layout.hips);
+  useInstanced(awningRef, layout.awnings);
   useInstanced(hvacRef, layout.hvac);
   useInstanced(tankRef, layout.tanks);
   useInstanced(antRef, layout.antennas);
@@ -306,6 +352,8 @@ export function Buildings() {
   const pad = useMemo(() => new THREE.MeshStandardMaterial({ color: '#1b1f27', emissive: new THREE.Color('#22d3ee'), emissiveIntensity: 0.25, roughness: 0.7 }), []);
   const scaffoldMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#c08a2a', wireframe: true, roughness: 0.6 }), []);
   const craneMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#e0a526', roughness: 0.5, metalness: 0.4 }), []);
+  const roofMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.75, metalness: 0.05, flatShading: true }), []);
+  const awningMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.8, emissive: new THREE.Color('#ffffff'), emissiveIntensity: 0.06 }), []);
 
   useFrame(() => {
     // blink beacons
@@ -327,6 +375,9 @@ export function Buildings() {
       <instancedMesh ref={neonRef} args={[unitBox, neonMat, Math.max(1, layout.neon.length)]} frustumCulled={false} />
       <instancedMesh ref={scaffoldRef} args={[unitBox, scaffoldMat, Math.max(1, layout.scaffold.length)]} frustumCulled={false} />
       <instancedMesh ref={craneRef} args={[unitBox, craneMat, Math.max(1, layout.cranes.length)]} castShadow frustumCulled={false} />
+      <instancedMesh ref={gableRef} args={[unitGable, roofMat, Math.max(1, layout.gables.length)]} castShadow receiveShadow frustumCulled={false} />
+      <instancedMesh ref={hipRef} args={[unitHip, roofMat, Math.max(1, layout.hips.length)]} castShadow receiveShadow frustumCulled={false} />
+      <instancedMesh ref={awningRef} args={[unitAwning, awningMat, Math.max(1, layout.awnings.length)]} castShadow frustumCulled={false} />
     </group>
   );
 }

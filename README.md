@@ -2,7 +2,7 @@
 
 **Emergent AI city • Year 2126 • The Complex**
 
-MORPHIS is a browser-based 3D cyberpunk city simulation. A deterministic simulation engine runs the city: roads, traffic signals, buildings, about 400 citizens with homes, jobs and daily schedules, cars, taxis, buses, delivery vans and an elevated Skyrail, weather, a day/night cycle, an economy and city events. A Three.js renderer shows that state as it happens.
+MORPHIS is a browser-based 3D simulation of a small neon town built on a floating island, above a sea of clouds. A deterministic simulation engine runs the town: streets, traffic signals, low-rise houses, shops and cafés, about 400 citizens with homes, jobs and daily schedules, cars, taxis, buses, delivery vans and an elevated Skyrail, weather, a day/night cycle, an economy and city events. Visitor traffic arrives and leaves through sky-lift gates at the island's edge. A Three.js renderer shows that state as it happens.
 
 **50 agents live in the city.** Twenty-five are the JARVIS workforce, who run projects. The other twenty-five are independent agents: a barista who wants her own café, a painter, a robotics student, an investor and others. Every evening each agent makes one life decision: open a venture in a vacant unit, put credits into someone else's venture, help fit one out, enrol in classes, change job, or rest. Ventures only open after real agent-hours of fit-out work on site, and classes only count while the agent is actually at the university. Every deed is logged on the agent's card.
 
@@ -12,9 +12,9 @@ When an AI provider is configured, the model makes those decisions (and runs JAR
 
 > **Honesty rules built into the product:** all money is simulated credits (§). Deliverables made without an AI provider are marked `[SIMULATED]`. The UI always shows which authority (browser worker or server), which persistence backend and which AI provider is actually in use.
 
-![Morphis at night](docs/screenshot-night.png)
+![Morphis: a town on a floating island](docs/screenshot-night.png)
 
-| Street level | Interior (JARVIS HQ) |
+| Walking in | Inside a café |
 |---|---|
 | ![street](docs/screenshot-street.png) | ![interior](docs/screenshot-interior.png) |
 
@@ -72,7 +72,7 @@ See [docs/systems/ai-agents.md](docs/systems/ai-agents.md) and [docs/systems/age
 
 | Milestone | Status |
 |---|---|
-| 1–2 3D city & visual quality | Procedural seeded city: 14 districts, about 180 buildings with procedural facades and window lighting driven by real occupancy, JARVIS HQ landmark, roads with markings, sidewalks, crosswalks, live traffic lights, neon, signs, billboards, props, distant skyline, bloom |
+| 1–2 3D world & visual quality | Procedural seeded town on a floating island: rock underside with glowing crystals, railed edge with lanterns, sky-lift gates, drifting islets, a sea of clouds, night sky with aurora. 14 districts, about 150 low-rise buildings (two to four storeys, pitched roofs, awnings, pastel facades, windows lit by real occupancy), JARVIS HQ landmark, roads with markings, sidewalks, crosswalks, live traffic lights, dense trees, fireflies, neon, signs, bloom |
 | 3 Living city | 400 citizens (25 core) with homes, jobs, weekday/weekend schedules and needs. A* on road and sidewalk graphs, walk cycles, cars, taxis, buses on 3 lines, delivery vans, external traffic |
 | 4 Simulation | Fixed 1 s ticks, speeds 1x–60x, day/night, Markov weather (clear/rain/fog/storm) with wet surfaces, signal-aware crossings, IDM car-following with emergent congestion, city events, news derived from state |
 | 5–6 Interaction & interface | Raycast selection of buildings, citizens and vehicles. District pins, nav tabs, info HUD, agent stream, bottom feature bar, key features, minimap, clock & weather panel, settings, debug overlay, city story, save/load/new |
@@ -82,7 +82,7 @@ See [docs/systems/ai-agents.md](docs/systems/ai-agents.md) and [docs/systems/age
 | 10 JARVIS | Command console, template and LLM planners, task dependency graphs, task manager, shared workspace, reviewer, final synthesis |
 | 11 Real AI citizens | Provider layer, live executor, tool manager with permission levels and audit log, agent memory. **Requires your API key**; the only tools enabled are workspace read/write (web and code-execution tools are defined but disabled until a sandbox exists) |
 | 12 Autonomous city | 50 agents with personas make daily life decisions (ventures, investments, fit-out help, studies, job changes), logged as deeds; ventures open after real fit-out hours, pay dividends and can close. Completing a JARVIS startup plan also founds a company |
-| Walk-in | Guest avatar (WASD / click / touch stick, third-person camera, collisions), waving answered by the simulation, agent cards (why, deeds, today, share link), chatter derived from real state, journal (daily goals, places, totals, badges, postcards), look editor, every building enterable, Skyrail rides, `#citizen=` deep links |
+| Walk-in | Guest avatar (WASD / click / touch stick, third-person camera that flies down from the overview, collisions), walk through any door into the rooms inside and back out, talk to anyone (Wave / What are you up to? / Where's good around here?, answered from their simulated day), waving answered by the simulation, agent cards (why, deeds, today, share link), chatter derived from real state, journal (daily goals, places, totals, badges, postcards), look editor, Skyrail rides, `#citizen=` deep links |
 
 Not included: Blender/GLB assets (all geometry is procedural; drop GLB files into the renderer when you have them) and Redis (not needed until multiple agent worker processes exist; a compose profile is reserved).
 

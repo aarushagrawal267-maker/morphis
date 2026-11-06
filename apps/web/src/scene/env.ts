@@ -16,9 +16,16 @@ export const env = {
   sunDir: new THREE.Vector3(0.4, 0.8, 0.3),
 };
 
+/** Facade colours: soft pastels that read warm under street light and cool under the moon. */
 export const PALETTE = [
-  '#323c4d', '#20252f', '#3d3c46', '#464a53', '#4f4246', '#373e4b', '#283246', '#352c46', '#5a5f69', '#4b3d3f', '#43453f', '#4d4d4f', '#a3acb9',
+  '#7d8fb3', '#5d6a8a', '#c99aa6', '#a7b89a', '#d6c29a', '#9a8cc0', '#6f8fa3', '#8e7aa8', '#cfc4b2', '#c58e74', '#8d8a7c', '#7a7f88', '#e2e0dc',
 ].map((c) => new THREE.Color(c));
+
+/** Pitched-roof colours: slate, terracotta, teal tile, plum, moss. */
+export const ROOF_PALETTE = ['#3d4560', '#8c4f3f', '#2f5f66', '#5c3d63', '#4b5a3a', '#6b4a3a'].map((c) => new THREE.Color(c));
+
+/** Shop awning colours. */
+export const AWNING_PALETTE = ['#e11d48', '#0ea5e9', '#f59e0b', '#10b981', '#a855f7', '#f472b6'].map((c) => new THREE.Color(c));
 
 export const FACADE_INDEX: Record<string, number> = { glass: 0, grid: 1, ribbon: 2, panel: 3, industrial: 4, residential: 5, none: 6 };
 

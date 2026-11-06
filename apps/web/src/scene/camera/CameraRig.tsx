@@ -11,8 +11,9 @@ import * as THREE from 'three';
 import { useSim } from '../../state/simStore';
 import { useUI, type CameraRequest } from '../../state/uiStore';
 import { citizenPosition, vehiclePosition } from '../positions';
+import { guestPose } from '../../state/guestStore';
 
-export const OVERVIEW = { pos: [128, 168, 182] as const, target: [0, 0, 4] as const };
+export const OVERVIEW = { pos: [250, 150, 330] as const, target: [0, -18, 0] as const };
 
 export function CameraRig() {
   const ref = useRef<CameraControlsImpl>(null);
@@ -31,15 +32,24 @@ export function CameraRig() {
     c.touches.two = CameraControlsImpl.ACTION.TOUCH_DOLLY_ROTATE;
     c.dollyToCursor = true;
     c.minDistance = 4;
-    c.maxDistance = 360;
+    c.maxDistance = 760;
     c.minPolarAngle = 0.12;
     c.maxPolarAngle = 1.44;
     c.smoothTime = 0.35;
     c.draggingSmoothTime = 0.12;
     c.truckSpeed = 1.6;
-    c.setBoundary(new THREE.Box3(new THREE.Vector3(-170, -1, -170), new THREE.Vector3(170, 120, 170)));
-    c.setLookAt(...OVERVIEW.pos, ...OVERVIEW.target, false);
+    c.setBoundary(new THREE.Box3(new THREE.Vector3(-260, -60, -260), new THREE.Vector3(260, 160, 260)));
+    // rising from street level (walk-in mode): start where the camera is and glide up
+    const p = camera.position.clone();
+    if (p.y < 60) {
+      void c.setLookAt(p.x, p.y, p.z, guestPose.x, guestPose.y + 1, guestPose.z, false);
+      c.smoothTime = 0.9;
+      void c.setLookAt(...OVERVIEW.pos, ...OVERVIEW.target, true).then(() => {
+        c.smoothTime = 0.35;
+      });
+    } else c.setLookAt(...OVERVIEW.pos, ...OVERVIEW.target, false);
     (window as unknown as { __morphisCamera: CameraControlsImpl }).__morphisCamera = c;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

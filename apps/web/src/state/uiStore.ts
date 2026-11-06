@@ -96,7 +96,7 @@ export const useUI = create<UIState>((set, get) => ({
   cameraMode: 'overview',
   follow: null,
   cameraRequest: null,
-  pins: true,
+  pins: false,
   panel: null,
   highlight: 'none',
   debug: false,

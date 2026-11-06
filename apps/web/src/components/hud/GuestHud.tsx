@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { displayName, formatClock } from '@morphis/shared';
 import { cameraBridge } from '../../scene/cameraBridge';
 import { enterDoor, guestWave, takePostcard } from '../../scene/guest/actions';
+import { leaveInterior } from '../../scene/guest/InteriorGuest';
 import { citizenPosition } from '../../scene/positions';
 import { simClient } from '../../sim/client';
 import { guestInput, guestPose, useGuest } from '../../state/guestStore';
@@ -29,8 +30,9 @@ export function startWalk(at?: { x: number; z: number; yaw?: number }): void {
     const hq = sim.buildingsById.get(world.hqId)!;
     x = (hq.entrance.x + hq.access.point.x) / 2;
     z = (hq.entrance.z + hq.access.point.z) / 2;
-    // face the street, back to the HQ doors
-    yaw = Math.atan2(hq.access.point.x - hq.entrance.x, hq.access.point.z - hq.entrance.z);
+    // stand on the plaza facing along the street, so the camera behind looks down the road, not into the HQ
+    const out = Math.atan2(hq.access.point.x - hq.entrance.x, hq.access.point.z - hq.entrance.z);
+    yaw = out + Math.PI / 2;
   }
   const ui = useUI.getState();
   ui.select(null);
@@ -53,13 +55,48 @@ export function rise(): void {
 export function GuestHud() {
   const active = useGuest((s) => s.active);
   const interior = useUI((s) => s.interior);
-  if (!active || interior) return null;
+  if (!active) return null;
+  if (interior) return <InsideBar buildingId={interior.buildingId} />;
   return (
     <>
       <GuestBar />
       <GuestPrompt />
       <TouchStick />
       <Chatter />
+    </>
+  );
+}
+
+/** While walking inside a building: where you are, who is here, and the way out. */
+function InsideBar({ buildingId }: { buildingId: string }) {
+  const b = useSim((s) => s.buildingsById.get(buildingId));
+  const biz = useSim((s) => s.businessByBuilding.get(buildingId));
+  const here = useSim((s) => (b ? (s.state?.occupancy[b.index] ?? 0) : 0));
+  if (!b) return null;
+  return (
+    <>
+      <section className="guest-bar glass" data-testid="inside-bar">
+        <div className="guest-bar__top">
+          <button className="chip" onClick={leaveInterior} data-testid="btn-out" title="Walk back out to the street (Esc)">
+            <Icon name="exit" /> OUT
+          </button>
+          <div className="guest-bar__where">
+            <strong>{displayName(biz?.name ?? b.name)}</strong>
+            <small>
+              {here} {here === 1 ? 'person' : 'people'} here · walk to the door to leave
+            </small>
+          </div>
+        </div>
+        <div className="guest-bar__actions">
+          <button className="icon-btn" title="Wave (Q)" onClick={guestWave}>
+            <Icon name="hand" />
+          </button>
+          <button className="icon-btn" title="Take a postcard (P)" onClick={takePostcard}>
+            <Icon name="camera" />
+          </button>
+        </div>
+      </section>
+      <TouchStick />
     </>
   );
 }

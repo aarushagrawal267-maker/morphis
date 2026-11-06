@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { CORE_ROLES } from '@morphis/shared';
 import { simClient } from '../../sim/client';
 import { useSim } from '../../state/simStore';
+import { useGuest } from '../../state/guestStore';
 import { useUI } from '../../state/uiStore';
 import { env } from '../env';
 import { hash01, parkSpot, stopSpot } from '../positions';
@@ -17,36 +18,53 @@ import { attachWaveListener, waveAmount, waves } from '../waves';
 
 const K = 0.82; // overall scale: ~1.8 m tall (1 unit = 2 m)
 
+/**
+ * A stylised person (about 1.8 m): legs, flared coat, torso, neck, round head,
+ * hair cap, arms and hands. Each vertex carries a part id used by the shader
+ * for colours and the walk / wave animation:
+ * 0 torso, 1 head and neck, 2/3 legs, 4/5 sleeves, 6 hair, 7 coat hem, 8/9 hands.
+ */
 export function characterGeometry(): THREE.BufferGeometry {
-  const parts: { size: [number, number, number]; pos: [number, number, number]; part: number }[] = [
-    { size: [0.36, 0.42, 0.22], pos: [0, 0.66, 0], part: 0 },
-    { size: [0.2, 0.22, 0.2], pos: [0, 0.99, 0], part: 1 },
-    { size: [0.21, 0.07, 0.21], pos: [0, 1.12, -0.01], part: 6 },
-    { size: [0.13, 0.46, 0.14], pos: [-0.09, 0.23, 0], part: 2 },
-    { size: [0.13, 0.46, 0.14], pos: [0.09, 0.23, 0], part: 3 },
-    { size: [0.09, 0.4, 0.1], pos: [-0.23, 0.65, 0], part: 4 },
-    { size: [0.09, 0.4, 0.1], pos: [0.23, 0.65, 0], part: 5 },
-  ];
-  const geos: THREE.BufferGeometry[] = [];
-  for (const p of parts) {
-    const g = new THREE.BoxGeometry(...p.size).toNonIndexed();
-    g.translate(...p.pos);
-    g.scale(K, K, K);
-    const n = g.getAttribute('position').count;
-    g.setAttribute('aPart', new THREE.Float32BufferAttribute(new Float32Array(n).fill(p.part), 1));
-    geos.push(g);
+  const parts: { g: THREE.BufferGeometry; part: number }[] = [];
+  const add = (g: THREE.BufferGeometry, part: number, x: number, y: number, z: number, sx = 1, sy = 1, sz = 1) => {
+    const ng = g.index ? g.toNonIndexed() : g;
+    ng.scale(sx, sy, sz);
+    ng.translate(x, y, z);
+    parts.push({ g: ng, part });
+  };
+  // legs with shoes
+  for (const [side, part] of [[-1, 2], [1, 3]] as const) {
+    add(new THREE.CylinderGeometry(0.058, 0.046, 0.5, 7), part, side * 0.068, 0.27, 0);
+    add(new THREE.BoxGeometry(0.085, 0.05, 0.15), part, side * 0.068, 0.025, 0.03);
   }
-  // merge
-  const total = geos.reduce((a, g) => a + g.getAttribute('position').count, 0);
+  // coat hem (flares over the hips), torso, shoulders
+  add(new THREE.CylinderGeometry(0.15, 0.2, 0.3, 10), 7, 0, 0.5, 0);
+  add(new THREE.CylinderGeometry(0.16, 0.148, 0.34, 10), 0, 0, 0.8, 0, 1, 1, 0.82);
+  add(new THREE.SphereGeometry(0.16, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0, 0.955, 0, 1.12, 0.42, 0.8);
+  // neck and head
+  add(new THREE.CylinderGeometry(0.045, 0.05, 0.07, 7), 1, 0, 1.0, 0);
+  add(new THREE.IcosahedronGeometry(0.1, 2), 1, 0, 1.115, 0.005, 0.95, 1.08, 1);
+  // hair cap (covers the top and back of the head)
+  add(new THREE.SphereGeometry(0.108, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.56), 6, 0, 1.13, -0.008, 1, 1.02, 1.04);
+  // hair at the back of the head, down to the nape
+  add(new THREE.SphereGeometry(0.104, 10, 6, Math.PI * 0.15, Math.PI * 0.7, Math.PI * 0.3, Math.PI * 0.45), 6, 0, 1.11, -0.012, 1.02, 1.05, 1.06);
+  // arms (sleeves) and hands
+  for (const [side, sleeve, hand] of [[-1, 4, 8], [1, 5, 9]] as const) {
+    add(new THREE.CylinderGeometry(0.045, 0.04, 0.4, 7), sleeve, side * 0.2, 0.74, 0);
+    add(new THREE.IcosahedronGeometry(0.042, 1), hand, side * 0.2, 0.52, 0.01);
+  }
+  const total = parts.reduce((a, p) => a + p.g.getAttribute('position').count, 0);
   const pos = new Float32Array(total * 3);
   const nor = new Float32Array(total * 3);
   const part = new Float32Array(total);
   let o = 0;
-  for (const g of geos) {
-    const n = g.getAttribute('position').count;
-    pos.set(g.getAttribute('position').array as Float32Array, o * 3);
-    nor.set(g.getAttribute('normal').array as Float32Array, o * 3);
-    part.set(g.getAttribute('aPart').array as Float32Array, o);
+  for (const p of parts) {
+    p.g.scale(K, K, K);
+    p.g.computeVertexNormals();
+    const n = p.g.getAttribute('position').count;
+    pos.set(p.g.getAttribute('position').array as Float32Array, o * 3);
+    nor.set(p.g.getAttribute('normal').array as Float32Array, o * 3);
+    part.fill(p.part, o, o + n);
     o += n;
   }
   const out = new THREE.BufferGeometry();
@@ -71,29 +89,34 @@ export function citizenMaterial(): THREE.MeshStandardMaterial {
       .replace(
         '#include <begin_vertex>',
         `vec3 transformed = position;
-        float sw = sin(uTime * 8.5 + aAnim.x) * 0.62 * aAnim.y;
-        if (aPart > 1.5 && aPart < 3.5) {
-          float s = aPart < 2.5 ? sw : -sw; float py = 0.46 * ${K.toFixed(3)};
+        float sw = sin(uTime * 8.5 + aAnim.x) * 0.55 * aAnim.y;
+        bool leg = aPart > 1.5 && aPart < 3.5;
+        bool arm = (aPart > 3.5 && aPart < 5.5) || aPart > 7.5;
+        bool rightSide = aPart > 4.5 && aPart < 5.5 || aPart > 8.5;
+        if (leg) {
+          float s = aPart < 2.5 ? sw : -sw; float py = 0.52 * ${K.toFixed(3)};
           transformed.y -= py;
           transformed = vec3(transformed.x, transformed.y * cos(s) - transformed.z * sin(s), transformed.y * sin(s) + transformed.z * cos(s));
           transformed.y += py;
-        } else if (aPart > 3.5 && aPart < 5.5) {
-          float s = (aPart < 4.5 ? -sw : sw) * 0.75; float py = 0.84 * ${K.toFixed(3)};
+        } else if (arm) {
+          float s = (rightSide ? sw : -sw) * 0.8; float py = 0.93 * ${K.toFixed(3)};
           transformed.y -= py;
           transformed = vec3(transformed.x, transformed.y * cos(s) - transformed.z * sin(s), transformed.y * sin(s) + transformed.z * cos(s));
           transformed.y += py;
         }
+        // coat hem sways a little while walking
+        if (aPart > 6.5 && aPart < 7.5) transformed.z += sin(uTime * 8.5 + aAnim.x + transformed.x * 9.0) * 0.012 * aAnim.y * step(transformed.y, 0.5 * ${K.toFixed(3)});
         // waving: raise the right arm and wave it
-        if (aPart > 4.5 && aPart < 5.5 && aWave > 0.01) {
+        if (arm && rightSide && aWave > 0.01) {
           float wa = aWave * (2.55 + 0.35 * sin(uTime * 11.0));
-          vec2 piv = vec2(0.19 * ${K.toFixed(3)}, 0.86 * ${K.toFixed(3)});
+          vec2 piv = vec2(0.2 * ${K.toFixed(3)}, 0.93 * ${K.toFixed(3)});
           vec2 q = transformed.xy - piv;
           transformed.xy = piv + vec2(q.x * cos(wa) - q.y * sin(wa), q.x * sin(wa) + q.y * cos(wa));
         }
-        // idle sway when standing
-        transformed.y += abs(sin(uTime * 8.5 + aAnim.x)) * 0.035 * aAnim.y;
-        transformed.x += sin(uTime * 1.3 + aAnim.x) * 0.012 * (1.0 - aAnim.y) * step(0.5, transformed.y);
-        vPartColor = aPart < 0.5 ? aTop : (aPart < 1.5 ? aSkin : (aPart < 3.5 ? aBottom : (aPart < 5.5 ? aTop : aHair)));`,
+        // gentle bob while walking, breathing sway when standing
+        transformed.y += abs(sin(uTime * 8.5 + aAnim.x)) * 0.03 * aAnim.y;
+        transformed.x += sin(uTime * 1.3 + aAnim.x) * 0.01 * (1.0 - aAnim.y) * step(0.5, transformed.y);
+        vPartColor = aPart < 0.5 ? aTop : (aPart < 1.5 ? aSkin : (aPart < 3.5 ? aBottom : (aPart < 5.5 ? aTop : (aPart < 6.5 ? aHair : (aPart < 7.5 ? aTop * 0.82 : aSkin)))));`,
       );
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vPartColor;')
@@ -160,6 +183,7 @@ export function Citizens() {
     const ui = useUI.getState();
     const highlight = ui.highlight === 'pedestrians';
     const selected = ui.selection?.kind === 'citizen' ? ui.selection.id : null;
+    const walkingGuest = useGuest.getState().active;
     const anim = geo.getAttribute('aAnim') as THREE.InstancedBufferAttribute;
     const waveAttr = geo.getAttribute('aWave') as THREE.InstancedBufferAttribute;
     const now = performance.now();
@@ -225,8 +249,8 @@ export function Citizens() {
       waveAttr.setX(k, wv);
       instanceToCitizen.current[k] = i;
       k++;
-      if (profiles[i].core || profiles[i].agent || highlight || selected === profiles[i].id) {
-        const s = selected === profiles[i].id ? 2.2 : highlight ? 1.4 : 0.8;
+      if (((profiles[i].core || profiles[i].agent) && !walkingGuest) || highlight || selected === profiles[i].id) {
+        const s = selected === profiles[i].id ? (walkingGuest ? 0.9 : 2.2) : highlight ? 1.4 : 0.8;
         tmpS.set(s, s * 1.4, s);
         tmpP.set(x, y + 1.45 + Math.sin(env.uTime.value * 3 + i) * 0.08, z);
         tmpQ.setFromAxisAngle(up, env.uTime.value * 2);

@@ -136,7 +136,7 @@ export type BuildingType =
   | 'plaza';
 
 export type FacadeType = 'glass' | 'grid' | 'ribbon' | 'panel' | 'industrial' | 'residential' | 'none';
-export type RooftopType = 'flat' | 'hvac' | 'antenna' | 'helipad' | 'garden' | 'tanks' | 'spire' | 'dish' | 'crown';
+export type RooftopType = 'flat' | 'hvac' | 'antenna' | 'helipad' | 'garden' | 'tanks' | 'spire' | 'dish' | 'crown' | 'gable' | 'hip';
 export type ShapeKind = 'box' | 'cylinder' | 'hex';
 export type InteriorKind = 'hq' | 'lab' | 'university' | 'office' | 'apartment' | 'cafe' | 'shop' | 'hall';
 
@@ -270,12 +270,25 @@ export interface RailLine {
   pylons: { x: number; z: number; tx: number; tz: number }[];
 }
 
+/** A small floating islet around the town (scenery). */
 export interface SkylineBlock {
   x: number;
   z: number;
   w: number;
   d: number;
   h: number;
+  /** Height above (or below) the town's ground level. */
+  y?: number;
+}
+
+/** The floating island the town is built on. */
+export interface IslandShape {
+  /** Closed outline of the top surface [x0, z0, x1, z1, ...]. */
+  outline: number[];
+  /** Depth of the rock underside below street level. */
+  depth: number;
+  /** Sky-lift portals where visitor traffic arrives and leaves (expressway ends). */
+  lifts: Vec2[];
 }
 
 export interface CityConfig {
@@ -304,7 +317,9 @@ export interface StaticWorld {
   busStops: BusStop[];
   busLines: BusLine[];
   rail?: RailLine;
+  /** Floating islets around the island (scenery). */
   skyline: SkylineBlock[];
+  island?: IslandShape;
   /** Ids of buildings considered landmarks (named, shown on the minimap). */
   landmarks: string[];
   hqId: string;

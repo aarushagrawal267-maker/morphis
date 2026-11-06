@@ -7,6 +7,7 @@ import { useUI } from '../../state/uiStore';
 import { Icon } from '../ui/icons';
 import { enterBuilding, focusBuilding, focusPoint, followCitizen, followVehicle } from './actions';
 import { AgentSections } from './Life';
+import { TalkBox } from './Talk';
 
 export function SelectionPanel() {
   const sel = useUI((s) => s.selection);
@@ -136,6 +137,7 @@ function CitizenPanel({ id }: { id: string }) {
       <div className={`badge badge--${(d?.status ?? 'idle').toLowerCase()}`} data-testid="citizen-status">
         {d?.status ?? '—'}
       </div>
+      <TalkBox key={`talk-${p.id}`} p={p} />
       {p.agent && <AgentSections key={p.id} p={p} />}
       <div className="rows">
         <Row k="Occupation" v={p.occupation} />

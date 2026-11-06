@@ -12,7 +12,6 @@ import type {
   CityConfig,
   PropInstance,
   RoadEdge,
-  SkylineBlock,
   StaticWorld,
   Vec2,
   WorldProps,
@@ -36,6 +35,7 @@ import {
 import { buildDistricts, districtAt } from './districts';
 import { buildPedGraph, type PedAttachment } from './pedestrian';
 import { buildRail } from './rail';
+import { buildIsland, buildIslets, fillerTrees } from './island';
 import { finaliseIntersections, generateStrokes, planarise, sidewalkOffset } from './roads';
 
 export function defaultConfig(overrides: Partial<CityConfig> = {}): CityConfig {
@@ -158,13 +158,13 @@ export function generateWorld(config: CityConfig): GeneratedWorld {
   {
     const w = 18;
     const d = 18;
-    const h = 96 * config.heightScale;
+    const h = 30 * Math.min(1, config.heightScale);
     const def = finishDef('hq', 'JARVIS HQ', { x: 0, z: 0 }, 0, w, d, h, { named: true, important: true, sign: 'JARVIS' });
     def.tiers = [
-      { shape: 'cylinder', ox: 0, oz: 0, w: 22, d: 22, y0: 0, h: 5, facade: 'glass' },
-      { shape: 'hex', ox: 0, oz: 0, w: 15, d: 15, y0: 5, h: h * 0.55, facade: 'glass' },
-      { shape: 'hex', ox: 0, oz: 0, w: 11, d: 11, y0: 5 + h * 0.55, h: h * 0.3, facade: 'ribbon' },
-      { shape: 'cylinder', ox: 0, oz: 0, w: 5, d: 5, y0: 5 + h * 0.85, h: h * 0.15 - 5, facade: 'none' },
+      { shape: 'cylinder', ox: 0, oz: 0, w: 22, d: 22, y0: 0, h: 4, facade: 'glass' },
+      { shape: 'hex', ox: 0, oz: 0, w: 15, d: 15, y0: 4, h: h * 0.45, facade: 'glass' },
+      { shape: 'hex', ox: 0, oz: 0, w: 11, d: 11, y0: 4 + h * 0.45, h: h * 0.25, facade: 'ribbon' },
+      { shape: 'cylinder', ox: 0, oz: 0, w: 5, d: 5, y0: 4 + h * 0.7, h: h * 0.3 - 4, facade: 'none' },
     ];
     def.rooftop = 'spire';
     def.neon = { color: '#22d3ee', style: 'edge' };
@@ -229,7 +229,9 @@ export function generateWorld(config: CityConfig): GeneratedWorld {
     const res = tryPlaceNear(target, lm.w, lm.d);
     if (!res) continue;
     const realD = res.obb.hd * 2;
-    const def = finishDef(lm.type, lm.name, res.center, res.rot, lm.w, realD, lm.h * config.heightScale, {
+    // town scale: landmarks stand out, but only a few storeys above their neighbours
+    const lmH = lm.type === 'park' ? 0 : (3.5 + lm.h * 0.13) * Math.min(1, config.heightScale);
+    const def = finishDef(lm.type, lm.name, res.center, res.rot, lm.w, realD, lmH, {
       named: true,
       important: true,
       sign: lm.sign ?? null,
@@ -504,7 +506,30 @@ export function generateWorld(config: CityConfig): GeneratedWorld {
   // ---------------------------------------------------------------- props + skyline
   const rail = buildRail(nodes, edges, nav, landmarks, buildings, ped.nodes, (id) => nodeNear(id, { x: 0, z: 0 }));
   const props = generateProps(Rng.derive(config.seed, 'props'), nodes, edges, buildings, busStops, ped.nodes, ped.edges);
-  const skyline = generateSkyline(Rng.derive(config.seed, 'skyline'), size);
+  const skyline = buildIslets(Rng.derive(config.seed, 'skyline'), size);
+  const content: Vec2[] = nodes.filter((n) => !n.gate).map((n) => ({ x: n.x, z: n.z }));
+  for (const b of buildings) {
+    const r = Math.hypot(b.width, b.depth) / 2;
+    for (let k = 0; k < 8; k++) content.push({ x: b.position.x + Math.cos((k * Math.PI) / 4) * r, z: b.position.z + Math.sin((k * Math.PI) / 4) * r });
+  }
+  const island = buildIsland(Rng.derive(config.seed, 'island'), size, content, nodes.filter((n) => n.gate).map((n) => ({ x: n.x, z: n.z })));
+  props.trees.push(
+    ...fillerTrees(
+      Rng.derive(config.seed, 'trees'),
+      island,
+      edges.map((e) => ({ a: nodes[e.a], b: nodes[e.b], clear: e.width / 2 + e.sidewalk + 0.7 })),
+      buildings.map((b) => {
+        let hw = b.width / 2;
+        let hd = b.depth / 2;
+        for (const t of b.tiers) {
+          hw = Math.max(hw, Math.abs(t.ox) + t.w / 2);
+          hd = Math.max(hd, Math.abs(t.oz) + t.d / 2);
+        }
+        return { x: b.position.x, z: b.position.z, c: Math.cos(b.rotation), s: Math.sin(b.rotation), hw, hd };
+      }),
+      [...busStops.map((b) => b.position), ...(rail?.stations.map((st) => st.access) ?? []), ...(rail?.pylons.map((p) => ({ x: p.x, z: p.z })) ?? [])],
+    ),
+  );
 
   const world: StaticWorld = {
     version: WORLD_VERSION,
@@ -521,6 +546,7 @@ export function generateWorld(config: CityConfig): GeneratedWorld {
     busLines,
     rail,
     skyline,
+    island,
     landmarks: buildings.filter((b) => b.named).map((b) => b.id),
     hqId: landmarks.hq,
   };
@@ -600,9 +626,10 @@ function generateProps(
         props.streetLights.push(
           P(a.x + u.x * s + p.x * side * lightOff, a.z + u.z * s + p.z * side * lightOff, Math.atan2(-p.x * side, -p.z * side), 0, 0),
         );
-        if (e.sidewalk >= 1.5 && rng.chance(e.cls === 'avenue' ? 0.8 : 0.45)) {
-          const ts = s + spacing / 2;
-          if (ts < s1) props.trees.push(P(a.x + u.x * ts + p.x * side * treeOff, a.z + u.z * ts + p.z * side * treeOff, rng.range(0, 6.28), rng.range(0.8, 1.2), 0));
+        // street trees: a green canopy along every sidewalk
+        for (const f of [0.3, 0.7]) {
+          const ts = s + spacing * f;
+          if (e.sidewalk >= 1.2 && ts < s1 && rng.chance(0.85)) props.trees.push(P(a.x + u.x * ts + p.x * side * treeOff, a.z + u.z * ts + p.z * side * treeOff, rng.range(0, 6.28), rng.range(1.0, 1.5), rng.int(0, 1)));
         }
         if (rng.chance(0.06)) {
           const vs = s + rng.range(2, spacing - 2);
@@ -672,24 +699,6 @@ function generateProps(
     props.crosswalks.push(P((na.x + nb.x) / 2, (na.z + nb.z) / 2, Math.atan2(nb.x - na.x, nb.z - na.z), pe.length));
   }
   return props;
-}
-
-function generateSkyline(rng: Rng, size: number): SkylineBlock[] {
-  const out: SkylineBlock[] = [];
-  const half = size / 2;
-  for (let i = 0; i < 560; i++) {
-    const ang = rng.range(0, Math.PI * 2);
-    const r = half + 170 + Math.pow(rng.float(), 0.8) * 420;
-    const x = Math.cos(ang) * r;
-    const z = Math.sin(ang) * r;
-    // keep expressway corridors clear
-    if (Math.abs(x) < 9 && Math.abs(z) > half) continue;
-    if (Math.abs(z - 6) < 9 && Math.abs(x) > half) continue;
-    const far = (r - half - 170) / 420;
-    const w = rng.range(10, 24) * (1 + far);
-    out.push({ x: r3(x), z: r3(z), w: r3(w), d: r3(w * rng.range(0.7, 1.3)), h: r3(rng.range(18, 60) * (1 + far * 2.2) * (rng.chance(0.1) ? 1.7 : 1)) });
-  }
-  return out;
 }
 
 function r3(v: number): number {

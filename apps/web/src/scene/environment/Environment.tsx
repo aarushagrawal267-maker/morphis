@@ -11,6 +11,7 @@ import { simClient } from '../../sim/client';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { GLSL_HASH, env } from '../env';
+import { IslandGround } from './Island';
 
 const C = (h: string) => new THREE.Color(h);
 const SKY = {
@@ -18,8 +19,8 @@ const SKY = {
   dayHorizon: C('#b7c9da'),
   duskZenith: C('#251c49'),
   duskHorizon: C('#e0745a'),
-  nightZenith: C('#03050b'),
-  nightHorizon: C('#1c1033'),
+  nightZenith: C('#02040c'),
+  nightHorizon: C('#0e1f45'),
   stormZenith: C('#1b2029'),
   stormHorizon: C('#3b4350'),
 };
@@ -38,15 +39,21 @@ ${GLSL_HASH}
 void main() {
   float h = max(vDir.y, 0.0);
   vec3 col = mix(uHorizon, uZenith, pow(h, 0.55));
-  // city light pollution glow near the horizon at night
-  col += vec3(0.32, 0.08, 0.35) * uNight * exp(-h * 9.0) * 0.55;
+  // aurora ribbons over the island at night
+  float az = atan(vDir.z, vDir.x);
+  float band = exp(-pow((h - 0.32 - 0.06 * sin(az * 3.0 + uTime * 0.05)) * 7.0, 2.0));
+  float curtain = 0.55 + 0.45 * sin(az * 23.0 + sin(az * 7.0 + uTime * 0.15) * 3.0);
+  col += mix(vec3(0.05, 0.55, 0.45), vec3(0.35, 0.2, 0.75), 0.5 + 0.5 * sin(az * 2.0)) * band * curtain * 0.32 * uNight * (1.0 - uCloud);
+  // below the horizon: the sea of clouds fades into haze
+  col = mix(col, uHorizon * 0.8, smoothstep(0.0, -0.08, vDir.y));
   // sun / moon disc
   float d = dot(normalize(vDir), normalize(uSun));
   col += vec3(1.0, 0.85, 0.6) * pow(max(d, 0.0), 900.0) * 6.0 * (1.0 - uNight) * (1.0 - uCloud);
   col += vec3(1.0, 0.7, 0.45) * pow(max(d, 0.0), 12.0) * 0.25 * (1.0 - uNight) * (1.0 - uCloud);
   vec3 moonDir = normalize(vec3(-uSun.x, abs(uSun.y) + 0.25, -uSun.z));
   float md = dot(normalize(vDir), moonDir);
-  col += vec3(0.75, 0.82, 1.0) * smoothstep(0.9993, 0.9997, md) * uNight * (1.0 - uCloud * 0.8);
+  col += vec3(0.85, 0.9, 1.0) * smoothstep(0.9975, 0.9982, md) * uNight * (1.0 - uCloud * 0.8);
+  col += vec3(0.35, 0.45, 0.8) * pow(max(md, 0.0), 120.0) * 0.5 * uNight * (1.0 - uCloud * 0.8);
   // stars
   vec2 sp = vec2(atan(vDir.z, vDir.x) * 120.0, vDir.y * 220.0);
   float st = mHash12(floor(sp));
@@ -163,13 +170,13 @@ export function EnvironmentController() {
       s.color.set(above ? (dusk > 0.3 ? '#ffb47a' : '#fff1dc') : '#8fa8ff');
     }
     if (hemi.current) {
-      hemi.current.intensity = 0.3 + day * 2.1 + flash * 2;
+      hemi.current.intensity = 0.95 + day * 1.55 + flash * 2;
       hemi.current.color.copy(zen).lerp(new THREE.Color('#b9c8ff'), 0.4);
-      hemi.current.groundColor.set(night > 0.5 ? '#1a0f24' : '#2a2a30');
+      hemi.current.groundColor.set(night > 0.5 ? '#241a38' : '#2a2a30');
     }
     if (ambient.current) {
-      ambient.current.intensity = 0.12 + night * 0.18;
-      ambient.current.color.set('#6b3fa0');
+      ambient.current.intensity = 0.16 + night * 0.4;
+      ambient.current.color.set('#5b6fd0');
     }
     scene.environmentIntensity = 0.3 + day * 1.2;
     void state;
@@ -294,13 +301,19 @@ export function Ground() {
   const half = world.size / 2;
   return (
     <group name="ground">
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.02} material={groundMat} receiveShadow>
-        <planeGeometry args={[3000, 3000]} />
-      </mesh>
-      {/* city block surface (slightly lighter than the outlying land) */}
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.01} material={lotMat} receiveShadow>
-        <planeGeometry args={[half * 2 - 10, half * 2 - 10]} />
-      </mesh>
+      {world.island ? (
+        <IslandGround world={world} lotMat={lotMat} />
+      ) : (
+        <>
+          <mesh rotation-x={-Math.PI / 2} position-y={-0.02} material={groundMat} receiveShadow>
+            <planeGeometry args={[3000, 3000]} />
+          </mesh>
+          {/* city block surface (slightly lighter than the outlying land) */}
+          <mesh rotation-x={-Math.PI / 2} position-y={-0.01} material={lotMat} receiveShadow>
+            <planeGeometry args={[half * 2 - 10, half * 2 - 10]} />
+          </mesh>
+        </>
+      )}
       {parks.map((p) => (
         <group key={p.id} position={[p.position.x, 0, p.position.z]} rotation-y={p.rotation}>
           <mesh material={lawnMat} position-y={0.06} receiveShadow>
