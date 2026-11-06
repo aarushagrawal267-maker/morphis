@@ -30,7 +30,7 @@ npm run db:generate && npm run db:push
 npm run dev:all                               # server :8787 + web :5173
 ```
 
-The web client connects to the server automatically when `http://<host>:8787/api/health` responds. Otherwise it falls back to local mode. Force a mode with `?mode=local` or `?mode=server`.
+In development the web server proxies `/api` and `/socket.io` to the simulation server, so everything runs on one address, http://localhost:5173. The client uses the server when it answers (same origin first, then port 8787). Otherwise it falls back to local mode. Force a mode with `?mode=local` or `?mode=server`.
 
 Useful URL parameters: `?hour=21` (start at 21:00), `?population=800`, `?seed=77`, `?quality=low|medium`.
 

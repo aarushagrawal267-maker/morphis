@@ -3,7 +3,15 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  server: { port: 5173, host: true },
+  server: {
+    port: 5173,
+    host: true,
+    // one origin for everything in development: API + WebSocket are proxied to the simulation server
+    proxy: {
+      '/api': 'http://localhost:8787',
+      '/socket.io': { target: 'http://localhost:8787', ws: true },
+    },
+  },
   preview: { port: 4173, host: true },
   worker: { format: 'es' },
   build: {
