@@ -98,13 +98,27 @@ export class SocketTransport implements Transport {
   }
 }
 
-/** Server URL: ?server=… query, VITE_SERVER_URL, or same host on port 8787. */
-export function serverUrl(): string {
+/** Candidate server URLs: ?server=…, VITE_SERVER_URL, same origin (dev proxy), then same host on port 8787. */
+export function serverCandidates(): string[] {
   const q = new URLSearchParams(location.search).get('server');
-  if (q) return q;
+  if (q) return [q];
   const env = import.meta.env.VITE_SERVER_URL as string | undefined;
-  if (env) return env;
-  return `${location.protocol}//${location.hostname}:8787`;
+  if (env) return [env];
+  return [location.origin, `${location.protocol}//${location.hostname}:8787`];
+}
+
+async function healthy(url: string): Promise<boolean> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 1200);
+    const res = await fetch(`${url}/api/health`, { signal: ctrl.signal });
+    clearTimeout(t);
+    if (!res.ok) return false;
+    const body = (await res.json()) as { mode?: string };
+    return body.mode === 'server';
+  } catch {
+    return false;
+  }
 }
 
 /** Decide which authority to use. `?mode=local|server` forces a mode. */
@@ -115,16 +129,10 @@ export async function chooseTransport(): Promise<Transport> {
   const seed = params.get('seed') ? Number(params.get('seed')) : undefined;
   const hour = params.get('hour') ? Number(params.get('hour')) : undefined;
   if (mode === 'local') return new WorkerTransport({ population, seed, hour });
-  const url = serverUrl();
-  try {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 1200);
-    const res = await fetch(`${url}/api/health`, { signal: ctrl.signal });
-    clearTimeout(t);
-    if (res.ok) return new SocketTransport(url);
-  } catch {
-    // no server reachable -> local mode
+  const candidates = serverCandidates();
+  for (const url of candidates) {
+    if (await healthy(url)) return new SocketTransport(url);
   }
-  if (mode === 'server') return new SocketTransport(url);
+  if (mode === 'server') return new SocketTransport(candidates[0]);
   return new WorkerTransport({ population, seed, hour });
 }
