@@ -44,3 +44,20 @@ describe('JARVIS planning (template planner, simulated execution)', () => {
     for (const t of completed) expect(t.output).toContain('[SIMULATED]');
   });
 });
+
+describe('JARVIS priority', () => {
+  it('pauses routine company work so JARVIS tasks start immediately', () => {
+    const sim = CitySimulation.create({ population: 120 });
+    sim.run(3600 * 3); // company backlog assigned during the morning
+    const busy = sim.state.citizens.find((c) => c.profile.core && c.dyn.currentTaskId)!;
+    expect(busy).toBeTruthy();
+    const role = busy.profile.role!;
+    const plan = templatePlan('Research the city');
+    plan.tasks = [{ key: 'only', title: 'Priority analysis', role, work: 60, dependsOn: [], description: 'x', artifact: 'only.md' }];
+    const r = sim.jarvisCommand('Priority analysis', plan, true);
+    expect(r.ok).toBe(true);
+    const task = sim.state.tasks.find((t) => t.title === 'Priority analysis')!;
+    expect(task.assigneeId).toBe(busy.profile.id);
+    expect(sim.state.projects.find((p) => p.id === task.projectId)!.urgent).toBe(true);
+  });
+});

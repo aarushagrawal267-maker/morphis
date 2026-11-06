@@ -24,7 +24,8 @@ export const commandSchema = z.discriminatedUnion('type', [
     seed: z.number().int().min(0).max(2 ** 31 - 1),
     population: z.number().int().min(25).max(5000).optional(),
   }),
-  z.object({ type: z.literal('jarvis.command'), text: z.string().trim().min(3).max(500) }),
+  z.object({ type: z.literal('jarvis.command'), text: z.string().trim().min(3).max(500), urgent: z.boolean().optional() }),
+  z.object({ type: z.literal('jarvis.approve'), id: z.string().min(1).max(64), approve: z.boolean() }),
 ]);
 
 export type SimCommand = z.infer<typeof commandSchema>;

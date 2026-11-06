@@ -55,6 +55,8 @@ export class TrafficSystem {
   crosswalkOcc: Int32Array;
   private signalOffset: Float64Array;
   private vehById = new Map<string, VehicleRT>();
+  /** Edges of the central circular avenue (ring traffic has priority, entries yield). */
+  private ringEdges = new Set<number>();
   avgSpeed = 0;
   moving = 0;
 
@@ -65,6 +67,7 @@ export class TrafficSystem {
     this.crosswalkOcc = new Int32Array(w.ped.edges.length);
     this.signalOffset = new Float64Array(w.roads.nodes.length);
     for (const n of w.roads.nodes) this.signalOffset[n.id] = hash2(n.id, w.seed) * SIGNAL_CYCLE;
+    for (const e of w.roads.edges) if (e.name === 'Command Circle') this.ringEdges.add(e.id);
     this.reindex();
   }
 
@@ -322,10 +325,14 @@ export class TrafficSystem {
       if (light === 'red') return true;
       if (light === 'yellow' && dist > v.v * 1.4 + 0.6) return true;
     } else if (!stuck) {
-      const occ = this.nodeOcc.get(node.id);
-      const waited = (time - v.waitingSince) / MS;
-      if (occ && occ.length && waited < 25) {
-        if (occ.some((o) => o !== v && o.legs[o.legIdx - 1]?.edge !== leg.edge)) return true;
+      const ringThrough = this.ringEdges.has(leg.edge) && !!nextLane && this.ringEdges.has(nextLane.edge);
+      // vehicles continuing around the ring have priority; everyone else needs a free junction
+      if (!ringThrough) {
+        const occ = this.nodeOcc.get(node.id);
+        const waited = (time - v.waitingSince) / MS;
+        if (occ && occ.length && waited < 25) {
+          if (occ.some((o) => o !== v && o.legs[o.legIdx - 1]?.edge !== leg.edge)) return true;
+        }
       }
     }
     if (stuck) return false;
@@ -339,7 +346,8 @@ export class TrafficSystem {
       const exit = edges[nextLane.edge];
       const laneLen = exit.length - exit.setbackA - exit.setbackB;
       const nl = this.laneMap.get(nextLane.key);
-      if (laneLen > 2 * (v.length + 2) && nl && nl.length && nl[0].v !== v && nl[0].v.v < 0.5 && nl[0].pos - nextLane.t0 < nl[0].v.length + v.length + 1) return true;
+      const guardBox = laneLen > 2 * (v.length + 2) || this.ringEdges.has(nextLane.edge);
+      if (guardBox && nl && nl.length && nl[0].v !== v && nl[0].v.v < 0.5 && nl[0].pos - nextLane.t0 < nl[0].v.length + v.length + 1) return true;
     }
     return false;
   }

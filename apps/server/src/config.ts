@@ -18,6 +18,13 @@ const schema = z.object({
   AI_MAX_TOKENS: z.coerce.number().int().min(256).default(1800),
   AI_DAILY_REQUEST_CAP: z.coerce.number().int().min(1).default(400),
   AI_TIMEOUT_MS: z.coerce.number().int().default(180_000),
+  /** NVIDIA NIM reasoning mode (chat_template_kwargs.enable_thinking). Slower, sometimes better. */
+  AI_THINKING: z.enum(['true', 'false']).default('false'),
+  /** Max tool-use steps per agent task. */
+  AI_AGENT_MAX_STEPS: z.coerce.number().int().min(1).max(12).default(6),
+  /** web.fetch is available to agents but every call still needs human approval. */
+  AI_WEB_FETCH: z.enum(['true', 'false']).default('true'),
+  AI_APPROVAL_TIMEOUT_MS: z.coerce.number().int().min(10_000).default(600_000),
 });
 
 export type ServerConfig = z.infer<typeof schema>;

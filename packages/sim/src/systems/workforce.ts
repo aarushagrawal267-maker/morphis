@@ -216,7 +216,7 @@ export class WorkforceSystem {
 
   // ---------------------------------------------------------------- projects
 
-  createProject(plan: ProjectPlan, source: SimProject['source'], buildingId: string, companyId: string | null, commandId: string | null): SimProject {
+  createProject(plan: ProjectPlan, source: SimProject['source'], buildingId: string, companyId: string | null, commandId: string | null, urgent = false): SimProject {
     const sim = this.sim;
     const slug = plan.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
     const project: SimProject = {
@@ -236,6 +236,7 @@ export class WorkforceSystem {
       commandId,
       foundsCompany: plan.foundsCompany ?? null,
       planner: plan.planner,
+      urgent,
     };
     const keyToId = new Map<string, string>();
     for (const pt of plan.tasks) keyToId.set(pt.key, sim.newId('task'));
@@ -332,7 +333,22 @@ export class WorkforceSystem {
         continue;
       }
       t.status = 'PENDING';
-      const c = this.core().find((x) => x.profile.role === t.role && !x.dyn.currentTaskId);
+      let c = this.core().find((x) => x.profile.role === t.role && !x.dyn.currentTaskId);
+      if (!c && this.project(t.projectId)?.source === 'jarvis') {
+        // JARVIS work has priority: pause a routine company task of the right role
+        c = this.core().find((x) => {
+          if (x.profile.role !== t.role || !x.dyn.currentTaskId) return false;
+          const cur = this.task(x.dyn.currentTaskId);
+          return !!cur && this.project(cur.projectId)?.source === 'company';
+        });
+        if (c) {
+          const paused = this.task(c.dyn.currentTaskId!)!;
+          paused.assigneeId = null;
+          paused.status = 'PENDING';
+          c.dyn.currentTaskId = null;
+          this.activity(c, `Pausing "${paused.title}" for JARVIS priority work`, 'task', paused.buildingId);
+        }
+      }
       if (!c) continue;
       t.assigneeId = c.profile.id;
       t.status = 'ACTIVE';
@@ -348,6 +364,15 @@ export class WorkforceSystem {
   /** Live (AI) execution applies to JARVIS projects; company backlog work stays simulated. */
   isLive(task: SimTask): boolean {
     return this.executor.mode === 'live' && this.project(task.projectId)?.source === 'jarvis';
+  }
+
+  /** Urgent work pulls the assignee in outside normal hours (unless exhausted). */
+  urgentTaskFor(c: CitizenRT): SimTask | null {
+    const id = c.dyn.currentTaskId;
+    if (!id) return null;
+    const t = this.task(id);
+    if (!t || t.status !== 'ACTIVE') return null;
+    return this.project(t.projectId)?.urgent ? t : null;
   }
 
   /** A citizen whose AI task is in flight stays at their desk until the agent finishes. */

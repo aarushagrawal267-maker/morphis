@@ -36,6 +36,7 @@ export class SimulationHost {
     this.sim = sim ?? CitySimulation.create({ seed: cfg.CITY_SEED, population: cfg.CITY_POPULATION });
     this.runner = new SimulationRunner(this.sim, 35);
     this.agents.bindSimulation(() => this.sim);
+    this.agents.onApprovals = (list) => this.io?.emit(SOCKET_EVENTS.approvals, list);
     this.attachExecutor();
   }
 
@@ -79,7 +80,7 @@ export class SimulationHost {
   }
 
   initPayload(): InitPayload {
-    return this.sim.buildInit('server', this.sessionId, this.persistence.info, this.agents.info);
+    return { ...this.sim.buildInit('server', this.sessionId, this.persistence.info, this.agents.info), approvals: this.agents.tools.recentApprovals() };
   }
 
   private replace(next: CitySimulation): void {
@@ -113,9 +114,13 @@ export class SimulationHost {
         case 'city.new':
           this.replace(CitySimulation.create({ seed: cmd.seed, population: cmd.population ?? this.sim.world.config.population }));
           return { ok: true, data: { seed: cmd.seed } };
+        case 'jarvis.approve': {
+          const ok = this.agents.tools.decide(cmd.id, cmd.approve);
+          return ok ? { ok: true } : { ok: false, error: 'no pending approval with that id' };
+        }
         case 'jarvis.command': {
           const { plan, note } = await this.agents.planCommand(cmd.text);
-          const reply = this.sim.jarvisCommand(cmd.text, plan);
+          const reply = this.sim.jarvisCommand(cmd.text, plan, cmd.urgent ?? false);
           this.broadcastPending();
           return reply.ok ? { ok: true, data: { ...(reply.data as object), note } } : { ok: false, error: reply.error };
         }
