@@ -37,6 +37,7 @@ export function chatterFor(p: CitizenProfile, d: CitizenDynamic, life: AgentLife
     if (h < 10) options.push(`Morning, ${f}! Sleep well?`);
     else if (h >= 20) options.push(`${f}! Out late again?`, `Walk me home, ${f}?`);
     if (ctx.weather === 'rain' || ctx.weather === 'storm') options.push(`${f}, share my umbrella?`);
+    if (ctx.weather === 'fog') options.push(`${f}? Is that you in this fog?`);
     const ev = ctx.events.find((e) => e.status === 'LIVE');
     if (ev) options.push(`${f}, coming to ${ev.name}?`);
     return pick(options, seed);
