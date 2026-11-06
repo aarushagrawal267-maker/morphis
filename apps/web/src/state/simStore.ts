@@ -5,6 +5,7 @@
 import { create } from 'zustand';
 import type {
   ActivityEntry,
+  ApprovalRequest,
   AiProviderInfo,
   AuthorityMode,
   BuildingDef,
@@ -49,6 +50,7 @@ interface SimData {
   commands: CommandRecord[];
   persistence: PersistenceInfo | null;
   ai: AiProviderInfo | null;
+  approvals: ApprovalRequest[];
   eventCount: number;
   /** Bumped when profiles change (hiring etc.). */
   revision: number;
@@ -81,6 +83,7 @@ export const useSim = create<SimData>((set, get) => ({
   commands: [],
   persistence: null,
   ai: null,
+  approvals: [],
   eventCount: 0,
   revision: 0,
 
@@ -110,6 +113,7 @@ export const useSim = create<SimData>((set, get) => ({
       commands: p.commands,
       persistence: p.persistence,
       ai: p.ai,
+      approvals: p.approvals ?? [],
       revision: get().revision + 1,
     });
   },

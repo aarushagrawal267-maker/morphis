@@ -91,6 +91,7 @@ export class OpenAICompatibleProvider implements AiProvider {
     private limiter: RateLimiter,
     private timeoutMs: number,
     private maxTokens: number,
+    private thinking = false,
   ) {
     this.name = baseUrl.includes('nvidia') ? 'nvidia-nim' : baseUrl.includes('openrouter') ? 'openrouter' : baseUrl.includes('openai.com') ? 'openai' : 'openai-compatible';
   }
@@ -105,7 +106,15 @@ export class OpenAICompatibleProvider implements AiProvider {
           method: 'POST',
           signal: ctrl.signal,
           headers: { 'content-type': 'application/json', ...(this.apiKey ? { authorization: `Bearer ${this.apiKey}` } : {}) },
-          body: JSON.stringify({ model: this.model, messages, max_tokens: opts.maxTokens ?? this.maxTokens, temperature: opts.temperature ?? 0.4, stream: false }),
+          body: JSON.stringify({
+            model: this.model,
+            messages,
+            max_tokens: opts.maxTokens ?? this.maxTokens,
+            temperature: opts.temperature ?? 0.4,
+            stream: false,
+            // NVIDIA NIM reasoning toggle (reasoning arrives separately in reasoning_content)
+            ...(this.name === 'nvidia-nim' ? { chat_template_kwargs: { enable_thinking: this.thinking } } : {}),
+          }),
         });
         if (!res.ok) throw new HttpError(res.status, `${this.name} ${res.status}: ${(await res.text()).slice(0, 300)}`);
         const json = (await res.json()) as { choices?: { message?: { content?: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } };
@@ -173,7 +182,7 @@ export function createProvider(cfg: ServerConfig): { provider: AiProvider | null
   const provider =
     cfg.AI_PROVIDER === 'anthropic'
       ? new AnthropicProvider(cfg.AI_API_KEY!, cfg.AI_MODEL, limiter, cfg.AI_TIMEOUT_MS, cfg.AI_MAX_TOKENS)
-      : new OpenAICompatibleProvider(cfg.AI_BASE_URL, cfg.AI_API_KEY, cfg.AI_MODEL, limiter, cfg.AI_TIMEOUT_MS, cfg.AI_MAX_TOKENS);
+      : new OpenAICompatibleProvider(cfg.AI_BASE_URL, cfg.AI_API_KEY, cfg.AI_MODEL, limiter, cfg.AI_TIMEOUT_MS, cfg.AI_MAX_TOKENS, cfg.AI_THINKING === 'true');
   return {
     provider,
     limiter,

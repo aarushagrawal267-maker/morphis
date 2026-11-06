@@ -158,12 +158,12 @@ export function EnvironmentController() {
       s.position.copy(dir).multiplyScalar(220);
       s.target.position.set(0, 0, 0);
       s.target.updateMatrixWorld();
-      const sunI = above ? (3.3 * day + 0.15) * (1 - cloud * 0.6) : 0.3;
+      const sunI = above ? (3.9 * day + 0.15) * (1 - cloud * 0.6) : 0.3;
       s.intensity = sunI + flash * 3;
       s.color.set(above ? (dusk > 0.3 ? '#ffb47a' : '#fff1dc') : '#8fa8ff');
     }
     if (hemi.current) {
-      hemi.current.intensity = 0.3 + day * 1.7 + flash * 2;
+      hemi.current.intensity = 0.3 + day * 2.1 + flash * 2;
       hemi.current.color.copy(zen).lerp(new THREE.Color('#b9c8ff'), 0.4);
       hemi.current.groundColor.set(night > 0.5 ? '#1a0f24' : '#2a2a30');
     }
@@ -171,7 +171,7 @@ export function EnvironmentController() {
       ambient.current.intensity = 0.12 + night * 0.18;
       ambient.current.color.set('#6b3fa0');
     }
-    scene.environmentIntensity = 0.3 + day * 0.9;
+    scene.environmentIntensity = 0.3 + day * 1.2;
     void state;
   });
 

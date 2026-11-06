@@ -277,6 +277,22 @@ export interface SimProject {
   /** Company to found when the project completes (JARVIS startup plans). */
   foundsCompany?: string | null;
   planner?: string;
+  /** Urgent projects call their assignees in to work immediately (overtime). */
+  urgent?: boolean;
+}
+
+/** A tool call by an AI agent waiting for a human decision. */
+export interface ApprovalRequest {
+  id: string;
+  tool: string;
+  /** Human readable summary, e.g. the URL to fetch. */
+  summary: string;
+  args: Record<string, string>;
+  citizenId: string;
+  agentName: string;
+  taskTitle: string;
+  requestedAt: string;
+  status: 'PENDING' | 'APPROVED' | 'DENIED' | 'EXPIRED';
 }
 
 export type NewsCategory =

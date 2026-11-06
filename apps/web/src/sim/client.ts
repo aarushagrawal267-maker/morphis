@@ -87,6 +87,9 @@ export class SimClient {
       case 'events':
         this.applyEvents(m.events);
         break;
+      case 'approvals':
+        useSim.setState({ approvals: m.approvals });
+        break;
     }
   }
 

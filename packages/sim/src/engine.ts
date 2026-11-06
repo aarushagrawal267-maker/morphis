@@ -364,14 +364,14 @@ export class CitySimulation {
         return { ok: true, data: { ticks } };
       }
       case 'jarvis.command':
-        return this.jarvisCommand(cmd.text, null);
+        return this.jarvisCommand(cmd.text, null, cmd.urgent ?? false);
       default:
         return { ok: false, error: `${cmd.type} must be handled by the host (persistence)` };
     }
   }
 
   /** Accept a command and plan it (template planner unless a plan is supplied by an LLM planner). */
-  jarvisCommand(text: string, plan: ProjectPlan | null): CommandReply {
+  jarvisCommand(text: string, plan: ProjectPlan | null, urgent = false): CommandReply {
     const sim = this as CitySimulation;
     const p = plan ?? templatePlan(text);
     const err = validatePlan(p);
@@ -382,13 +382,13 @@ export class CitySimulation {
       status: err ? ('REJECTED' as const) : ('RUNNING' as const),
       projectId: null as string | null,
       planner: p.planner,
-      message: err ? `Plan rejected: ${err}` : `Planned "${p.name}" with ${p.tasks.length} tasks.`,
+      message: err ? `Plan rejected: ${err}` : `Planned "${p.name}" with ${p.tasks.length} tasks${urgent ? ' (urgent: team called in now)' : ''}.`,
     };
     sim.state.commands.push(record);
     if (sim.state.commands.length > 50) sim.state.commands.shift();
     if (!err) {
       const hq = sim.world.hqId;
-      const project = sim.workforce.createProject(p, 'jarvis', hq, null, record.id);
+      const project = sim.workforce.createProject(p, 'jarvis', hq, null, record.id, urgent);
       record.projectId = project.id;
     }
     sim.bus.emit('jarvis.command', sim.time, { command: record });

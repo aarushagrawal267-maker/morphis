@@ -20,7 +20,7 @@ import type {
   VehicleInfo,
   WeatherState,
 } from './types/sim';
-import type { BuildingDynamic } from './types/sim';
+import type { ApprovalRequest, BuildingDynamic } from './types/sim';
 import type { StaticWorld } from './types/world';
 
 /** High-frequency motion frame (~15 Hz). */
@@ -86,6 +86,7 @@ export interface InitPayload {
   commands: CommandRecord[];
   persistence: PersistenceInfo;
   ai: AiProviderInfo;
+  approvals?: ApprovalRequest[];
 }
 
 export interface SaveSummary {
@@ -103,6 +104,7 @@ export type AuthorityMessage =
   | { t: 'frame'; frame: MotionFrame }
   | { t: 'state'; state: StateFrame }
   | { t: 'events'; events: SimEvent[] }
+  | { t: 'approvals'; approvals: ApprovalRequest[] }
   | { t: 'reply'; id: number; ok: boolean; data?: unknown; error?: string };
 
 /** Socket.IO event names. */
@@ -111,5 +113,6 @@ export const SOCKET_EVENTS = {
   frame: 'sim.frame',
   state: 'sim.state',
   events: 'sim.events',
+  approvals: 'ai.approvals',
   command: 'sim.command',
 } as const;

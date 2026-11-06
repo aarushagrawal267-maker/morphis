@@ -3,7 +3,7 @@
  * stream and accept the same validated commands.
  */
 import { io, type Socket } from 'socket.io-client';
-import type { AuthorityMessage, InitPayload, MotionFrame, SimCommand, SimEvent, StateFrame } from '@morphis/shared';
+import type { ApprovalRequest, AuthorityMessage, InitPayload, MotionFrame, SimCommand, SimEvent, StateFrame } from '@morphis/shared';
 import { SOCKET_EVENTS } from '@morphis/shared';
 
 export interface Transport {
@@ -78,6 +78,7 @@ export class SocketTransport implements Transport {
     s.on(SOCKET_EVENTS.frame, (frame: MotionFrame) => onMessage({ t: 'frame', frame }));
     s.on(SOCKET_EVENTS.state, (state: StateFrame) => onMessage({ t: 'state', state }));
     s.on(SOCKET_EVENTS.events, (events: SimEvent[]) => onMessage({ t: 'events', events }));
+    s.on(SOCKET_EVENTS.approvals, (approvals: ApprovalRequest[]) => onMessage({ t: 'approvals', approvals }));
   }
 
   send(cmd: SimCommand): Promise<unknown> {

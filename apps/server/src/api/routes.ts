@@ -70,9 +70,9 @@ export function registerRoutes(app: FastifyInstance, host: SimulationHost): void
   });
 
   app.post('/api/jarvis', async (req, reply) => {
-    const body = z.object({ text: z.string().trim().min(3).max(500) }).safeParse(req.body);
+    const body = z.object({ text: z.string().trim().min(3).max(500), urgent: z.boolean().optional() }).safeParse(req.body);
     if (!body.success) return reply.code(400).send({ ok: false, error: 'text (3-500 chars) required' });
-    const r = await host.command({ type: 'jarvis.command', text: body.data.text });
+    const r = await host.command({ type: 'jarvis.command', text: body.data.text, urgent: body.data.urgent });
     return reply.code(r.ok ? 200 : 422).send(r);
   });
 }

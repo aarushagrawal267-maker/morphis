@@ -111,8 +111,12 @@ describe('AI agents against a mock OpenAI-compatible provider', () => {
         const json = JSON.parse(body) as { messages: { role: string; content: string }[] };
         const system = json.messages.find((m) => m.role === 'system')?.content ?? '';
         const user = json.messages.find((m) => m.role === 'user')?.content ?? '';
+        const observed = json.messages.some((m) => m.content.startsWith('Observation from'));
         calls.push({ system, user });
-        let content = '# Deliverable\n\n- Finding one\n- Finding two';
+        // agents: first a tool step, then the final deliverable as JSON
+        let content = observed
+          ? JSON.stringify({ thought: 'done', final: '# Deliverable\n\n- Finding one\n- Finding two' })
+          : JSON.stringify({ thought: 'check the workspace first', action: 'workspace.list', args: {} });
         if (user.includes('single word: ready')) content = 'ready';
         else if (system.includes('Master Planner'))
           content =
@@ -128,7 +132,7 @@ describe('AI agents against a mock OpenAI-compatible provider', () => {
               ],
             }) +
             '\n```';
-        else if (system.includes('reviewer')) content = '<think>internal</think># Final synthesis\nAll good.';
+        else if (system.includes('reviewer') && observed) content = '<think>internal</think># Final synthesis\nAll good.';
         res.setHeader('content-type', 'application/json');
         res.end(JSON.stringify({ choices: [{ message: { content } }], usage: { prompt_tokens: 10, completion_tokens: 20 } }));
       });
@@ -170,5 +174,35 @@ describe('AI agents against a mock OpenAI-compatible provider', () => {
     expect(review.user).toContain('Collect energy data');
     expect(readFileSync(path.join(dataDir, 'audit.log'), 'utf8')).toContain('workspace.write');
     await ctx.app.close();
+  });
+});
+
+describe('agent tools: approvals and network safety', () => {
+  it('pauses an approval-gated tool until the commander decides', async () => {
+    const { ToolManager, assertPublicUrl } = await import('../src/ai/tools');
+    const { Workspace } = await import('../src/ai/workspace');
+    const dir = mkdtempSync(path.join(tmpdir(), 'morphis-tools-'));
+    const changes: number[] = [];
+    const tm = new ToolManager(new Workspace(dir), { dataDir: dir, webFetch: true, approvalTimeoutMs: 60_000, onApprovalsChanged: (l) => changes.push(l.length) });
+    const ctx = { actor: 'citizen_0000', agentName: 'Sarah Chen', taskTitle: 'Research', workspace: '/projects/test' };
+    const denied = tm.invoke(ctx, 'web.fetch', { url: 'https://example.com/' });
+    await wait(10);
+    expect(tm.pending).toHaveLength(1);
+    expect(tm.pending[0].summary).toBe('https://example.com/');
+    tm.decide(tm.pending[0].id, false);
+    await expect(denied).rejects.toThrow(/did not approve/);
+    // approved, but the target is a private address -> still refused
+    const blocked = tm.invoke(ctx, 'web.fetch', { url: 'http://127.0.0.1:8787/api/health' });
+    await wait(10);
+    tm.decide(tm.pending[0].id, true);
+    await expect(blocked).rejects.toThrow(/not allowed/);
+    await expect(assertPublicUrl('http://169.254.169.254/latest')).rejects.toThrow();
+    await expect(assertPublicUrl('file:///etc/passwd')).rejects.toThrow();
+    // workspace paths cannot escape the project
+    await tm.invoke(ctx, 'workspace.write', { path: 'notes.md', content: 'hello' });
+    expect(await tm.invoke(ctx, 'workspace.read', { path: 'notes.md' })).toBe('hello');
+    await expect(tm.invoke(ctx, 'workspace.read', { path: '../../etc/passwd' })).rejects.toThrow();
+    await expect(tm.invoke(ctx, 'system.shell', {})).rejects.toThrow(/restricted/);
+    expect(changes.length).toBeGreaterThan(0);
   });
 });

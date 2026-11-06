@@ -9,13 +9,13 @@
  * produces the synthesis, acting as reviewer.
  */
 import { z } from 'zod';
-import type { AiProviderInfo, CitizenProfile, CoreRole, ProjectPlan, SimProject, SimTask } from '@morphis/shared';
+import type { AiProviderInfo, ApprovalRequest, CitizenProfile, CoreRole, ProjectPlan, SimProject, SimTask } from '@morphis/shared';
 import { CORE_ROLES, CORE_ROLE_ORDER } from '@morphis/shared';
 import type { CitySimulation, TaskExecutor } from '@morphis/sim';
 import { templatePlan, validatePlan } from '@morphis/sim';
 import type { ServerConfig } from '../config';
 import { AgentMemory } from './memory';
-import { createProvider, type AiProvider, type RateLimiter } from './provider';
+import { createProvider, type AiProvider, type ChatMessage, type RateLimiter } from './provider';
 import { ToolManager } from './tools';
 import { Workspace } from './workspace';
 
@@ -41,14 +41,67 @@ const planSchema = z.object({
     .max(16),
 });
 
-/** Extract the first JSON object from a model response (tolerates fences and prose). */
+/** Escape raw control characters that models sometimes leave inside JSON strings. */
+function repairStrings(json: string): string {
+  let out = '';
+  let inStr = false;
+  let esc = false;
+  for (const ch of json) {
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+      else if (ch === '\n') {
+        out += '\\n';
+        continue;
+      } else if (ch === '\r') {
+        out += '\\r';
+        continue;
+      } else if (ch === '\t') {
+        out += '\\t';
+        continue;
+      }
+    } else if (ch === '"') inStr = true;
+    out += ch;
+  }
+  return out;
+}
+
+/**
+ * Extract the first JSON object from a model response. Tolerates code fences,
+ * prose around the object, trailing extra braces and raw newlines in strings.
+ */
 export function extractJson(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const body = fenced ? fenced[1] : text;
   const start = body.indexOf('{');
-  const end = body.lastIndexOf('}');
-  if (start < 0 || end <= start) throw new Error('no JSON object in response');
-  return JSON.parse(body.slice(start, end + 1));
+  if (start < 0) throw new Error('no JSON object in response');
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < body.length; i++) {
+    const ch = body[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) {
+        const candidate = body.slice(start, i + 1);
+        try {
+          return JSON.parse(candidate);
+        } catch {
+          return JSON.parse(repairStrings(candidate));
+        }
+      }
+    }
+  }
+  throw new Error('unterminated JSON object in response');
 }
 
 export class LlmMasterPlanner {
@@ -104,6 +157,28 @@ interface Job {
   inputs: SimTask[];
 }
 
+export interface AgentStep {
+  thought?: string;
+  action?: string;
+  args?: Record<string, string>;
+  final?: string;
+}
+
+/** Parse one agent turn: a JSON action, or plain text treated as the final deliverable. */
+export function parseStep(text: string): AgentStep {
+  try {
+    const j = extractJson(text) as AgentStep;
+    if (j && (typeof j.final === 'string' || typeof j.action === 'string')) {
+      const args: Record<string, string> = {};
+      for (const [k, v] of Object.entries(j.args ?? {})) args[k] = typeof v === 'string' ? v : JSON.stringify(v);
+      return { thought: j.thought, action: j.action, args, final: j.final };
+    }
+  } catch {
+    /* not JSON: the model answered directly */
+  }
+  return { final: text };
+}
+
 export class LiveTaskExecutor implements TaskExecutor {
   readonly mode = 'live' as const;
   readonly label: string;
@@ -145,51 +220,96 @@ export class LiveTaskExecutor implements TaskExecutor {
     const ctl = this.ctl;
     const role = CORE_ROLES[task.role];
     const isReview = /review|synthes/i.test(task.title);
+    const ctx = { actor: citizen.id, agentName: citizen.name, taskTitle: task.title, workspace: project.workspace };
+    const activity = (text: string) => {
+      const c = sim.citizenById(citizen.id);
+      if (c && ctl.sim() === sim) sim.workforce.activity(c, text, 'task', task.buildingId);
+    };
     try {
+      const sources = isReview
+        ? project.tasks.map((id) => sim.workforce.task(id)!).filter((t) => t && t.id !== task.id && t.status === 'COMPLETED')
+        : job.inputs;
       const inputs: string[] = [];
-      const sources = isReview ? project.tasks.map((id) => sim.workforce.task(id)!).filter((t) => t && t.id !== task.id && t.status === 'COMPLETED') : job.inputs;
       for (const t of sources) {
-        const content = t.artifact ? await ctl.tools.invoke(citizen.id, 'workspace.read', { path: t.artifact }) : '';
-        inputs.push(`### ${t.title} (by ${CORE_ROLES[t.role].label})\n${(content || t.output || '').slice(0, isReview ? 1400 : 2200)}`);
+        const content = t.artifact ? await ctl.workspace.read(t.artifact) : null;
+        inputs.push(`### ${t.title} (by ${CORE_ROLES[t.role].label}, file ${t.artifact?.split('/').pop()})\n${(content || t.output || '').slice(0, isReview ? 1400 : 2000)}`);
       }
       const memory = ctl.memory.recent(citizen.id).map((m) => `- ${m.project}: ${m.task} — ${m.summary}`);
-      sim.workforce.reportProgress(task.id, 0.25);
-      const res = await ctl.provider!.complete([
+      const tools = ctl.tools.agentTools();
+      const toolDocs = tools
+        .map((t) => `- ${t.name}: ${t.description}${Object.keys(t.args).length ? ` Args: ${JSON.stringify(t.args)}` : ''}${t.permission === 'approval' ? ' [needs human approval]' : ''}`)
+        .join('\n');
+      const messages: ChatMessage[] = [
         {
           role: 'system',
           content: [
             `You are ${citizen.name}, the ${role.label} (${role.department}) in MORPHIS, an AI organisation coordinated by JARVIS.`,
             `Your skills: ${Object.keys(citizen.skills).join(', ')}.`,
-            'Produce the deliverable for your assigned task as a well-structured markdown document (headings, bullet points, concrete specifics).',
-            'Work only from the information given; state assumptions explicitly. You cannot browse the web, run code or contact anyone, so never claim to have done so.',
-            isReview ? 'You are the reviewer: assess the upstream deliverables for gaps and contradictions, then write the final synthesis and next steps.' : '',
+            'You work step by step. Each reply must be ONE JSON object and nothing else:',
+            '  {"thought": "short reasoning", "action": "<tool name>", "args": {...}}   to use a tool, or',
+            '  {"thought": "short reasoning", "final": "<your complete markdown deliverable>"}   when done.',
+            `Tools:\n${toolDocs}`,
+            'Only use web.fetch for specific, relevant public URLs; the commander may deny it, then continue without it.',
+            'State assumptions explicitly. Never claim to have done things you did not do (you cannot email, buy, deploy or run code).',
+            isReview ? 'You are the reviewer: check the deliverables for gaps and contradictions, then write the final synthesis with clear next steps.' : '',
           ].join('\n'),
         },
         {
           role: 'user',
           content: [
             `Project: ${project.name}`,
-            `Project brief: ${project.description}`,
+            `Brief: ${project.description}`,
             `Your task: ${task.title}`,
-            inputs.length ? `\nInputs from teammates:\n${inputs.join('\n\n')}` : '\nNo upstream inputs: you are starting this work stream.',
+            inputs.length ? `\nDeliverables from teammates:\n${inputs.join('\n\n')}` : '\nNo upstream deliverables: you start this work stream.',
             memory.length ? `\nYour recent work:\n${memory.join('\n')}` : '',
-            '\nKeep it under 700 words.',
+            `\nYour final deliverable will be saved as ${task.artifact?.split('/').pop()}. Keep it under 800 words.`,
           ].join('\n'),
         },
-      ]);
-      if (ctl.sim() !== sim) return; // city was replaced while we worked
-      sim.workforce.reportProgress(task.id, 0.85);
+      ];
+      let final: string | null = null;
+      const maxSteps = ctl.maxSteps;
+      for (let step = 0; step < maxSteps && final === null; step++) {
+        const res = await ctl.provider!.complete(messages);
+        ctl.usage.input += res.inputTokens;
+        ctl.usage.output += res.outputTokens;
+        if (ctl.sim() !== sim) return; // city replaced while we worked
+        const parsed = parseStep(res.text);
+        messages.push({ role: 'assistant', content: res.text });
+        if (parsed.final !== undefined && !parsed.action) {
+          final = parsed.final;
+          break;
+        }
+        const action = parsed.action ?? '';
+        sim.workforce.reportProgress(task.id, 0.15 + (0.65 * (step + 1)) / maxSteps);
+        let observation: string;
+        try {
+          if (action === 'web.fetch') activity(`Requesting approval to read ${parsed.args?.url ?? 'a web page'}`);
+          observation = await ctl.tools.invoke(ctx, action, parsed.args ?? {});
+          if (action === 'web.fetch') activity(`Reading ${parsed.args?.url}`);
+        } catch (e) {
+          observation = `ERROR: ${e instanceof Error ? e.message : String(e)}`;
+        }
+        ctl.steps++;
+        messages.push({ role: 'user', content: `Observation from ${action}:\n${observation.slice(0, 4000)}\n\nContinue. Reply with one JSON object.` });
+      }
+      if (final === null) {
+        messages.push({ role: 'user', content: 'Step limit reached. Reply now with {"final": "<your complete markdown deliverable>"}.' });
+        const res = await ctl.provider!.complete(messages);
+        if (ctl.sim() !== sim) return;
+        const parsed = parseStep(res.text);
+        final = parsed.final ?? res.text;
+      }
+      sim.workforce.reportProgress(task.id, 0.9);
       const header = `<!-- ${task.title} · ${citizen.name} (${role.label}) · model ${ctl.provider!.model} · ${new Date().toISOString()} -->\n`;
-      if (task.artifact) await ctl.tools.invoke(citizen.id, 'workspace.write', { path: task.artifact, content: header + res.text });
-      const summary = res.text.replace(/[#*`>_]/g, '').replace(/\s+/g, ' ').trim().slice(0, 260);
+      // hand-in goes through the audited workspace tool
+      if (task.artifact) await ctl.tools.invoke(ctx, 'workspace.write', { path: task.artifact.split('/').pop()!, content: header + final });
+      const summary = final.replace(/[#*`>_]/g, '').replace(/\s+/g, ' ').trim().slice(0, 260);
       ctl.memory.add(citizen.id, { time: new Date().toISOString(), project: project.name, task: task.title, summary: summary.slice(0, 160) });
-      ctl.usage.input += res.inputTokens;
-      ctl.usage.output += res.outputTokens;
       ctl.usage.tasks++;
       sim.workforce.complete(task.id, `[AI · ${ctl.provider!.model}] ${summary}${summary.length >= 260 ? '…' : ''}`);
       if (isReview) {
         const p = sim.workforce.project(project.id);
-        if (p) p.report = `# ${p.name} — final synthesis (AI)\n\n${res.text}`;
+        if (p) p.report = `# ${p.name} — final synthesis (AI)\n\n${final}`;
       }
     } catch (e) {
       const reason = e instanceof Error ? e.message : String(e);
@@ -211,7 +331,9 @@ export class AgentController {
   readonly limiter: RateLimiter;
   readonly workspace: Workspace;
   readonly tools: ToolManager;
-  readonly memory = new AgentMemory();
+  readonly memory: AgentMemory;
+  readonly maxSteps: number;
+  steps = 0;
   readonly planner: LlmMasterPlanner | null;
   readonly executor: LiveTaskExecutor | null;
   info: AiProviderInfo;
@@ -220,13 +342,25 @@ export class AgentController {
   usage = { input: 0, output: 0, tasks: 0 };
   private getSim: () => CitySimulation | null = () => null;
 
+  /** Called whenever the approval queue changes (broadcast to clients). */
+  onApprovals: (list: ApprovalRequest[]) => void = () => undefined;
+
   constructor(cfg: ServerConfig, audit?: (actor: string, action: string, detail: object, approved: boolean) => Promise<void>) {
     const { provider, info, limiter } = createProvider(cfg);
     this.provider = provider;
     this.info = info;
     this.limiter = limiter;
+    this.maxSteps = cfg.AI_AGENT_MAX_STEPS;
+    this.memory = new AgentMemory(cfg.DATA_DIR);
+    void this.memory.load();
     this.workspace = new Workspace(cfg.DATA_DIR);
-    this.tools = new ToolManager(this.workspace, cfg.DATA_DIR, audit);
+    this.tools = new ToolManager(this.workspace, {
+      dataDir: cfg.DATA_DIR,
+      webFetch: cfg.AI_WEB_FETCH === 'true',
+      approvalTimeoutMs: cfg.AI_APPROVAL_TIMEOUT_MS,
+      onAudit: audit,
+      onApprovalsChanged: (list) => this.onApprovals(list),
+    });
     this.planner = provider ? new LlmMasterPlanner(provider) : null;
     this.executor = provider ? new LiveTaskExecutor(this) : null;
   }
@@ -277,9 +411,10 @@ export class AgentController {
       verified: this.verified,
       lastError: this.lastError,
       usage: this.usage,
+      agentSteps: this.steps,
       requestsToday: this.limiter.used,
       tools: this.tools.list(),
-      pendingApprovals: this.tools.pending,
+      approvals: this.tools.recentApprovals(),
       inFlight: this.executor ? [...this.executor.inFlight] : [],
     };
   }

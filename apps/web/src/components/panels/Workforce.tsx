@@ -191,12 +191,14 @@ export function JarvisConsole() {
   const tasks = useSim((s) => s.tasks);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const [urgent, setUrgent] = useState(false);
+  const approvals = useSim((s) => s.approvals);
   if (!open) return null;
   const core = citizens.filter((c) => c.core);
   const submit = async (t: string) => {
     if (t.trim().length < 3) return;
     setBusy(true);
-    await run({ type: 'jarvis.command', text: t.trim() }, 'JARVIS accepted the command');
+    await run({ type: 'jarvis.command', text: t.trim(), urgent }, urgent ? 'JARVIS accepted the command — team called in now' : 'JARVIS accepted the command');
     setBusy(false);
     setText('');
   };
@@ -224,6 +226,45 @@ export function JarvisConsole() {
           SEND
         </button>
       </form>
+      <label className="toggle" data-testid="jarvis-urgent">
+        <input type="checkbox" checked={urgent} onChange={(e) => setUrgent(e.target.checked)} />
+        <span>Start now (urgent: call the team in even outside working hours)</span>
+      </label>
+      {approvals.length > 0 && (
+        <>
+          <h4>Approvals</h4>
+          <ul className="approvals">
+            {approvals
+              .slice()
+              .reverse()
+              .slice(0, 8)
+              .map((a) => (
+                <li key={a.id} className={`appr appr--${a.status.toLowerCase()}`} data-testid="approval">
+                  <div>
+                    <b>
+                      {a.agentName} wants to use {a.tool}
+                    </b>
+                    <small>
+                      “{a.taskTitle}” · <code>{a.summary}</code>
+                    </small>
+                  </div>
+                  {a.status === 'PENDING' ? (
+                    <span className="appr__btns">
+                      <button onClick={() => run({ type: 'jarvis.approve', id: a.id, approve: true }, 'Approved')} data-testid="approve">
+                        APPROVE
+                      </button>
+                      <button className="deny" onClick={() => run({ type: 'jarvis.approve', id: a.id, approve: false }, 'Denied')}>
+                        DENY
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="appr__status">{a.status}</span>
+                  )}
+                </li>
+              ))}
+          </ul>
+        </>
+      )}
       <div className="examples">
         {EXAMPLES.map((e) => (
           <button key={e} onClick={() => setText(e)}>

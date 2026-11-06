@@ -179,6 +179,10 @@ export class CitizenSystem {
     else if (d.satiety < 0.22 && activity !== 'sleep' && activity !== 'eat' && h > 6.5 && h < 23) activity = 'eat';
     if ((activity === 'work' || activity === 'study') && !c.profile.workplaceId) activity = h < 18 ? 'park' : 'home';
 
+    // urgent JARVIS work calls the assignee in now (overtime), unless they are exhausted
+    const urgent = sim.workforce.urgentTaskFor(c);
+    if (urgent && d.energy > 0.15 && activity !== 'eat') activity = urgent.buildingId === c.profile.workplaceId ? 'work' : 'meeting';
+
     // core citizens with a task in another building go there during work hours
     if (activity === 'work' && d.currentTaskId) {
       const task = sim.workforce.task(d.currentTaskId);
