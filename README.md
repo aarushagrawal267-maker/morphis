@@ -97,3 +97,4 @@ docs              architecture, systems and development guides
 | `npm run test:e2e` | Playwright browser tests |
 | `npm run typecheck` / `npm run lint` | Type-check / lint all packages |
 | `npm run build` | Production build of the web client |
+| `npm run build:static` | Static, server-free build (local mode only, relative paths) into `apps/web/dist-static` |

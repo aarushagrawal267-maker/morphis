@@ -128,7 +128,8 @@ export async function chooseTransport(): Promise<Transport> {
   const population = Number(params.get('population')) || undefined;
   const seed = params.get('seed') ? Number(params.get('seed')) : undefined;
   const hour = params.get('hour') ? Number(params.get('hour')) : undefined;
-  if (mode === 'local') return new WorkerTransport({ population, seed, hour });
+  // Static builds (VITE_LOCAL_ONLY=1) have no server to talk to, so skip probing.
+  if (mode === 'local' || import.meta.env.VITE_LOCAL_ONLY === '1') return new WorkerTransport({ population, seed, hour });
   const candidates = serverCandidates();
   for (const url of candidates) {
     if (await healthy(url)) return new SocketTransport(url);

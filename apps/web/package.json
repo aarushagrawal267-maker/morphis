@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:static": "VITE_LOCAL_ONLY=1 vite build --base ./ --outDir dist-static",
     "preview": "vite preview"
   },
   "dependencies": {

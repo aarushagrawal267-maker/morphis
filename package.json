@@ -13,6 +13,7 @@
     "dev:server": "npm run dev --workspace @morphis/server",
     "dev:all": "node scripts/dev-all.mjs",
     "build": "npm run build --workspace @morphis/web",
+    "build:static": "npm run build:static --workspace @morphis/web",
     "start:server": "npm run start --workspace @morphis/server",
     "typecheck": "tsc -p packages/shared && tsc -p packages/sim && tsc -p apps/server && tsc -p apps/web",
     "test": "vitest run",
