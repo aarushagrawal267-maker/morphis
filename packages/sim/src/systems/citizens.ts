@@ -163,6 +163,12 @@ export class CitizenSystem {
     if (c.trip || c.walker) return;
     const sim = this.sim;
     const time = sim.time;
+    if (sim.workforce.holdsCitizen(c)) {
+      // the citizen's AI agent is still working: stay at the desk
+      this.setActivity(c, 'work');
+      this.schedule(c, time + 10 * 60);
+      return;
+    }
     const d = c.dyn;
     const block = this.currentBlock(c);
     let activity = block.activity;
