@@ -164,6 +164,44 @@ export interface AgentStep {
   final?: string;
 }
 
+/** Unescape a (possibly unterminated) JSON string body. */
+function unescapeJsonString(body: string): string {
+  let out = '';
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (ch === '"') break;
+    if (ch !== '\\') {
+      out += ch;
+      continue;
+    }
+    const n = body[++i];
+    if (n === undefined) break;
+    if (n === 'n') out += '\n';
+    else if (n === 't') out += '\t';
+    else if (n === 'r') out += '';
+    else if (n === 'u') {
+      out += String.fromCharCode(parseInt(body.slice(i + 1, i + 5), 16) || 32);
+      i += 4;
+    } else out += n;
+  }
+  return out;
+}
+
+/**
+ * Recover the document from a JSON turn that was cut off by the token limit:
+ * the text of "final" or of the "content" being written becomes the deliverable.
+ */
+export function salvageTruncated(text: string): string | null {
+  for (const key of ['final', 'content']) {
+    const m = text.match(new RegExp(`"${key}"\\s*:\\s*"`));
+    if (m && m.index !== undefined) {
+      const doc = unescapeJsonString(text.slice(m.index + m[0].length)).trim();
+      if (doc.length > 40) return doc;
+    }
+  }
+  return null;
+}
+
 /** Parse one agent turn: a JSON action, or plain text treated as the final deliverable. */
 export function parseStep(text: string): AgentStep {
   try {
@@ -174,7 +212,11 @@ export function parseStep(text: string): AgentStep {
       return { thought: j.thought, action: j.action, args, final: j.final };
     }
   } catch {
-    /* not JSON: the model answered directly */
+    /* not (complete) JSON */
+  }
+  if (text.trimStart().startsWith('{')) {
+    const doc = salvageTruncated(text);
+    if (doc) return { final: doc + '\n\n> Note: the model output was cut off at the token limit; this deliverable may be incomplete.' };
   }
   return { final: text };
 }
@@ -249,6 +291,7 @@ export class LiveTaskExecutor implements TaskExecutor {
             '  {"thought": "short reasoning", "action": "<tool name>", "args": {...}}   to use a tool, or',
             '  {"thought": "short reasoning", "final": "<your complete markdown deliverable>"}   when done.',
             `Tools:\n${toolDocs}`,
+            'Put your main deliverable in "final" (it is saved for you as the task file). Use workspace.write only for short supporting notes.',
             'Only use web.fetch for specific, relevant public URLs; the commander may deny it, then continue without it.',
             'State assumptions explicitly. Never claim to have done things you did not do (you cannot email, buy, deploy or run code).',
             isReview ? 'You are the reviewer: check the deliverables for gaps and contradictions, then write the final synthesis with clear next steps.' : '',

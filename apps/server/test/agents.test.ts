@@ -33,3 +33,16 @@ describe('agent output parsing (real-model quirks)', () => {
     expect(() => extractJson('no json here')).toThrow();
   });
 });
+
+describe('truncated output recovery', () => {
+  it('recovers a document cut off inside a tool call (real Nemotron case)', async () => {
+    const { salvageTruncated } = await import('../src/ai/agents');
+    const raw = '{"thought": "Workspace is empty.", "action": "workspace.write", "args": {"path": "x.md", "content": "# Report\\n## Summary\\nCongestion peaks at 18:00 \\"rush\\"\\n- item one\\n- item two that keeps going';
+    const doc = salvageTruncated(raw)!;
+    expect(doc.startsWith('# Report\n## Summary')).toBe(true);
+    expect(doc).toContain('"rush"');
+    const step = parseStep(raw);
+    expect(step.action).toBeUndefined();
+    expect(step.final).toContain('cut off at the token limit');
+  });
+});
