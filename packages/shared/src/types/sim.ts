@@ -274,6 +274,9 @@ export interface SimProject {
   workspace: string;
   report: string | null;
   commandId: string | null;
+  /** Company to found when the project completes (JARVIS startup plans). */
+  foundsCompany?: string | null;
+  planner?: string;
 }
 
 export type NewsCategory =
@@ -341,4 +344,29 @@ export interface CommandRecord {
   projectId: string | null;
   planner: string;
   message: string;
+}
+
+/** A task in a project plan produced by a planner (template or LLM). */
+export interface PlanTask {
+  key: string;
+  title: string;
+  role: CoreRole;
+  /** Estimated work in simulated minutes. */
+  work: number;
+  dependsOn: string[];
+  /** Landmark key where the work happens (defaults to the assignee's workplace). */
+  location?: string;
+  description: string;
+  artifact: string;
+}
+
+export interface ProjectPlan {
+  name: string;
+  kind: string;
+  description: string;
+  tasks: PlanTask[];
+  /** Which planner produced the plan, e.g. "template-planner" or "llm:nvidia/…". */
+  planner: string;
+  /** Optional: when the project completes, found a company with this name. */
+  foundsCompany?: string | null;
 }

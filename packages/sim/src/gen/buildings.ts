@@ -160,11 +160,15 @@ export class BuildingPlacer {
   add(obb: OBB, def: BuildingDef): void {
     const idx = this.placed.length;
     this.placed.push({ obb, def });
-    const [x0, z0, x1, z1] = this.obbBounds(obb);
+    this.register(idx);
+  }
+
+  private register(idx: number): void {
+    const [x0, z0, x1, z1] = this.obbBounds(this.placed[idx].obb);
     for (const k of this.cellsFor(x0, z0, x1, z1)) {
       const l = this.grid.get(k);
-      if (l) l.push(idx);
-      else this.grid.set(k, [idx]);
+      if (!l) this.grid.set(k, [idx]);
+      else if (!l.includes(idx)) l.push(idx);
     }
   }
 
@@ -197,6 +201,77 @@ export class BuildingPlacer {
     const startPad = na >= 3 ? 1.4 : na === 2 ? 0.4 : 1.5;
     const endPad = nb >= 3 ? 1.4 : nb === 2 ? 0.4 : 1.5;
     return [Math.max(0, at) + startPad, e.length - Math.max(0, bt) - endPad];
+  }
+
+  /** Distance from a point to the clearance zone of the nearest road other than `skipEdge`. */
+  private roadClearanceAt(x: number, z: number, skipEdge: number): number {
+    let best = Infinity;
+    const cell = this.roadGrid.get(`${Math.floor(x / 16)},${Math.floor(z / 16)}`) ?? [];
+    for (const eid of cell) {
+      if (eid === skipEdge) continue;
+      const e = this.ctx.edges[eid];
+      const a = this.ctx.nodes[e.a];
+      const b = this.ctx.nodes[e.b];
+      const abx = b.x - a.x;
+      const abz = b.z - a.z;
+      const l2 = abx * abx + abz * abz || 1;
+      const t = Math.max(0, Math.min(1, ((x - a.x) * abx + (z - a.z) * abz) / l2));
+      const d = Math.hypot(x - a.x - abx * t, z - a.z - abz * t) - (e.width / 2 + (e.cls === 'highway' ? 3 : e.sidewalk) + 0.25);
+      if (d < best) best = d;
+    }
+    return best;
+  }
+
+  /**
+   * Block depth available behind a frontage slot: march outward from the kerb
+   * line until another road's clearance zone (or the city limit) is reached.
+   */
+  depthAvailable(e: RoadEdge, side: 1 | -1, s: number, w: number, max = 70): number {
+    const f = this.frontageFrame(e, side);
+    const lim = this.ctx.size / 2 - 11;
+    let best = max;
+    for (const t of [s + 0.3, s + w / 2, s + w - 0.3]) {
+      const bx = f.a.x + f.u.x * t + f.out.x * f.off;
+      const bz = f.a.z + f.u.z * t + f.out.z * f.off;
+      let dd = 0;
+      while (dd < best) {
+        const x = bx + f.out.x * dd;
+        const z = bz + f.out.z * dd;
+        if (Math.abs(x) > lim || Math.abs(z) > lim || this.roadClearanceAt(x, z, e.id) < 0) break;
+        dd += 0.5;
+      }
+      best = Math.min(best, dd);
+    }
+    return best;
+  }
+
+  /** Grow a placed building backwards into free space (keeps its frontage). */
+  tryGrow(index: number, e: RoadEdge, side: 1 | -1, s: number, w: number, maxD: number): number | null {
+    const cur = this.placed[index];
+    const d0 = cur.obb.hd * 2;
+    let bestD: number | null = null;
+    for (let d = maxD; d > d0 + 0.9; d -= 1) {
+      const f = this.frontageFrame(e, side);
+      const along = s + w / 2;
+      const obb: OBB = {
+        cx: f.a.x + f.u.x * along + f.out.x * (f.off + d / 2),
+        cz: f.a.z + f.u.z * along + f.out.z * (f.off + d / 2),
+        hw: w / 2,
+        hd: d / 2,
+        rot: cur.obb.rot,
+      };
+      const saved = this.placed[index].obb;
+      this.placed[index].obb = { cx: 1e6, cz: 1e6, hw: 0, hd: 0, rot: 0 };
+      const ok = this.fits(obb);
+      this.placed[index].obb = saved;
+      if (ok) {
+        this.placed[index].obb = obb;
+        this.register(index);
+        bestD = d;
+        break;
+      }
+    }
+    return bestD;
   }
 
   /** Try to place a building of size w x d on edge side at distance s from node a. */
@@ -233,9 +308,9 @@ export class BuildingPlacer {
 // ------------------------------------------------------------------ type + size selection
 
 const TYPE_WEIGHT: Partial<Record<BuildingType, number>> = {
-  shop: 0.8,
-  cafe: 0.55,
-  restaurant: 0.55,
+  shop: 0.5,
+  cafe: 0.35,
+  restaurant: 0.35,
   parking: 0.25,
   school: 0.15,
   library: 0.1,

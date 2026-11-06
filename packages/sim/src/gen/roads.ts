@@ -129,8 +129,8 @@ export function generateStrokes(rng: Rng, size: number, roadDensity: number): { 
       const southEast = cz > 60 && cx > 0;
       if (southEast && rng.chance(0.65)) continue; // big industrial / utility blocks
       const density = roadDensity;
-      const splitX = w > 44 && rng.chance(0.85 * density);
-      const splitZ = h > 44 && rng.chance(0.85 * density);
+      const splitX = w > 44 && rng.chance(0.6 * density);
+      const splitZ = h > 44 && rng.chance(0.45 * density);
       const sx = cx + rng.range(-4, 4);
       const sz = cz + rng.range(-4, 4);
       if (splitX) {
@@ -498,7 +498,8 @@ export function finaliseIntersections(nodes: RoadNode[], edges: RoadEdge[]): Cor
     if (k < 3 || n.gate) continue;
     const ranks = n.edges.map((id) => CLASS_RANK[edges[id].cls]);
     const majors = ranks.filter((r) => r >= 2).length;
-    n.signal = majors >= 2 || (k >= 4 && majors >= 1);
+    const onRoundabout = n.edges.some((id) => edges[id].name === 'Command Circle');
+    n.signal = !onRoundabout && (majors >= 2 || (k >= 4 && majors >= 1));
     // group by axis: edges within ~40° (mod 180°) of the highest ranked edge share group 0
     const lead = n.edges.reduce((best, id) => (CLASS_RANK[edges[id].cls] > CLASS_RANK[edges[best].cls] ? id : best), n.edges[0]);
     const leadAng = angleOf(edgeDirFrom(nodes, edges[lead], n.id));
@@ -509,6 +510,17 @@ export function finaliseIntersections(nodes: RoadNode[], edges: RoadEdge[]): Cor
       const g = da < (40 * Math.PI) / 180 ? 0 : 1;
       if (e.a === n.id) e.groupA = g;
       else e.groupB = g;
+    }
+  }
+  // thin out signals on very short links: keep the busier intersection
+  for (const e of edges) {
+    if (e.length >= 16) continue;
+    const a = nodes[e.a];
+    const b = nodes[e.b];
+    if (a.signal && b.signal) {
+      const weight = (n: RoadNode): number => n.edges.reduce((acc, id) => acc + CLASS_RANK[edges[id].cls], 0) + n.edges.length;
+      if (weight(a) >= weight(b)) b.signal = false;
+      else a.signal = false;
     }
   }
   return sets;

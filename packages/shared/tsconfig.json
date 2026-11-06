@@ -1,5 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "src", "outDir": "../../node_modules/.tsc/shared", "tsBuildInfoFile": "../../node_modules/.tsc/shared.tsbuildinfo" },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }
