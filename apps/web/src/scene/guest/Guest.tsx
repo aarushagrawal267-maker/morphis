@@ -10,13 +10,13 @@ import * as THREE from 'three';
 import { displayName } from '@morphis/shared';
 import { PedNav } from '@morphis/sim';
 import { simClient } from '../../sim/client';
-import { guestInput, guestPose, useGuest } from '../../state/guestStore';
+import { arrival, guestInput, guestPose, useGuest } from '../../state/guestStore';
 import { useJournal } from '../../state/journalStore';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { characterGeometry, citizenMaterial } from '../citizens/Citizens';
 import { railPoint } from '../rail/railGeo';
-import { Colliders } from './collision';
+import { collidersFor } from './collision';
 import { enterDoor, guestWave, takePostcard } from './actions';
 
 const WALK = 4.2;
@@ -27,13 +27,14 @@ export function GuestController() {
   const world = useSim((s) => s.world)!;
   const look = useGuest((s) => s.look);
   const { camera, gl, raycaster, pointer } = useThree();
-  const colliders = useMemo(() => new Colliders(world), [world]);
+  const colliders = useMemo(() => collidersFor(world), [world]);
   const ped = useMemo(() => new PedNav(world.ped.nodes, world.ped.edges), [world]);
   const group = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.InstancedMesh>(null);
   const lastProbe = useRef(0);
   const mountedAt = useRef(performance.now());
   const camPitchNow = useRef(guestPose.camPitch);
+  const ring = useRef<THREE.Mesh>(null);
   const climb = useRef<{ from: THREE.Vector3; to: THREE.Vector3; t0: number; dur: number; then: 'wait' | 'street' } | null>(null);
 
   const geo = useMemo(() => {
@@ -288,6 +289,14 @@ export function GuestController() {
     if (grp && m) {
       grp.position.set(guestPose.x, guestPose.y + 0.12, guestPose.z);
       grp.rotation.y = guestPose.yaw;
+      // landing ring: a burst when dropping in, then a soft marker at the feet
+      if (ring.current) {
+        const since = (now - arrival.at) / 700;
+        const burst = since < 1 ? 1 + (1 - since) * 3.5 : 1;
+        ring.current.scale.setScalar(burst);
+        (ring.current.material as THREE.MeshBasicMaterial).opacity = since < 1 ? 0.95 : 0.55;
+        ring.current.visible = guestPose.y < 1;
+      }
       m4.makeScale(look.build, look.height, look.build);
       m.setMatrixAt(0, m4);
       m.instanceMatrix.needsUpdate = true;
@@ -406,6 +415,10 @@ export function GuestController() {
       {/* a soft light that travels with the visitor so the street around them reads at night */}
       <pointLight position={[0, 2.6, 0.6]} color="#ffd9a8" intensity={14} distance={16} decay={1.6} />
       <instancedMesh ref={mesh} args={[geo, mat, 1]} castShadow frustumCulled={false} />
+      <mesh ref={ring} rotation-x={-Math.PI / 2} position-y={0.04}>
+        <ringGeometry args={[0.55, 0.68, 40]} />
+        <meshBasicMaterial color={new THREE.Color(look.eyes).multiplyScalar(1.6)} toneMapped={false} transparent opacity={0.55} depthWrite={false} />
+      </mesh>
       {/* visor: the guest's eyes */}
       <mesh position={[0, 0.925 * look.height, 0.086 * look.build]}>
         <boxGeometry args={[0.12, 0.028, 0.02]} />

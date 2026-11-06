@@ -186,6 +186,9 @@ export const useGuest = create<GuestState>((set, get) => ({
   },
 }));
 
+/** When the visitor last dropped in from the island view (drives the landing ring). */
+export const arrival = { at: 0 };
+
 /** Live input (keyboard + on-screen stick), read by the guest controller each frame. */
 export const guestInput = {
   keys: new Set<string>(),

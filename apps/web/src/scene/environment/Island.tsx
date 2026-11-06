@@ -4,7 +4,8 @@
  * crystal veins, the sky-lift gates at the expressway ends, the drifting
  * islets, and the sea of clouds far below.
  */
-import { useFrame } from '@react-three/fiber';
+import { useFrame, type ThreeEvent } from '@react-three/fiber';
+import { dropIn } from '../../components/hud/GuestHud';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { IslandShape, SkylineBlock, StaticWorld } from '@morphis/shared';
@@ -24,6 +25,12 @@ function outlinePts(island: IslandShape, step = 1): THREE.Vector2[] {
 
 // ------------------------------------------------------------------ ground surface
 
+/** Clicking the town from above drops the visitor in at that spot. */
+export function onGroundClick(e: ThreeEvent<MouseEvent>): void {
+  if (e.delta > 6 || e.button !== 0) return; // a drag, or not the main button
+  if (dropIn(e.point.x, e.point.z)) e.stopPropagation();
+}
+
 export function IslandGround({ world, lotMat }: { world: StaticWorld; lotMat: THREE.Material }) {
   const island = world.island!;
   const { top, edge } = useMemo(() => {
@@ -42,8 +49,8 @@ export function IslandGround({ world, lotMat }: { world: StaticWorld; lotMat: TH
   const grass = useMemo(() => new THREE.MeshStandardMaterial({ color: '#1f3b2c', roughness: 1 }), []);
   return (
     <group name="island-ground">
-      <mesh geometry={top} material={lotMat} position-y={-0.01} receiveShadow />
-      <mesh geometry={edge} material={grass} position-y={0.005} receiveShadow />
+      <mesh geometry={top} material={lotMat} position-y={-0.01} receiveShadow onClick={onGroundClick} />
+      <mesh geometry={edge} material={grass} position-y={0.005} receiveShadow onClick={onGroundClick} />
     </group>
   );
 }

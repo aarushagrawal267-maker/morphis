@@ -11,7 +11,7 @@ import { simClient } from '../../sim/client';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { GLSL_HASH, env } from '../env';
-import { IslandGround } from './Island';
+import { IslandGround, onGroundClick } from './Island';
 
 const C = (h: string) => new THREE.Color(h);
 const SKY = {
@@ -309,7 +309,7 @@ export function Ground() {
             <planeGeometry args={[3000, 3000]} />
           </mesh>
           {/* city block surface (slightly lighter than the outlying land) */}
-          <mesh rotation-x={-Math.PI / 2} position-y={-0.01} material={lotMat} receiveShadow>
+          <mesh rotation-x={-Math.PI / 2} position-y={-0.01} material={lotMat} receiveShadow onClick={onGroundClick}>
             <planeGeometry args={[half * 2 - 10, half * 2 - 10]} />
           </mesh>
         </>

@@ -7,11 +7,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { displayName, formatClock } from '@morphis/shared';
 import { cameraBridge } from '../../scene/cameraBridge';
+import { collidersFor } from '../../scene/guest/collision';
 import { enterDoor, guestWave, takePostcard } from '../../scene/guest/actions';
 import { leaveInterior } from '../../scene/guest/InteriorGuest';
 import { citizenPosition } from '../../scene/positions';
 import { simClient } from '../../sim/client';
-import { guestInput, guestPose, useGuest } from '../../state/guestStore';
+import { arrival, guestInput, guestPose, useGuest } from '../../state/guestStore';
 import { useJournal } from '../../state/journalStore';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
@@ -42,6 +43,24 @@ export function startWalk(at?: { x: number; z: number; yaw?: number }): void {
   useGuest.getState().enter(x, z, yaw);
 }
 
+/**
+ * Drop in at a clicked spot of the island: the character appears there (nudged
+ * out of any building), facing away from the camera, and the camera flies down.
+ */
+export function dropIn(x: number, z: number): boolean {
+  const world = useSim.getState().world;
+  if (!world || useGuest.getState().active || useUI.getState().interior) return false;
+  const col = collidersFor(world);
+  if (!col.onIsland(x, z)) return false;
+  const p = { x, z };
+  col.resolve(p, 0.6);
+  const cam = cameraBridge.camera;
+  const yaw = cam ? Math.atan2(p.x - cam.position.x, p.z - cam.position.z) : 0;
+  startWalk({ x: p.x, z: p.z, yaw });
+  arrival.at = performance.now();
+  return true;
+}
+
 function displayNameOf(id: string): string {
   const b = useSim.getState().buildingsById.get(id);
   return b ? displayName(b.name) : id;
@@ -50,6 +69,20 @@ function displayNameOf(id: string): string {
 export function rise(): void {
   useGuest.getState().exit();
   useUI.getState().requestCamera({ kind: 'overview' }, 'overview');
+}
+
+/** In the island view: tell visitors they can drop in anywhere. */
+export function DropHint() {
+  const active = useGuest((s) => s.active);
+  const interior = useUI((s) => s.interior);
+  const selection = useUI((s) => s.selection);
+  const panel = useUI((s) => s.panel);
+  if (active || interior || selection || panel) return null;
+  return (
+    <div className="drop-hint glass" data-testid="drop-hint">
+      <Icon name="walk" /> Click anywhere on the island to walk in there
+    </div>
+  );
 }
 
 export function GuestHud() {

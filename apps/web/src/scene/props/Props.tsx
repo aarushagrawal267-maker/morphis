@@ -8,7 +8,7 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { PropInstance } from '@morphis/shared';
 import { useSim } from '../../state/simStore';
-import { env } from '../env';
+import { env, fadeNearCamera } from '../env';
 import { adTexture } from './textures';
 
 const Y = new THREE.Vector3(0, 1, 0);
@@ -95,12 +95,12 @@ export function Props() {
   );
   const mats = useMemo(
     () => ({
-      metal: new THREE.MeshStandardMaterial({ color: '#2b3038', metalness: 0.7, roughness: 0.4 }),
+      metal: fadeNearCamera(new THREE.MeshStandardMaterial({ color: '#2b3038', metalness: 0.7, roughness: 0.4 })),
       lamp: new THREE.MeshBasicMaterial({ color: new THREE.Color(2.6, 2.2, 1.6), toneMapped: false }),
       hwLamp: new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.6, 0.9), toneMapped: false }),
       pool: new THREE.MeshBasicMaterial({ map: poolTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: new THREE.Color('#ffcf94'), toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2 }),
-      trunk: new THREE.MeshStandardMaterial({ color: '#3b2b22', roughness: 1 }),
-      crown: new THREE.MeshStandardMaterial({ roughness: 0.9, flatShading: true }),
+      trunk: fadeNearCamera(new THREE.MeshStandardMaterial({ color: '#3b2b22', roughness: 1 })),
+      crown: fadeNearCamera(new THREE.MeshStandardMaterial({ roughness: 0.9, flatShading: true })),
       bench: new THREE.MeshStandardMaterial({ color: '#4b4039', roughness: 0.8 }),
       planter: new THREE.MeshStandardMaterial({ color: '#2c3a33', roughness: 0.9 }),
       shelter: new THREE.MeshStandardMaterial({ color: '#2a3340', metalness: 0.5, roughness: 0.4 }),

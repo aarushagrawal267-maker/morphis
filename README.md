@@ -40,7 +40,7 @@ In development the web server proxies `/api` and `/socket.io` to the simulation 
 
 Useful URL parameters: `?hour=21` (start at 21:00), `?population=800`, `?seed=77`, `?quality=low|medium`. Link to an agent with `#citizen=<name-slug>`, for example `#citizen=juno-albright`.
 
-**Walking controls:** WASD or arrows (Shift runs), click the street to walk there, drag to look, wheel to zoom, Q to wave, P for a postcard, E to enter the door you're standing at. On a phone, use the on-screen stick.
+**Walking controls:** from the island view, click any spot to drop in there (or press Walk In to start outside JARVIS HQ). Then WASD or arrows (Shift runs), click the street to walk there, drag to look, wheel to zoom, Q to wave, P for a postcard, E to enter the door you're standing at. On a phone, use the on-screen stick.
 
 ## Hosting it online
 
