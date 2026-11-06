@@ -1,5 +1,6 @@
 /** Guest actions shared by the HUD buttons and keyboard shortcuts. */
 import { create } from 'zustand';
+import { sound } from '../../audio/engine';
 import { simClient } from '../../sim/client';
 import { useGuest, guestPose } from '../../state/guestStore';
 import { useJournal } from '../../state/journalStore';
@@ -15,6 +16,7 @@ export function guestWave(): void {
   const now = performance.now();
   if (guestPose.waveUntil > now) return;
   guestPose.waveUntil = now + 2200;
+  sound.chime();
   const sim = useSim.getState();
   const inside = useUI.getState().interior?.buildingId;
   if (inside) {
@@ -78,6 +80,7 @@ function reportWaves(waved: string[]): void {
 export const usePostcard = create<{ pending: boolean }>(() => ({ pending: false }));
 
 export function takePostcard(): void {
+  sound.shutter();
   usePostcard.setState({ pending: true });
 }
 

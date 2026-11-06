@@ -10,6 +10,13 @@ import { useUI } from '../state/uiStore';
 import { followCitizen } from '../components/panels/actions';
 import { useGuest } from '../state/guestStore';
 import { TestHooks } from './TestHooks';
+import { setGoalListener } from '../state/journalStore';
+import { sound } from '../audio/engine';
+
+setGoalListener((g) => {
+  sound.ding();
+  useUI.getState().notify(`Goal done · ${g.label}`);
+});
 
 /** "#citizen=<slug or id>" opens that citizen's card and follows them. */
 function openHashLink(): void {

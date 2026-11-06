@@ -14,6 +14,7 @@
  */
 import { Suspense } from 'react';
 import { useGuest } from '../state/guestStore';
+import { AudioDirector } from '../audio/AudioDirector';
 import { useUI } from '../state/uiStore';
 import { usePostcard } from './guest/actions';
 import { GuestController } from './guest/Guest';
@@ -55,6 +56,7 @@ export function CityScene() {
       </Suspense>
       {walking ? interior ? <InteriorGuest buildingId={interior.buildingId} /> : <GuestController /> : <CameraRig />}
       {postcard && <PostcardCapture />}
+      <AudioDirector />
       <CameraBridgeSync />
       <PerfProbe />
       {interior ? (

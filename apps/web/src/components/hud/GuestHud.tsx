@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { displayName, formatClock } from '@morphis/shared';
 import { cameraBridge } from '../../scene/cameraBridge';
+import { sound } from '../../audio/engine';
 import { collidersFor } from '../../scene/guest/collision';
 import { enterDoor, guestWave, takePostcard } from '../../scene/guest/actions';
 import { leaveInterior } from '../../scene/guest/InteriorGuest';
@@ -58,6 +59,7 @@ export function dropIn(x: number, z: number): boolean {
   const yaw = cam ? Math.atan2(p.x - cam.position.x, p.z - cam.position.z) : 0;
   startWalk({ x: p.x, z: p.z, yaw });
   arrival.at = performance.now();
+  sound.whoosh();
   return true;
 }
 

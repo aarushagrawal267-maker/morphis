@@ -1,5 +1,6 @@
 /** Top header, navigation tabs and the city information HUD. */
 import { useState } from 'react';
+import { sound } from '../../audio/engine';
 import { CITY_NAME, CITY_TAGLINE, SIM_SPEEDS, WEEKDAYS, dayOf, formatClock, formatCredits, weekdayOf } from '@morphis/shared';
 import { run } from '../../sim/commands';
 import { focusDistrict } from '../../scene/districts/DistrictPins';
@@ -9,6 +10,25 @@ import { Icon, Logo } from '../ui/icons';
 import { focusBuilding } from '../panels/actions';
 import { useGuest } from '../../state/guestStore';
 import { rise, startWalk } from './GuestHud';
+
+function SoundToggle() {
+  const [on, setOn] = useState(sound.settings.enabled);
+  return (
+    <button
+      className="icon-btn"
+      title={on ? 'Sound on (click to mute)' : 'Sound off (click to unmute)'}
+      onClick={() => {
+        const next = !on;
+        setOn(next);
+        sound.setSettings({ ...sound.settings, enabled: next });
+        if (next) sound.unlock();
+      }}
+      data-testid="btn-sound"
+    >
+      <Icon name={on ? 'sound' : 'mute'} />
+    </button>
+  );
+}
 
 export function TopHeader() {
   const pins = useUI((s) => s.pins);
@@ -70,6 +90,7 @@ export function TopHeader() {
         <button className={`icon-btn ${panel === 'saves' ? 'on' : ''}`} title="Save / load city" onClick={() => ui.togglePanel('saves')} data-testid="btn-saves">
           <Icon name="save" />
         </button>
+        <SoundToggle />
         <button className={`icon-btn ${panel === 'settings' ? 'on' : ''}`} title="Settings" onClick={() => ui.togglePanel('settings')} data-testid="btn-settings">
           <Icon name="gear" />
         </button>
