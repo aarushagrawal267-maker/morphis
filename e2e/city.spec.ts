@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /** Local-mode city (no server needed), low graphics for software WebGL in CI. */
-async function open(page: Page, extra = '') {
+async function open(page: Page, extra = '', welcome = false) {
+  if (!welcome) await page.addInitScript(() => localStorage.setItem('morphis.welcome', '1'));
   await page.goto(`/?mode=local&quality=low&population=150${extra}`);
   await page.waitForFunction(() => (window as any).__morphis?.sim.getState().ready, null, { timeout: 90_000 });
   await expect(page.getByTestId('top-header')).toBeVisible();
@@ -141,4 +142,71 @@ test('debug overlay shows engine metrics', async ({ page }) => {
   await expect(page.getByTestId('debug-overlay')).toContainText('Draw calls');
   await expect(page.getByTestId('debug-overlay')).toContainText('Simulation tick');
   await page.getByTestId('dbg-roads').check();
+});
+
+test('welcome screen leads into walk-in mode; the guest walks, waves and keeps a journal', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await open(page, '&hour=8', true);
+  await expect(page.getByTestId('welcome')).toBeVisible();
+  await page.getByTestId('btn-welcome-walk').click();
+  await expect(page.getByTestId('guest-bar')).toBeVisible();
+  await expect(page.getByTestId('navbar')).toHaveCount(0);
+  const pose = () => page.evaluate(() => { const g = (window as any).__morphis.guestPose; return { x: g.x, z: g.z }; });
+  const p0 = await pose();
+  await page.keyboard.down('w');
+  await page.waitForTimeout(2500);
+  await page.keyboard.up('w');
+  const p1 = await pose();
+  expect(Math.hypot(p1.x - p0.x, p1.z - p0.z)).toBeGreaterThan(0.3);
+  // stand next to someone walking and wave: the simulation makes them wave back
+  const walker = await page.evaluate(() => {
+    const s = (window as any).__morphis.simClient.sampleMotion();
+    for (let i = 0; i < s.cVisible.length; i++) if (s.cVisible[i]) return { x: s.cX[i], z: s.cZ[i] };
+    return null;
+  });
+  expect(walker).not.toBeNull();
+  await page.evaluate((w) => { const g = (window as any).__morphis.guestPose; g.x = w!.x + 1; g.z = w!.z + 1; }, walker);
+  await page.getByTestId('btn-wave').click();
+  await expect.poll(() => page.evaluate(() => (window as any).__morphis.journal.getState().totals.waves)).toBe(1);
+  await expect.poll(() => page.evaluate(() => { const t = (window as any).__morphis.journal.getState().totals; return t.agentsMet + t.residentsMet; }), { timeout: 15_000 }).toBeGreaterThan(0);
+  await page.getByTestId('btn-journal').click();
+  await expect(page.getByTestId('journal-panel')).toContainText('TODAY');
+  await expect(page.getByTestId('goals').locator('li')).toHaveCount(3);
+  await page.getByTestId('btn-rise').click();
+  await expect(page.getByTestId('guest-bar')).toHaveCount(0);
+  await expect(page.getByTestId('navbar')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('agents directory opens an agent card with why, deeds, today and a share link', async ({ page }) => {
+  await open(page);
+  await page.getByTestId('btn-agents').click();
+  await expect(page.getByTestId('agents-panel')).toContainText('AGENTS · 50');
+  await page.getByTestId('agent-juno-albright').click();
+  await expect(page.getByTestId('panel-title')).toHaveText('JUNO ALBRIGHT');
+  await expect(page.getByTestId('agent-why')).toContainText('espresso');
+  await page.getByTestId('card-tab-deeds').click();
+  await expect(page.getByTestId('deeds')).toContainText('Moved to Morphis');
+  await page.getByTestId('card-tab-today').click();
+  await expect(page.getByTestId('today').locator('li').first()).toBeVisible();
+  await page.getByTestId('card-tab-share').click();
+  await expect(page.getByTestId('share-link')).toHaveValue(/#citizen=juno-albright$/);
+});
+
+test('a #citizen= link opens that agent and follows them', async ({ page }) => {
+  await open(page, '#citizen=sarah-chen');
+  await expect(page.getByTestId('panel-title')).toHaveText('SARAH CHEN', { timeout: 30_000 });
+  await expect.poll(() => page.evaluate(() => (window as any).__morphis.ui.getState().follow?.kind)).toBe('citizen');
+});
+
+test('the skyrail runs trains between stations', async ({ page }) => {
+  await open(page);
+  const line = await page.evaluate(() => (window as any).__morphis.sim.getState().world.rail);
+  expect(line.stations.length).toBeGreaterThanOrEqual(3);
+  const s0 = await page.evaluate(() => (window as any).__morphis.simClient.sampleMotion().rail.slice());
+  expect(s0.length).toBeGreaterThan(0);
+  await page.waitForTimeout(3000);
+  const s1 = await page.evaluate(() => (window as any).__morphis.simClient.sampleMotion().rail.slice());
+  expect(s1.some((v: number, i: number) => v !== s0[i])).toBe(true);
 });

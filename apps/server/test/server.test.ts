@@ -135,6 +135,11 @@ describe('AI agents against a mock OpenAI-compatible provider', () => {
             }) +
             '\n```';
         else if (system.includes('reviewer')) content = '<think>internal</think># Final synthesis\nAll good.';
+        else if (system.includes('inner voice')) {
+          // life decisions: pick the first option, like a model would, with a reason
+          const id = /- id "([^"]+)"/.exec(user)?.[1] ?? 'rest';
+          content = JSON.stringify({ choice: id, reason: 'It fits why I came here.', plan: 'Off to make it happen.' });
+        }
         res.setHeader('content-type', 'application/json');
         res.end(JSON.stringify({ choices: [{ message: { content } }], usage: { prompt_tokens: 10, completion_tokens: 20 } }));
       });
@@ -177,6 +182,52 @@ describe('AI agents against a mock OpenAI-compatible provider', () => {
     const review = calls.find((c) => c.system.includes('reviewer'))!;
     expect(review.user).toContain('Collect energy data');
     expect(readFileSync(path.join(dataDir, 'audit.log'), 'utf8')).toContain('workspace.write');
+    await ctx.app.close();
+  });
+});
+
+describe('AI life decisions (mock provider)', () => {
+  let mock: HttpServer;
+  let base = '';
+  beforeAll(async () => {
+    mock = createServer((req, res) => {
+      let body = '';
+      req.on('data', (c) => (body += c));
+      req.on('end', () => {
+        const json = JSON.parse(body) as { messages: { role: string; content: string }[] };
+        const user = json.messages.find((m) => m.role === 'user')?.content ?? '';
+        const id = /- id "([^"]+)"/.exec(user)?.[1] ?? 'rest';
+        const content = user.includes('single word: ready') ? 'ready' : `Sure.\n{"choice":"${id}","reason":"It fits why I came here.","plan":"Off to make it happen."}`;
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ choices: [{ message: { content } }], usage: { prompt_tokens: 10, completion_tokens: 20 } }));
+      });
+    });
+    await new Promise<void>((r) => mock.listen(0, '127.0.0.1', r));
+    base = `http://127.0.0.1:${(mock.address() as { port: number }).port}/v1`;
+  });
+  afterAll(() => mock.close());
+
+  it('lets the model choose agents\' evening decisions and logs them as AI-made', async () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), 'morphis-life-'));
+    const ctx = await buildServer(
+      loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '200', AI_PROVIDER: 'openai-compatible', AI_BASE_URL: base, AI_MODEL: 'mock-model', AI_REQUESTS_PER_MINUTE: '6000', AI_LIFE_DECISIONS_PER_HOUR: '100' }),
+    );
+    const sim = ctx.host.sim;
+    expect(sim.life.mind).not.toBeNull();
+    sim.run(13 * 3600); // ~19:40
+    for (let i = 0; i < 60; i++) {
+      sim.run(120);
+      await wait(15);
+    }
+    const stats = ctx.agents.lifeMind!.stats;
+    expect(stats.decided).toBeGreaterThan(0);
+    expect(stats.failed).toBe(0);
+    const aiLives = sim.state.life!.filter((l) => l.planBy === 'ai');
+    expect(aiLives.length).toBe(stats.decided);
+    expect(aiLives[0].plan).toBe('Off to make it happen.');
+    const res = await ctx.app.inject({ method: 'GET', url: '/api/agents' });
+    expect(res.statusCode).toBe(200);
+    expect((res.json() as unknown[]).length).toBe(50);
     await ctx.app.close();
   });
 });
