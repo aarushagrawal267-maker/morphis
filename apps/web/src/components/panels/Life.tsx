@@ -442,6 +442,7 @@ export function JournalPanel() {
           </span>
         ))}
       </div>
+      <JournalSync />
       <h4>POSTCARDS · {j.postcards.length}</h4>
       {j.postcards.length === 0 && <p className="note">Press the camera button (or P) while walking to take one.</p>}
       <div className="postcards">
@@ -461,6 +462,64 @@ export function JournalPanel() {
         ))}
       </div>
     </section>
+  );
+}
+
+/** Hosted towns: keep the journal under a private code to use it on another device. */
+function JournalSync() {
+  const mode = useSim((s) => s.mode);
+  const [code, setCode] = useState(() => {
+    try {
+      return localStorage.getItem('morphis.journalCode') ?? '';
+    } catch {
+      return '';
+    }
+  });
+  const [input, setInput] = useState('');
+  if (mode !== 'server') return null;
+  const base = (simClient.transport as { url?: string } | null)?.url ?? '';
+  const save = () =>
+    void fetch(`${base}/api/journal`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...(code ? { code } : {}), journal: useJournal.getState().snapshot() }) })
+      .then((r) => r.json())
+      .then((r: { code?: string; error?: string }) => {
+        if (!r.code) throw new Error(r.error);
+        setCode(r.code);
+        try {
+          localStorage.setItem('morphis.journalCode', r.code);
+        } catch {
+          /* ignore */
+        }
+        useUI.getState().notify('Journal saved under your code');
+      })
+      .catch(() => useUI.getState().notify('Could not save the journal', 'error'));
+  const restore = () =>
+    void fetch(`${base}/api/journal/${encodeURIComponent(input.trim().toUpperCase())}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('not found'))))
+      .then((r: { journal: Parameters<ReturnType<typeof useJournal.getState>['restore']>[0] }) => {
+        useJournal.getState().restore(r.journal);
+        setCode(input.trim().toUpperCase());
+        try {
+          localStorage.setItem('morphis.journalCode', input.trim().toUpperCase());
+        } catch {
+          /* ignore */
+        }
+        useUI.getState().notify('Journal restored');
+      })
+      .catch(() => useUI.getState().notify('No journal under that code', 'error'));
+  return (
+    <>
+      <h4>SYNC</h4>
+      <p className="note">{code ? `Your code: ${code}. Use it on another device to bring your journal along (postcard images stay on this device).` : 'Save your journal under a private code to continue on another device.'}</p>
+      <div className="talk__actions">
+        <button onClick={save} data-testid="journal-save">{code ? 'Update saved journal' : 'Save to a code'}</button>
+      </div>
+      <form className="talk__say" onSubmit={(e) => (e.preventDefault(), restore())}>
+        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="MORPH-XXXX-XXXX-XXXX" />
+        <button type="submit" disabled={input.trim().length < 10}>
+          Restore
+        </button>
+      </form>
+    </>
   );
 }
 

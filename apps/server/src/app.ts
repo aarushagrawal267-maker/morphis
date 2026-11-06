@@ -10,6 +10,7 @@ import { SimulationHost } from './simulation/host';
 import { attachSockets } from './websocket/socket';
 import { serveWebClient } from './web/static';
 import { ExternalAgents } from './api/externalAgents';
+import { registerJournalSync } from './api/journalSync';
 
 export async function buildServer(cfg: ServerConfig, opts: { logger?: boolean; verifyAi?: boolean; serveWeb?: boolean } = {}) {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 1_000_000 });
@@ -24,6 +25,7 @@ export async function buildServer(cfg: ServerConfig, opts: { logger?: boolean; v
   const outside = new ExternalAgents(cfg.DATA_DIR);
   await outside.load();
   outside.register(app, host);
+  registerJournalSync(app, cfg.DATA_DIR);
   if (cfg.WEB_DIST && opts.serveWeb !== false) serveWebClient(app, cfg.WEB_DIST, log);
   attachSockets(app.server, host, cfg.CORS_ORIGIN);
   app.addHook('onClose', async () => {
