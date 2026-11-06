@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { commandSchema } from '@morphis/shared';
 import type { SimulationHost } from '../simulation/host';
+import { LOCKED } from '../websocket/socket';
 
 export function registerRoutes(app: FastifyInstance, host: SimulationHost): void {
   app.get('/api/health', async () => ({
@@ -92,6 +93,7 @@ export function registerRoutes(app: FastifyInstance, host: SimulationHost): void
   app.post('/api/commands', async (req, reply) => {
     const parsed = commandSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') });
+    if (!host.canRun(parsed.data, req.headers['x-admin-token'] as string | undefined)) return reply.code(403).send({ ok: false, error: LOCKED });
     const r = await host.command(parsed.data);
     return reply.code(r.ok ? 200 : 422).send(r);
   });
@@ -99,6 +101,7 @@ export function registerRoutes(app: FastifyInstance, host: SimulationHost): void
   app.post('/api/jarvis', async (req, reply) => {
     const body = z.object({ text: z.string().trim().min(3).max(500), urgent: z.boolean().optional() }).safeParse(req.body);
     if (!body.success) return reply.code(400).send({ ok: false, error: 'text (3-500 chars) required' });
+    if (!host.isAdmin(req.headers['x-admin-token'] as string | undefined)) return reply.code(403).send({ ok: false, error: LOCKED });
     const r = await host.command({ type: 'jarvis.command', text: body.data.text, urgent: body.data.urgent });
     return reply.code(r.ok ? 200 : 422).send(r);
   });

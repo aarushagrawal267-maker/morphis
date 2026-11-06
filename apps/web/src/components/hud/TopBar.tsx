@@ -17,6 +17,7 @@ export function TopHeader() {
   const mode = useSim((s) => s.mode);
   const connection = useSim((s) => s.connection);
   const ai = useSim((s) => s.ai);
+  const locked = useSim((s) => s.access.locked && !s.access.admin);
   const walking = useGuest((s) => s.active);
   const agents = useSim((s) => s.agents.length);
   const ui = useUI.getState();
@@ -51,7 +52,8 @@ export function TopHeader() {
         <div className="divider" />
         <button
           className="icon-btn play"
-          title={clock?.paused ? 'Play' : 'Pause'}
+          disabled={locked}
+          title={locked ? 'Only the host can pause this town' : clock?.paused ? 'Play' : 'Pause'}
           onClick={() => run({ type: 'sim.setPaused', paused: !clock?.paused })}
           data-testid="btn-pause"
         >
@@ -59,7 +61,7 @@ export function TopHeader() {
         </button>
         <div className="speeds" role="group" aria-label="Simulation speed">
           {SIM_SPEEDS.map((s) => (
-            <button key={s} className={clock?.speed === s ? 'on' : ''} onClick={() => run({ type: 'sim.setSpeed', speed: s })} data-testid={`speed-${s}`}>
+            <button key={s} disabled={locked} title={locked ? 'Only the host can change the speed' : undefined} className={clock?.speed === s ? 'on' : ''} onClick={() => run({ type: 'sim.setSpeed', speed: s })} data-testid={`speed-${s}`}>
               {s}x
             </button>
           ))}

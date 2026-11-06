@@ -92,6 +92,9 @@ export class SimClient {
       case 'approvals':
         useSim.setState({ approvals: m.approvals });
         break;
+      case 'access':
+        useSim.setState({ access: m.access });
+        break;
     }
   }
 

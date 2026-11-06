@@ -8,8 +8,9 @@ import { createPersistence } from './persistence';
 import { PrismaPersistence } from './persistence/prisma';
 import { SimulationHost } from './simulation/host';
 import { attachSockets } from './websocket/socket';
+import { serveWebClient } from './web/static';
 
-export async function buildServer(cfg: ServerConfig, opts: { logger?: boolean; verifyAi?: boolean } = {}) {
+export async function buildServer(cfg: ServerConfig, opts: { logger?: boolean; verifyAi?: boolean; serveWeb?: boolean } = {}) {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 1_000_000 });
   await app.register(cors, { origin: cfg.CORS_ORIGIN === '*' ? true : cfg.CORS_ORIGIN.split(',').map((s) => s.trim()) });
   const log = (m: string) => (opts.logger ? app.log.info(m) : undefined);
@@ -19,6 +20,7 @@ export async function buildServer(cfg: ServerConfig, opts: { logger?: boolean; v
   if (opts.verifyAi !== false && agents.provider) await agents.verify();
   const host = new SimulationHost(cfg, persistence, agents);
   registerRoutes(app, host);
+  if (cfg.WEB_DIST && opts.serveWeb !== false) serveWebClient(app, cfg.WEB_DIST, log);
   attachSockets(app.server, host, cfg.CORS_ORIGIN);
   app.addHook('onClose', async () => {
     host.stop();

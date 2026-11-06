@@ -42,6 +42,16 @@ Useful URL parameters: `?hour=21` (start at 21:00), `?population=800`, `?seed=77
 
 **Walking controls:** WASD or arrows (Shift runs), click the street to walk there, drag to look, wheel to zoom, Q to wave, P for a postcard, E to enter the door you're standing at. On a phone, use the on-screen stick.
 
+## Hosting it online
+
+One container runs everything (simulation, API, WebSocket and the website):
+
+```bash
+docker compose --profile app up --build
+```
+
+To put it on a host with PostgreSQL and your AI key, and to lock town controls behind an admin key, see [docs/development/deployment.md](docs/development/deployment.md).
+
 ## Real AI agents (optional)
 
 The server talks to any OpenAI-compatible endpoint or to Anthropic. API keys stay on the server and never reach the browser.
@@ -64,7 +74,9 @@ With a provider connected, a JARVIS command flows like this:
 4. Each agent writes a markdown deliverable into the project workspace (`data/workspaces/<project>/`) through the permissioned tool manager. Tool use is recorded in the audit log.
 5. The final review task receives every upstream deliverable and writes the synthesis report.
 
-With a provider connected, the model also makes the agents' evening life decisions: the simulation offers only options it can carry out, the model picks one and explains why in the agent's voice, and the simulation re-validates the choice before acting. `AI_LIFE_DECISIONS_PER_HOUR` (default 20) caps this, and 40% of the daily request cap stays reserved for JARVIS. Deeds made this way are marked **AI** on the agent's card.
+With a provider connected, people also **talk back in their own voice**: click anyone and ask "What are you up to?", "Where's good around here?" or type your own question. The simulation gives the model only what that person really knows (their day, plan, recent deeds, friends, what is open nearby), and replies voiced by the model are marked **AI**. `AI_TALK_PER_MINUTE` (default 12) caps this.
+
+The model also makes the agents' evening life decisions: the simulation offers only options it can carry out, the model picks one and explains why in the agent's voice, and the simulation re-validates the choice before acting. `AI_LIFE_DECISIONS_PER_HOUR` (default 20) caps this, and 40% of the daily request cap stays reserved for JARVIS. Deeds made this way are marked **AI** on the agent's card.
 
 See [docs/systems/ai-agents.md](docs/systems/ai-agents.md) and [docs/systems/agent-lives.md](docs/systems/agent-lives.md).
 
