@@ -45,9 +45,9 @@ export function chatterFor(p: CitizenProfile, d: CitizenDynamic, life: AgentLife
   if (life?.plan && seed % 3 !== 2) return life.plan;
   if (d.satiety < 0.28) return pick(['Starving. Where is the nearest café?', 'I could eat a whole noodle bar.', 'Lunch. Now.'], seed);
   if (d.energy < 0.2) return pick(['I need about twelve hours of sleep.', 'Running on fumes.', 'Bed. Soon.'], seed);
-  if (ctx.weather === 'storm') return pick(['This storm is no joke.', 'Stay off the skyways tonight.', 'Did you see that lightning?'], seed);
-  if (ctx.weather === 'rain') return pick(['Should have brought an umbrella.', 'Rain makes the neon look better.', 'Wet streets again.'], seed);
-  if (ctx.weather === 'fog') return pick(["Can't even see the towers today.", 'This fog is thick.', 'Feels like walking through a cloud.'], seed);
+  if (ctx.weather === 'storm') return pick(['This storm is no joke.', 'Hold on to your hat near the island edge.', 'Did you see that lightning?'], seed);
+  if (ctx.weather === 'rain') return pick(['Should have brought an umbrella.', 'Rain makes the shop lights look better.', 'Wet streets again.'], seed);
+  if (ctx.weather === 'fog') return pick(["Can't even see the end of the street.", 'This fog is thick.', 'Feels like walking through a cloud.'], seed);
   if (ctx.weather === 'clear' && h >= 18 && h < 20 && seed % 2 === 0) return pick(['Look at that sunset over the cloud sea.', 'Golden hour on the island. Best time of day.', 'The sky lifts glow at dusk.'], seed);
   if (ctx.weather === 'clear' && h >= 6 && h < 8 && seed % 2 === 0) return pick(['Fresh morning air up here.', 'First light over the clouds. Never gets old.', 'Early start, quiet streets.'], seed);
   const live = ctx.events.find((e) => e.status === 'LIVE');
@@ -80,6 +80,6 @@ export function chatterFor(p: CitizenProfile, d: CitizenDynamic, life: AgentLife
     case 'sleep':
       return h >= 21 || h < 5 ? pick(['Heading home.', 'Long day.', 'Night, Morphis.'], seed) : pick(['Back home for a bit.', 'Forgot something at home.'], seed);
   }
-  if (h >= 22 || h < 5) return pick(['The neon never sleeps.', 'Quiet streets.', 'Late again.'], seed);
-  return pick(['Morning, neighbour.', 'Nice day.', 'Busy city.', 'This street has the best signs.'], seed);
+  if (h >= 22 || h < 5) return pick(['Lanterns are still on at the café.', 'Quiet streets.', 'Late again.'], seed);
+  return pick(['Morning, neighbour.', 'Nice day.', 'Busy town today.', 'This street has the best little shops.'], seed);
 }
