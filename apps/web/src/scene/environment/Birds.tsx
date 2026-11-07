@@ -1,4 +1,4 @@
-/** Small flocks of birds circling the island by day (instanced, cheap). Hidden at night and in storms. */
+/** Small flocks of birds circling the island by day (instanced, cheap). Hidden at night, in rain and in fog. */
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
@@ -24,7 +24,7 @@ export function Birds() {
   useFrame(({ clock }, dt) => {
     const m = mesh.current;
     if (!m) return;
-    const show = 1 - Math.max(env.uNight.value * 0.8, env.uRain.value);
+    const show = 1 - Math.max(env.uNight.value * 0.8, env.uRain.value, env.uFog.value);
     mat.opacity = Math.max(0, Math.min(1, show * 1.4 - 0.2));
     m.visible = mat.opacity > 0.02;
     if (!m.visible) return;
