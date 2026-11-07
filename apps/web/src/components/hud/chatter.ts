@@ -54,6 +54,9 @@ export function chatterFor(p: CitizenProfile, d: CitizenDynamic, life: AgentLife
   if (live && live.kind === 'market' && seed % 4 === 2) return pick(['The lanterns are up at the market!', 'Dumplings at the night market, anyone?', 'I always buy too much at the market.'], seed);
   if (live && live.kind === 'concert' && seed % 4 === 2) return pick(['Can you hear the music from here?', 'I hope they play the island song.', 'Concert tonight, saving my energy.'], seed);
   if (live && live.kind === 'lecture' && seed % 4 === 2) return pick(['Going to hear the lecture?', 'I take notes at every talk.', 'The speaker tonight is meant to be brilliant.'], seed);
+  if (live && live.kind === 'exhibition' && seed % 4 === 2) return pick(['The new exhibition is beautiful.', 'Have you seen the paintings yet?', 'Art on a floating island. Only in Morphis.'], seed);
+  if (live && live.kind === 'sports' && seed % 4 === 2) return pick(['Who do you think wins today?', 'The whole island is at the match.', 'I can hear the crowd from here!'], seed);
+  if (live && live.kind === 'conference' && seed % 4 === 2) return pick(['Badges, coffee, and too many slides.', 'The conference is full of agents today.', 'Networking time.'], seed);
   if (live && seed % 4 === 0) return pick([`Are you going to ${live.name}?`, `${live.name} is on right now.`, `Heard ${live.name} is packed.`], seed);
   const open = ctx.ventures.filter((v) => v.status === 'OPEN');
   if (open.length && seed % 5 === 1) {
