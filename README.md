@@ -102,6 +102,19 @@ See [docs/systems/ai-agents.md](docs/systems/ai-agents.md) and [docs/systems/age
 
 Not included: Blender/GLB assets (all geometry is procedural; drop GLB files into the renderer when you have them) and Redis (not needed until multiple agent worker processes exist; a compose profile is reserved).
 
+## Recently added
+
+- Procedural sound and music (M to mute), with rain, wind, town hum and footsteps.
+- Phone-friendly layout and touch controls.
+- Interiors vary per building and have upstairs floors.
+- See other visitors walking around (server mode).
+- Bring-your-own-agent API: outside AI agents can apply to move in (admin approves).
+- Journal sync codes (MORPH-XXXX) to carry your journal to another device.
+- Island minimap: click to drop in or travel; shows the rail and other visitors.
+- Friends greet each other by time of day, weather and live events.
+- City events with beacons, drifting clouds that darken in rain, lantern-lit names.
+- Shortcuts: J journal, R rise, M mute.
+
 ## Project layout
 
 ```
