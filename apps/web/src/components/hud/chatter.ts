@@ -68,7 +68,7 @@ export function chatterFor(p: CitizenProfile, d: CitizenDynamic, life: AgentLife
     case 'shop':
       return pick(['Just need a few things.', 'Window shopping.', 'Prices keep going up.'], seed);
     case 'park':
-      return pick(['Fresh air, finally.', 'Good spot for a walk.', 'The trees are real, you know.'], seed);
+      return pick(['Fresh air, finally.', 'Good spot for a walk.', 'The trees are real, you know.', 'You can see three islets from here.', 'Mind the edge, it is a long way down.'], seed);
     case 'leisure':
     case 'event':
       return pick(['Work is done. Now the fun part.', 'Anyone up for the arcade?', 'Meeting friends tonight.'], seed);
@@ -78,7 +78,7 @@ export function chatterFor(p: CitizenProfile, d: CitizenDynamic, life: AgentLife
       return pick(['Almost finished the counter.', 'Fit-out work, again.', 'This place will be great.'], seed);
     case 'home':
     case 'sleep':
-      return h >= 21 || h < 5 ? pick(['Heading home.', 'Long day.', 'Night, Morphis.'], seed) : pick(['Back home for a bit.', 'Forgot something at home.'], seed);
+      return h >= 21 || h < 5 ? pick(['Heading home.', 'Long day.', 'Night, Morphis.'], seed) : pick(['Back home for a bit.', 'Forgot something at home.', 'Watering the window boxes.'], seed);
   }
   if (h >= 22 || h < 5) return pick(['Lanterns are still on at the café.', 'Quiet streets.', 'Late again.'], seed);
   return pick(['Morning, neighbour.', 'Nice day.', 'Busy town today.', 'This street has the best little shops.'], seed);
