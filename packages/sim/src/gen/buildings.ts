@@ -47,7 +47,7 @@ export const LANDMARKS: LandmarkSpec[] = [
   { key: 'bank', name: 'NOVA BANK', type: 'bank', target: [94, 16], w: 20, d: 16, h: 66, sign: 'NOVA BANK' },
   { key: 'hospital', name: 'MORPHIS GENERAL HOSPITAL', type: 'hospital', target: [96, 60], w: 26, d: 18, h: 30, sign: 'HOSPITAL' },
   { key: 'studio', name: 'PRISM STUDIOS', type: 'office', target: [-90, -46], w: 18, d: 14, h: 18, sign: 'PRISM' },
-  { key: 'market', name: 'NEON MARKET', type: 'shop', target: [-78, 58], w: 24, d: 14, h: 8, sign: 'NEON MARKET' },
+  { key: 'market', name: 'LANTERN MARKET', type: 'shop', target: [-78, 58], w: 24, d: 14, h: 8, sign: 'LANTERN MARKET' },
   { key: 'arena', name: 'ARCADIA ARENA', type: 'entertainment', target: [-98, 96], w: 26, d: 20, h: 14, sign: 'ARCADIA' },
   { key: 'station', name: 'MORPHIS CENTRAL STATION', type: 'transit_hub', target: [-24, 100], w: 30, d: 16, h: 12, sign: 'CENTRAL STATION' },
   { key: 'forge', name: 'FORGE WORKS', type: 'factory', target: [40, 100], w: 28, d: 20, h: 12 },
@@ -64,7 +64,7 @@ const NAME_A = ['Axion', 'Helix', 'Vanta', 'Quanta', 'Stratos', 'Lumina', 'Cygnu
 const NAME_B = ['Systems', 'Dynamics', 'Labs', 'Networks', 'Holdings', 'Group', 'Analytics', 'Robotics', 'Logic', 'Collective', 'Works', 'Ventures'];
 const CAFE_A = ['Byte', 'Drip', 'Synth', 'Pixel', 'Steam', 'Glow', 'Static', 'Ion', 'Velvet', 'Rain'];
 const CAFE_B = ['Brew', 'Bean', 'Cafe', 'Roastery', 'Espresso Bar', 'Tea House'];
-const FOOD_A = ['Golden', 'Chrome', 'Midnight', 'Lotus', 'Ember', 'Jade', 'Neon', 'Lucky', 'Orbit', 'Paper Lantern'];
+const FOOD_A = ['Golden', 'Chrome', 'Midnight', 'Lotus', 'Ember', 'Jade', 'Willow', 'Lucky', 'Orbit', 'Paper Lantern'];
 const FOOD_B = ['Noodle Bar', 'Grill', 'Kitchen', 'Dumpling House', 'Diner', 'Bistro', 'Bao Shop', 'Taqueria'];
 const SHOP_A = ['Synth', 'Holo', 'Volt', 'Circuit', 'Nova', 'Flux', 'Kinetic', 'Retro', 'Prime', 'Mono'];
 const SHOP_B = ['Mart', 'Wares', 'Goods', 'Tech Store', 'Supply', 'Boutique', 'Optics', 'Records'];

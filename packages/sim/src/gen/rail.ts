@@ -12,7 +12,7 @@ export const RAIL_HEIGHT = 13;
 
 const STATION_KEYS = ['station', 'university', 'ai_lab', 'hospital', 'arena', 'skyline', 'market', 'cityhall', 'forge', 'orbital'];
 
-/** "MORPHIS CENTRAL STATION" -> "Central Station", "NEON MARKET" -> "Neon Market Station". */
+/** "MORPHIS CENTRAL STATION" -> "Central Station", "LANTERN MARKET" -> "Lantern Market Station". */
 function stationName(building: string): string {
   const words = building
     .replace(/^MORPHIS\s+/i, '')
