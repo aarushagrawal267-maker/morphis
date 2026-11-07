@@ -70,9 +70,9 @@ export function chatterFor(p: CitizenProfile, d: CitizenDynamic, life: AgentLife
     case 'work':
       return pick(['Running late again.', 'Another shift.', 'Work, then dinner.', 'Big day today.'], seed);
     case 'eat':
-      return pick(['Noodles or dumplings?', 'Food first.', 'I know a good place nearby.'], seed);
+      return pick(['Noodles or dumplings?', 'Food first.', 'I know a good place nearby.', 'The bakery by the lift has fresh bread.'], seed);
     case 'shop':
-      return pick(['Just need a few things.', 'Window shopping.', 'Prices keep going up.'], seed);
+      return pick(['Just need a few things.', 'Window shopping.', 'Prices keep going up.', 'Everything comes up by sky lift, you know.'], seed);
     case 'park':
       return pick(['Fresh air, finally.', 'Good spot for a walk.', 'The trees are real, you know.', 'You can see three islets from here.', 'Mind the edge, it is a long way down.'], seed);
     case 'leisure':
