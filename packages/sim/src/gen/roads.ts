@@ -93,7 +93,7 @@ export function generateStrokes(rng: Rng, size: number, roadDensity: number): { 
   const d = R * Math.SQRT1_2;
   const diagEnd = H - cr * (1 - Math.SQRT1_2) - 0.5;
   const diagonals: Stroke[] = [
-    { pts: [{ x: -d, z: -d }, { x: -diagEnd, z: -diagEnd }], cls: 'avenue', name: 'Neon Boulevard' },
+    { pts: [{ x: -d, z: -d }, { x: -diagEnd, z: -diagEnd }], cls: 'avenue', name: 'Lantern Boulevard' },
     { pts: [{ x: d, z: d }, { x: diagEnd, z: diagEnd }], cls: 'avenue', name: 'Foundry Way' },
   ];
   strokes.push(...diagonals);

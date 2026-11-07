@@ -56,7 +56,7 @@ const COMPANY_PROJECTS: CompanyTemplate[] = [
   },
   {
     landmark: 'studio',
-    names: ['Brand campaign: Neon Season', 'Morphis city guide redesign'],
+    names: ['Brand campaign: Lantern Season', 'Morphis city guide redesign'],
     tasks: [
       { key: 'ux', title: 'User interviews', role: 'ux_researcher', work: 160, deps: [] },
       { key: 'visual', title: 'Visual concepts', role: 'ui_designer', work: 200, deps: ['ux'] },

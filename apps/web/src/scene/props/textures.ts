@@ -6,7 +6,7 @@ import * as THREE from 'three';
 
 const ADS: { title: string; sub: string; a: string; b: string }[] = [
   { title: 'MORPHIS OS', sub: 'THE CITY THAT THINKS', a: '#22d3ee', b: '#1e1b4b' },
-  { title: 'NEON NOODLES', sub: 'OPEN ALL NIGHT', a: '#f472b6', b: '#3b0764' },
+  { title: 'LANTERN NOODLES', sub: 'OPEN ALL NIGHT', a: '#f472b6', b: '#3b0764' },
   { title: 'ORBITAL', sub: 'LAUNCH WITH US', a: '#a78bfa', b: '#0f172a' },
   { title: 'NOVA BANK', sub: 'CREDITS THAT GROW', a: '#fbbf24', b: '#1c1917' },
   { title: 'SYNTH//WAVE', sub: 'ARCADIA ARENA LIVE', a: '#fb7185', b: '#111827' },
