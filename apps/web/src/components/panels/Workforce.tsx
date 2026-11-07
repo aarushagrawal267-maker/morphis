@@ -179,7 +179,7 @@ export function TaskModal() {
   );
 }
 
-const EXAMPLES = ['Create an AI tutoring startup', 'Build a city traffic dashboard', 'Research energy use in Morphis', 'Run a marketing campaign for Neon Market', 'Audit the security of the data center'];
+const EXAMPLES = ['Create an AI tutoring startup', 'Build a city traffic dashboard', 'Research energy use in Morphis', 'Run a marketing campaign for the Lantern Night Market', 'Audit the security of the data center'];
 
 export function JarvisConsole() {
   const open = useUI((s) => s.panel === 'jarvis');
