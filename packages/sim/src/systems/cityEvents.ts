@@ -17,7 +17,7 @@ interface EventTemplate {
 }
 
 const TEMPLATES: EventTemplate[] = [
-  { name: 'Neon Night Market', kind: 'market', landmark: 'market', days: [3, 4, 5], start: 19, hours: 4 },
+  { name: 'Lantern Night Market', kind: 'market', landmark: 'market', days: [3, 4, 5], start: 19, hours: 4 },
   { name: 'Synthwave Live', kind: 'concert', landmark: 'arena', days: [4, 5], start: 20, hours: 3.5 },
   { name: 'Open Lecture: Machine Minds', kind: 'lecture', landmark: 'university', days: [0, 2], start: 18, hours: 2 },
   { name: 'Morphis Tech Summit', kind: 'conference', landmark: 'corporate', days: [2], start: 10, hours: 6 },
