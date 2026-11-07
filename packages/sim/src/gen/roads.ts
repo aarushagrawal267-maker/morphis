@@ -33,7 +33,7 @@ const EW_NAMES = ['Aurora Boulevard', 'Circuit Avenue', 'Photon Avenue', 'Ember 
 const STREET_WORDS = [
   'Cobalt', 'Argon', 'Lattice', 'Tensor', 'Signal', 'Pixel', 'Kernel', 'Cipher', 'Orbit', 'Prism',
   'Flux', 'Echo', 'Ion', 'Relay', 'Synapse', 'Vertex', 'Nimbus', 'Zenith', 'Quasar', 'Pulse',
-  'Halo', 'Glyph', 'Matrix', 'Neon', 'Chrome', 'Static', 'Ether', 'Binary', 'Radiant', 'Photon',
+  'Halo', 'Glyph', 'Matrix', 'Lantern', 'Chrome', 'Static', 'Ether', 'Binary', 'Radiant', 'Photon',
   'Carbon', 'Silica', 'Plasma', 'Helios', 'Lumen', 'Arc', 'Cinder', 'Delta', 'Gamma', 'Sigma',
 ];
 
