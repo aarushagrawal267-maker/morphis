@@ -163,9 +163,21 @@ test('welcome screen leads into walk-in mode; the guest walks, waves and keeps a
   const p1 = await pose();
   expect(Math.hypot(p1.x - p0.x, p1.z - p0.z)).toBeGreaterThan(0.3);
   // stand next to someone walking and wave: the simulation makes them wave back
+  // let the start-up fast-forward to 08:00 finish, so what is on screen matches the simulation
+  const clock = () => page.evaluate(() => (window as any).__morphis.sim.getState().state.clock.time as number);
+  await expect
+    .poll(async () => {
+      const a = await clock();
+      await page.waitForTimeout(500);
+      return (await clock()) - a;
+    }, { timeout: 20_000 })
+    .toBeLessThan(200);
+  // someone on foot in the street (not riding a bus or the Skyrail, who cannot wave back)
   const walker = await page.evaluate(() => {
-    const s = (window as any).__morphis.simClient.sampleMotion();
-    for (let i = 0; i < s.cVisible.length; i++) if (s.cVisible[i]) return { x: s.cX[i], z: s.cZ[i] };
+    const m = (window as any).__morphis;
+    const s = m.simClient.sampleMotion();
+    const cs = m.sim.getState().state.citizens;
+    for (let i = 0; i < s.cVisible.length; i++) if (s.cVisible[i] && cs[i]?.location?.kind === 'street') return { x: s.cX[i], z: s.cZ[i] };
     return null;
   });
   expect(walker).not.toBeNull();
