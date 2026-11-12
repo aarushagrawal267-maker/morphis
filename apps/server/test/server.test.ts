@@ -134,7 +134,7 @@ describe('AI agents against a mock OpenAI-compatible provider', () => {
               ],
             }) +
             '\n```';
-        else if (system.includes('reviewer')) content = '<think>internal</think># Final synthesis\nAll good.';
+        else if (system.includes('You are the reviewer')) content = '<think>internal</think># Final synthesis\nAll good.';
         else if (system.includes('inner voice')) {
           // life decisions: pick the first option, like a model would, with a reason
           const id = /- id "([^"]+)"/.exec(user)?.[1] ?? 'rest';
@@ -179,7 +179,7 @@ describe('AI agents against a mock OpenAI-compatible provider', () => {
     }
     expect(project.report).toContain('Final synthesis');
     expect(project.report).not.toContain('<think>');
-    const review = calls.find((c) => c.system.includes('reviewer'))!;
+    const review = calls.find((c) => c.system.includes('You are the reviewer'))!;
     expect(review.user).toContain('Collect energy data');
     expect(readFileSync(path.join(dataDir, 'audit.log'), 'utf8')).toContain('workspace.write');
     await ctx.app.close();
