@@ -140,7 +140,8 @@ export type DeedKind =
   | 'dividend'
   | 'rest'
   | 'met'
-  | 'friends';
+  | 'friends'
+  | 'talked';
 
 export interface Deed {
   id: string;
@@ -155,4 +156,17 @@ export interface Deed {
   by: 'ai' | 'sim';
   /** The agent's own reason, when it gave one. */
   reason?: string;
+  /** For conversations between agents: what each of them said. */
+  lines?: { citizenId: string; text: string }[];
+}
+
+/** Two agents who know each other are spending time in the same place and get talking. */
+export interface AgentEncounter {
+  id: string;
+  aId: string;
+  bId: string;
+  buildingId: string;
+  time: number;
+  /** What they are doing there (eat, leisure, park, event, build, shop). */
+  activity: string;
 }

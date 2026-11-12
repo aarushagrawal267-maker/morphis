@@ -46,6 +46,7 @@ export class SimulationHost {
   private attachExecutor(): void {
     this.sim.workforce.executor = this.agents.executor && this.agents.live ? this.agents.executor : new SimulatedExecutor();
     this.sim.life.mind = this.agents.lifeMind && this.agents.live ? this.agents.lifeMind : null;
+    this.sim.life.talker = this.agents.conversations && this.agents.live ? this.agents.conversations : null;
   }
 
   /** Re-evaluate live vs simulated execution (e.g. after the provider check). */

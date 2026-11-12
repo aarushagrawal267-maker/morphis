@@ -194,4 +194,6 @@ export interface SimState {
   trains?: TrainRT[];
   /** Time agents have spent together (hours), keyed "citizenA|citizenB" (sorted). */
   bonds?: Record<string, number>;
+  /** Day two agents last had a conversation (pair key "a|b"). */
+  talks?: Record<string, number>;
 }

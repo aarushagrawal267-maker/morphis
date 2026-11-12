@@ -12,6 +12,7 @@
  */
 import type {
   ActivityKind,
+  AgentEncounter,
   AgentIntent,
   AgentLife,
   AgentPersona,
@@ -30,6 +31,7 @@ import type {
 import {
   AGENCY_AGENTS,
   AGENCY_DIVISIONS,
+  agencyAgent,
   AMBITION_LABEL,
   BUILDING_TYPES,
   CORE_ROLES,
@@ -66,6 +68,15 @@ type TurnPhase = keyof typeof TURNS;
 /** Activities a day-turn plan may replace (never sleep or a scheduled shift). */
 const PLANNABLE: ActivityKind[] = ['leisure', 'park', 'shop', 'event', 'eat', 'home'];
 const FREE_TIME: ActivityKind[] = ['leisure', 'park', 'shop', 'event'];
+
+/** A real AI that can voice conversations between agents. */
+export interface ConversationMind {
+  /** Take this encounter (and call `recordConversation` later) or return false to let the simulation write it. */
+  request(encounter: AgentEncounter): boolean;
+}
+
+/** Most conversations per simulated hour (the busiest places first). */
+const TALKS_PER_HOUR = 3;
 
 /** A real AI that can make agents' life decisions. */
 export interface LifeMind {
@@ -108,6 +119,7 @@ const WORKFORCE_WHY = [
 
 export class LifeSystem {
   mind: LifeMind | null = null;
+  talker: ConversationMind | null = null;
   private byCitizen = new Map<string, AgentLife>();
 
   constructor(private sim: CitySimulation) {
@@ -1047,6 +1059,7 @@ export class LifeSystem {
     const bonds = (this.st.bonds ??= {});
     const SOCIAL = new Set(['eat', 'leisure', 'event', 'park', 'build', 'shop']);
     const byPlace = new Map<string, CitizenRT[]>();
+    const talkCandidates: [CitizenRT, CitizenRT, string][] = [];
     for (const l of this.st.life) {
       const c = sim.citizenById(l.citizenId);
       if (!c || !c.insideId || !SOCIAL.has(c.dyn.activity)) continue;
@@ -1065,6 +1078,7 @@ export class LifeSystem {
           const after = before + 1;
           bonds[key] = after;
           const what = a.dyn.activity === 'build' ? 'fitting out' : a.dyn.activity === 'eat' ? 'a meal at' : a.dyn.activity === 'park' ? 'a walk in' : 'an evening at';
+          if (before >= 1 && (this.st.talks?.[key] ?? 0) < dayOf(sim.time)) talkCandidates.push([a, b, placeId]);
           if (before === 0) {
             this.addDeed(a, 'met', `${firstName(a.profile.name)} met ${b.profile.name} over ${what} ${place}.`, 'sim', { buildingId: placeId, others: [b.profile.id] });
           } else if (before < 3 && after >= 3) {
@@ -1077,6 +1091,112 @@ export class LifeSystem {
         }
       }
     }
+    this.startConversations(talkCandidates);
+  }
+
+  // ---------------------------------------------------------------- conversations
+
+  /** Up to a few pairs per hour who already know each other get talking. */
+  private startConversations(candidates: [CitizenRT, CitizenRT, string][]): void {
+    const sim = this.sim;
+    const talks = (this.st.talks ??= {});
+    const day = dayOf(sim.time);
+    const used = new Set<string>();
+    const pool = [...candidates];
+    for (let n = 0; n < TALKS_PER_HOUR && pool.length; n++) {
+      const i = sim.rng.int(0, pool.length - 1);
+      const [a, b, placeId] = pool.splice(i, 1)[0];
+      if (used.has(a.profile.id) || used.has(b.profile.id)) continue;
+      used.add(a.profile.id);
+      used.add(b.profile.id);
+      talks[`${a.profile.id}|${b.profile.id}`] = day;
+      const enc: AgentEncounter = { id: sim.newId('talk'), aId: a.profile.id, bId: b.profile.id, buildingId: placeId, time: sim.time, activity: a.dyn.activity };
+      let taken = false;
+      if (this.talker) {
+        try {
+          taken = this.talker.request(enc);
+        } catch {
+          taken = false;
+        }
+      }
+      if (!taken) {
+        const t = this.simulatedConversation(enc);
+        this.recordConversation(enc, t.lines, t.summary, 'sim', true);
+      }
+    }
+  }
+
+  /** Facts one agent could bring up with another (all from the simulation). */
+  conversationTopics(c: CitizenRT): string[] {
+    const sim = this.sim;
+    const life = this.life(c.profile.id);
+    const out: string[] = [];
+    const v = this.venture(life?.ventureId);
+    if (v) out.push(v.status === 'OPEN' ? `runs ${v.name}, which is open` : `is fitting out ${v.name} (${Math.round((v.progress / v.work) * 100)}% done)`);
+    const h = this.venture(life?.helpingId);
+    if (h?.status === 'FITTING_OUT') out.push(`is helping to build ${h.name}`);
+    if (life?.study) out.push(`is studying ${life.study.field} (${Math.round((life.study.minutes / life.study.required) * 100)}% of classes done)`);
+    if (life?.graduated.length) out.push(`graduated in ${life.graduated[life.graduated.length - 1]}`);
+    const task = c.dyn.currentTaskId ? sim.workforce.task(c.dyn.currentTaskId) : undefined;
+    if (task) out.push(`is working on "${task.title}" for JARVIS`);
+    if (life?.plan && life.plan !== 'Settling in.') out.push(`plans: ${life.plan}`);
+    const spec = agencyAgent(c.profile.agent?.agency);
+    if (spec) out.push(`is The Agency's ${spec.name}`);
+    else if (c.profile.agent) out.push(`is a ${c.profile.agent.calling.toLowerCase()}`);
+    return out;
+  }
+
+  /** A short conversation written by the simulation from what both agents are really up to. */
+  simulatedConversation(enc: AgentEncounter): { lines: { citizenId: string; text: string }[]; summary: string } {
+    const sim = this.sim;
+    const a = sim.citizenById(enc.aId)!;
+    const b = sim.citizenById(enc.bId)!;
+    const an = firstName(a.profile.name);
+    const bn = firstName(b.profile.name);
+    const place = displayName(sim.economy.byBuilding(enc.buildingId)?.name ?? sim.building(enc.buildingId).name);
+    const lb = this.life(b.profile.id);
+    const la = this.life(a.profile.id);
+    const lines: { citizenId: string; text: string }[] = [{ citizenId: a.profile.id, text: `${bn}! Good to see you here.` }];
+    let topic = 'their week';
+    const bv = this.venture(lb?.ventureId);
+    const btask = b.dyn.currentTaskId ? sim.workforce.task(b.dyn.currentTaskId) : undefined;
+    if (bv) {
+      topic = bv.name;
+      lines.push({ citizenId: a.profile.id, text: bv.status === 'OPEN' ? `How is ${bv.name} doing?` : `How is the fit-out of ${bv.name} going?` });
+      lines.push({ citizenId: b.profile.id, text: bv.status === 'OPEN' ? 'Busy, in a good way. Come by sometime.' : `About ${Math.round((bv.progress / bv.work) * 100)}% done. Any help is welcome.` });
+    } else if (btask) {
+      topic = `"${btask.title}"`;
+      lines.push({ citizenId: a.profile.id, text: 'What is JARVIS keeping you busy with?' });
+      lines.push({ citizenId: b.profile.id, text: `"${btask.title}". ${Math.round(btask.progress * 100)}% there.` });
+    } else if (lb?.study) {
+      topic = `${lb.study.field} classes`;
+      lines.push({ citizenId: a.profile.id, text: `How are the ${lb.study.field} classes?` });
+      lines.push({ citizenId: b.profile.id, text: `Hard work, but I am ${Math.round((lb.study.minutes / lb.study.required) * 100)}% through.` });
+    } else {
+      const live = sim.state.cityEvents.find((e) => e.status === 'LIVE');
+      topic = live ? live.name : `the ${sim.state.weather.kind === 'clear' ? 'good weather' : 'weather'}`;
+      lines.push({ citizenId: b.profile.id, text: live ? `Are you going to ${live.name}?` : sim.state.weather.kind === 'clear' ? 'What a day for it.' : 'Not the best weather, is it?' });
+    }
+    if (la?.plan && la.plan !== 'Settling in.') lines.push({ citizenId: a.profile.id, text: `Me? ${la.plan}` });
+    return { lines: lines.slice(0, 4), summary: `${an} and ${bn} talked about ${topic} at ${place}.` };
+  }
+
+  /** Log a conversation between two agents (from the AI or the simulation). Talking brings them closer. */
+  recordConversation(enc: AgentEncounter, lines: { citizenId: string; text: string }[], summary: string, by: 'ai' | 'sim', closer: boolean): Deed | null {
+    const sim = this.sim;
+    const a = sim.citizenById(enc.aId);
+    const b = sim.citizenById(enc.bId);
+    if (!a || !b) return null;
+    const valid = lines.filter((l) => (l.citizenId === enc.aId || l.citizenId === enc.bId) && l.text.trim()).map((l) => ({ citizenId: l.citizenId, text: clip(l.text.trim(), 220)! }));
+    const deed = this.addDeed(a, 'talked', clip(summary, 200) ?? `${firstName(a.profile.name)} and ${firstName(b.profile.name)} talked.`, by, { buildingId: enc.buildingId, others: [b.profile.id], time: Math.max(enc.time, Math.min(sim.time, enc.time + 3600)), silent: true });
+    if (valid.length) deed.lines = valid.slice(0, 6);
+    sim.bus.emit('citizen.deed', deed.time, { deed });
+    if (closer) {
+      const bonds = (this.st.bonds ??= {});
+      const key = `${enc.aId}|${enc.bId}`;
+      bonds[key] = (bonds[key] ?? 0) + 1;
+    }
+    return deed;
   }
 
   /**

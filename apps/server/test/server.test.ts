@@ -274,6 +274,54 @@ describe('AI day turns (mock provider)', () => {
   });
 });
 
+describe('conversations between agents (mock provider)', () => {
+  let mock: HttpServer;
+  let base = '';
+  beforeAll(async () => {
+    mock = createServer((req, res) => {
+      let body = '';
+      req.on('data', (c) => (body += c));
+      req.on('end', () => {
+        const json = JSON.parse(body) as { messages: { role: string; content: string }[] };
+        const system = json.messages.find((m) => m.role === 'system')?.content ?? '';
+        const user = json.messages.find((m) => m.role === 'user')?.content ?? '';
+        let content = 'ready';
+        if (system.includes('natural conversation')) {
+          const a = /A: ([^,]+),/.exec(user)?.[1] ?? 'A';
+          const b = /B: ([^,]+),/.exec(user)?.[1] ?? 'B';
+          content = JSON.stringify({ lines: [{ speaker: 'A', text: `Hey ${b.split(' ')[0]}!` }, { speaker: 'B', text: 'Good to see you.' }], summary: `${a} and ${b} caught up over coffee.`, closer: true });
+        }
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ choices: [{ message: { content } }], usage: { prompt_tokens: 10, completion_tokens: 20 } }));
+      });
+    });
+    await new Promise<void>((r) => mock.listen(0, '127.0.0.1', r));
+    base = `http://127.0.0.1:${(mock.address() as { port: number }).port}/v1`;
+  });
+  afterAll(() => mock.close());
+
+  it('the model voices encounters between agents; both remember them', async () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), 'morphis-chats-'));
+    const ctx = await buildServer(
+      loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '300', AI_PROVIDER: 'openai-compatible', AI_BASE_URL: base, AI_MODEL: 'mock-model', AI_REQUESTS_PER_MINUTE: '6000', AI_LIFE_DECISIONS_PER_HOUR: '0', AI_DAY_TURNS_PER_HOUR: '0', AI_AGENT_CHATS_PER_HOUR: '100' }),
+    );
+    const sim = ctx.host.sim;
+    expect(sim.life.talker).not.toBeNull();
+    for (let i = 0; i < 200 && !sim.state.deeds!.some((d) => d.kind === 'talked' && d.by === 'ai'); i++) {
+      sim.run(900);
+      await wait(10);
+    }
+    const talk = sim.state.deeds!.find((d) => d.kind === 'talked' && d.by === 'ai')!;
+    expect(talk).toBeDefined();
+    expect(talk.text).toMatch(/caught up over coffee/);
+    expect(talk.lines!.length).toBe(2);
+    expect(ctx.agents.memory.all(talk.citizenId).some((m) => m.kind === 'talk' && m.summary.includes('caught up'))).toBe(true);
+    expect(ctx.agents.memory.all(talk.others![0]).some((m) => m.kind === 'talk')).toBe(true);
+    expect(ctx.agents.conversations!.stats.ai).toBeGreaterThan(0);
+    await ctx.app.close();
+  });
+});
+
 describe('AI conversations (mock provider)', () => {
   let mock: HttpServer;
   let base = '';
