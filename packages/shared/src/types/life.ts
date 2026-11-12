@@ -52,7 +52,28 @@ export interface Venture {
   paidOut: number;
 }
 
-export type LifeActionKind = 'found' | 'invest' | 'help_build' | 'enroll' | 'join' | 'rest';
+export type LifeActionKind = 'found' | 'invest' | 'help_build' | 'enroll' | 'join' | 'rest' | 'visit' | 'meet' | 'work';
+
+/** When a decision is made: the evening life decision, or a turn during the day. */
+export type DecisionPhase = 'evening' | 'morning' | 'midday';
+
+/** What an agent decided to do in a window of today (from a morning or midday turn). */
+export interface AgentIntent {
+  phase: 'morning' | 'midday';
+  kind: LifeActionKind;
+  /** Activity the agent does in the window (eat, park, event, leisure, build, work, study). */
+  activity: string;
+  buildingId: string | null;
+  /** Sim time window in which the intent applies. */
+  from: number;
+  until: number;
+  label: string;
+  /** What the agent says about it (written by the AI when it chose). */
+  say: string | null;
+  by: 'ai' | 'sim';
+  /** Friend met (for meet intents). */
+  withId?: string;
+}
 
 export interface LifeOption {
   id: string;
@@ -62,6 +83,9 @@ export interface LifeOption {
   targetId?: string;
   amount?: number;
   venture?: { kind: VentureKind; name: string; buildingId: string };
+  /** Day turns: the activity this option leads to, and the friend it involves. */
+  activity?: string;
+  withId?: string;
 }
 
 export interface LifeDecision {
@@ -71,6 +95,8 @@ export interface LifeDecision {
   createdAt: number;
   /** Sim time after which the simulation decides by itself. */
   deadline: number;
+  /** Evening life decision (default) or a turn during the day. */
+  phase?: DecisionPhase;
 }
 
 export interface AgentLife {
@@ -92,6 +118,10 @@ export interface AgentLife {
   guestsMet: number;
   /** Other agents this agent has become friends with. */
   friends?: string[];
+  /** Day of the last morning / midday turn. */
+  turns?: { morning: number; midday: number };
+  /** Today's plans from the day turns: lunch (morning turn) and evening (midday turn). */
+  intents?: { morning?: AgentIntent | null; midday?: AgentIntent | null };
 }
 
 export type DeedKind =

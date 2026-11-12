@@ -118,7 +118,7 @@ export class ExternalAgents {
       const a = this.byCredential(req);
       if (!a) return reply.code(401).send({ error: 'unknown credential' });
       if (!a.citizenId) return reply.code(409).send({ error: `application is ${a.status}` });
-      return host.sim.life.pendingFor(a.citizenId).map((d) => ({ id: d.id, options: d.options, deadlineSimTime: d.deadline, simTime: host.sim.time }));
+      return host.sim.life.pendingFor(a.citizenId).map((d) => ({ id: d.id, phase: d.phase ?? 'evening', options: d.options, deadlineSimTime: d.deadline, simTime: host.sim.time }));
     });
 
     app.post('/api/external-agents/me/decisions/:id', async (req, reply) => {

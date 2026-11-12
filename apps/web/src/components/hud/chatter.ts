@@ -42,6 +42,9 @@ export function chatterFor(p: CitizenProfile, d: CitizenDynamic, life: AgentLife
     if (ev) options.push(`${f}, coming to ${ev.name}?`);
     return pick(options, seed);
   }
+  const now = ctx.time;
+  const intent = [life?.intents?.morning, life?.intents?.midday].find((it) => it && now >= it.from - 1800 && now < it.until);
+  if (intent && seed % 2 === 0) return intent.say ?? `${intent.label}${now < intent.from ? ' later' : ''}.`;
   if (life?.plan && seed % 3 !== 2) return life.plan;
   if (d.satiety < 0.28) return pick(['Starving. Where is the nearest café?', 'I could eat a whole noodle bar.', 'Lunch. Now.'], seed);
   if (d.energy < 0.2) return pick(['I need about twelve hours of sleep.', 'Running on fumes.', 'Bed. Soon.'], seed);

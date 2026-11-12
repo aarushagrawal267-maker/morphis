@@ -12,6 +12,7 @@
  */
 import type {
   ActivityKind,
+  AgentIntent,
   AgentLife,
   AgentPersona,
   AmbitionKind,
@@ -41,6 +42,8 @@ import {
   displayName,
   firstName,
   dayOf,
+  formatClock,
+  isOpenAt,
   formatCredits,
   hourOf,
   minuteOfDay,
@@ -53,6 +56,15 @@ const CLASS_MINUTES = 6 * 110;
 const TUITION = 800;
 /** How long a pending AI decision may wait before the simulation decides. */
 const DECISION_TIMEOUT = 3 * 3600;
+/** Day turns: when agents think about the next part of their day, and the window it covers (minutes of day). */
+const TURNS = {
+  morning: { at: 7 * 60 + 15, from: 11 * 60 + 30, until: 14 * 60 + 30, window: 'lunch' },
+  midday: { at: 12 * 60 + 40, from: 17 * 60, until: 22 * 60, window: 'this evening' },
+} as const;
+const TURN_TIMEOUT = 75 * 60;
+type TurnPhase = keyof typeof TURNS;
+/** Activities a day-turn plan may replace (never sleep or a scheduled shift). */
+const PLANNABLE: ActivityKind[] = ['leisure', 'park', 'shop', 'event', 'eat', 'home'];
 const FREE_TIME: ActivityKind[] = ['leisure', 'park', 'shop', 'event'];
 
 /** A real AI that can make agents' life decisions. */
@@ -365,6 +377,14 @@ export class LifeSystem {
     const day = dayOf(time);
     const m = minuteOfDay(time);
     for (const life of this.st.life) {
+      // day turns: plan lunch in the morning and the evening around midday
+      for (const phase of ['morning', 'midday'] as TurnPhase[]) {
+        const turns = (life.turns ??= { morning: day - 1, midday: day - 1 });
+        if (turns[phase] >= day || m < TURNS[phase].at + ((life.decideAt * 7) % 40)) continue;
+        turns[phase] = day;
+        const c = life.pending ? undefined : sim.citizenById(life.citizenId);
+        if (c) this.beginTurn(c, life, phase);
+      }
       if (life.pending || life.lastDecisionDay >= day || m < life.decideAt) continue;
       const c = sim.citizenById(life.citizenId);
       if (!c) continue;
@@ -380,6 +400,10 @@ export class LifeSystem {
       this.st.decisions = (this.st.decisions ?? []).filter((x) => x.id !== d.id);
       if (!c || !life) continue;
       life.pending = null;
+      if (d.phase === 'morning' || d.phase === 'midday') {
+        this.applyTurn(c, life, d, this.chooseTurn(c, d.options), 'sim', null, null);
+        continue;
+      }
       const opt = this.choose(c, d.options);
       this.apply(c, life, opt, 'sim', null, null, ' (the AI did not answer in time, so the simulation decided)');
     }
@@ -518,6 +542,10 @@ export class LifeSystem {
     if (!c || !life) return { ok: false, error: 'unknown agent' };
     life.pending = null;
     const opt = d.options.find((o) => o.id === optionId);
+    if (d.phase === 'morning' || d.phase === 'midday') {
+      this.applyTurn(c, life, d, opt ?? this.chooseTurn(c, d.options), opt ? 'ai' : 'sim', opt ? clip(reason, 240) : null, opt ? clip(plan, 90) : null);
+      return opt ? { ok: true } : { ok: false, error: 'unknown option' };
+    }
     if (!opt) {
       this.apply(c, life, this.choose(c, d.options), 'sim', null, null, ' (the AI chose an option that does not exist, so the simulation decided)');
       return { ok: false, error: 'unknown option' };
@@ -649,6 +677,156 @@ export class LifeSystem {
     }
   }
 
+  // ---------------------------------------------------------------- day turns
+
+  /** Window of today a turn plans for (absolute sim times). */
+  private turnWindow(phase: TurnPhase): { from: number; until: number } {
+    const dayStart = this.sim.time - (this.sim.time % 86400);
+    return { from: dayStart + TURNS[phase].from * 60, until: dayStart + TURNS[phase].until * 60 };
+  }
+
+  private beginTurn(c: CitizenRT, life: AgentLife, phase: TurnPhase): void {
+    // already invited by a friend for this window today: keep that plan
+    const planned = life.intents?.[phase];
+    if (planned?.kind === 'meet' && planned.from >= this.turnWindow(phase).from) return;
+    const options = this.turnOptions(c, life, phase);
+    if (options.length < 2) return;
+    const decision: LifeDecision = { id: this.sim.newId('turn'), citizenId: c.profile.id, options, createdAt: this.sim.time, deadline: this.sim.time + TURN_TIMEOUT, phase };
+    if (c.profile.agent?.external || this.mind) {
+      let taken = !!c.profile.agent?.external;
+      if (!taken && this.mind) {
+        try {
+          taken = this.mind.request(decision);
+        } catch {
+          taken = false;
+        }
+      }
+      if (taken) {
+        life.pending = decision.id;
+        (this.st.decisions ??= []).push(decision);
+        return;
+      }
+    }
+    this.applyTurn(c, life, decision, this.chooseTurn(c, options), 'sim', null, null);
+  }
+
+  /** What this agent can really do in the coming window: places that are open, friends, work, events. */
+  turnOptions(c: CitizenRT, life: AgentLife, phase: TurnPhase): LifeOption[] {
+    const sim = this.sim;
+    const p = c.profile;
+    const { from, until } = this.turnWindow(phase);
+    const hour = TURNS[phase].from / 60 + 0.5;
+    // lunch happens near work (or home without a job); the evening starts near home
+    const home = sim.building(phase === 'morning' && p.workplaceId ? p.workplaceId : p.homeId);
+    const nearOpen = (types: BuildingDef['type'][], n: number) =>
+      sim
+        .buildingsOfType(types)
+        .filter((b) => !b.construction && sim.state.buildings[b.index].dyn.status === 'ACTIVE' && isOpenAt(b.type, hour))
+        .sort((a, b) => dist(a, home) - dist(b, home))
+        .slice(0, n);
+    const name = (b: BuildingDef) => displayName(sim.economy.byBuilding(b.id)?.name ?? b.name);
+    const out: LifeOption[] = [];
+    const id = (s: string) => `turn:${phase}:${s}`;
+    const meal = phase === 'morning' ? 'Lunch' : 'Dinner';
+    for (const b of nearOpen(phase === 'morning' ? ['cafe', 'restaurant'] : ['restaurant', 'cafe'], 2)) {
+      out.push({ id: id(`eat:${b.id}`), kind: 'visit', activity: 'eat', targetId: b.id, label: `${meal} at ${name(b)}`, detail: `${b.type === 'cafe' ? 'A café' : 'A restaurant'} near ${phase === 'morning' && p.workplaceId ? 'work' : 'home'}.` });
+    }
+    // a friend's open venture
+    const friends = life.friends ?? [];
+    const friendVenture = this.ventures.find((v) => v.status === 'OPEN' && friends.includes(v.founderId) && (v.kind === 'cafe' || v.kind === 'restaurant'));
+    if (friendVenture) {
+      const f = sim.citizenById(friendVenture.founderId);
+      out.push({ id: id(`eat:${friendVenture.buildingId}`), kind: 'visit', activity: 'eat', targetId: friendVenture.buildingId, label: `${meal} at ${friendVenture.name}`, detail: `${f ? firstName(f.profile.name) : 'A friend'} runs it.` });
+    }
+    // meet a friend (the one with the strongest bond who is not already busy then)
+    if (friends.length) {
+      const bonds = this.st.bonds ?? {};
+      const key = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+      const friend = [...friends]
+        .map((fid) => sim.citizenById(fid))
+        .filter((f): f is CitizenRT => !!f && !this.life(f.profile.id)?.intents?.[phase]?.withId && !this.life(f.profile.id)?.pending)
+        .sort((a, b) => (bonds[key(p.id, b.profile.id)] ?? 0) - (bonds[key(p.id, a.profile.id)] ?? 0))[0];
+      const spot = nearOpen(phase === 'morning' ? ['cafe'] : ['cafe', 'restaurant', 'entertainment'], 1)[0];
+      if (friend && spot) {
+        out.push({ id: id(`meet:${friend.profile.id}`), kind: 'meet', activity: phase === 'morning' ? 'eat' : 'leisure', targetId: spot.id, withId: friend.profile.id, label: `Meet ${firstName(friend.profile.name)} at ${name(spot)}`, detail: `${friend.profile.name} is a friend.` });
+      }
+    }
+    if (phase === 'midday') {
+      const park = nearOpen(['park'], 1)[0];
+      if (park) out.push({ id: id(`park:${park.id}`), kind: 'visit', activity: 'park', targetId: park.id, label: `Walk in ${name(park)}`, detail: 'Fresh air after the day.' });
+      const ev = sim.state.cityEvents.find((e) => e.status !== 'ENDED' && e.start < until && e.end > from);
+      if (ev) {
+        const eb = sim.building(ev.buildingId);
+        out.push({ id: id(`event:${ev.id}`), kind: 'visit', activity: 'event', targetId: ev.buildingId, label: `Go to ${ev.name}`, detail: `At ${name(eb)}, ${formatClock(ev.start)} to ${formatClock(ev.end)}.` });
+      }
+      const helping = this.venture(life.helpingId) ?? this.venture(life.ventureId);
+      if (helping?.status === 'FITTING_OUT') out.push({ id: id(`build:${helping.id}`), kind: 'help_build', activity: 'build', targetId: helping.buildingId, label: `Work on the fit-out of ${helping.name}`, detail: `${Math.round((helping.progress / helping.work) * 100)}% done.` });
+      if (life.study) out.push({ id: id('study'), kind: 'enroll', activity: 'study', targetId: undefined, label: `Evening class in ${life.study.field}`, detail: `${Math.round((life.study.minutes / life.study.required) * 100)}% of classes done.` });
+    }
+    const task = c.dyn.currentTaskId ? sim.workforce.task(c.dyn.currentTaskId) : undefined;
+    if (task && task.status === 'ACTIVE') out.push({ id: id('work'), kind: 'work', activity: 'work', targetId: task.buildingId, label: `Keep working on "${task.title}"`, detail: `${Math.round(task.progress * 100)}% done.` });
+    out.push({ id: id('rest'), kind: 'rest', label: phase === 'morning' ? 'Lunch as usual' : 'A quiet evening, as usual', detail: 'Keep the usual routine.' });
+    return out;
+  }
+
+  /** Simulation's choice for a turn: friends and interests make some options likelier. */
+  chooseTurn(c: CitizenRT, options: LifeOption[]): LifeOption {
+    const interests = c.profile.agent?.interests ?? [];
+    const weight = (o: LifeOption) => {
+      switch (o.kind) {
+        case 'meet':
+          return 2.5 + (interests.includes('community') ? 2 : 0);
+        case 'visit':
+          return (o.activity === 'event' ? 2 : 1.2) + (o.activity === 'eat' && interests.includes('food') ? 1.5 : 0) + (o.activity === 'park' && interests.includes('explore') ? 1.5 : 0);
+        case 'work':
+          return c.profile.agent?.workforce || c.profile.agent?.agency ? 2.2 : 1;
+        case 'help_build':
+          return 2.5;
+        case 'enroll':
+          return 3;
+        default:
+          return 1.4;
+      }
+    };
+    return this.sim.rng.weighted(options, weight) ?? options[options.length - 1];
+  }
+
+  private applyTurn(c: CitizenRT, life: AgentLife, d: LifeDecision, opt: LifeOption, by: 'ai' | 'sim', reason: string | null, say: string | null): void {
+    const sim = this.sim;
+    const phase = d.phase === 'midday' ? 'midday' : 'morning';
+    const { from, until } = this.turnWindow(phase);
+    const intents = (life.intents ??= {});
+    if (opt.kind === 'rest' || !opt.activity) {
+      intents[phase] = null;
+      return;
+    }
+    intents[phase] = { phase, kind: opt.kind, activity: opt.activity, buildingId: opt.targetId ?? null, from, until, label: opt.label, say, by, ...(opt.withId ? { withId: opt.withId } : {}) };
+    sim.bus.emit('agent.plan', sim.time, { citizenId: c.profile.id, plan: say ?? opt.label, by });
+    if (opt.kind === 'meet' && opt.withId) {
+      const f = sim.citizenById(opt.withId);
+      const fl = f ? this.life(f.profile.id) : undefined;
+      if (f && fl) {
+        // the friend says yes unless they already made plans together with someone
+        (fl.intents ??= {})[phase] = { phase, kind: 'meet', activity: opt.activity, buildingId: opt.targetId ?? null, from, until, label: `Meet ${firstName(c.profile.name)} at ${opt.label.replace(/^Meet \S+ at /, '')}`, say: null, by, withId: c.profile.id };
+        this.addDeed(c, 'met', `${firstName(c.profile.name)} asked ${f.profile.name} to meet ${phase === 'morning' ? 'for lunch' : 'this evening'} at ${opt.label.replace(/^Meet \S+ at /, '')}.`, by, { buildingId: opt.targetId, others: [f.profile.id], ...(reason ? { reason } : {}) });
+      }
+    }
+  }
+
+  /** The agent's plan for right now, if a day turn set one. */
+  activeIntent(life: AgentLife): AgentIntent | null {
+    const intents = life.intents;
+    if (!intents) return null;
+    const now = this.sim.time;
+    for (const phase of ['morning', 'midday'] as TurnPhase[]) {
+      const it = intents[phase];
+      if (!it) continue;
+      if (now >= it.until) intents[phase] = null;
+      else if (now >= it.from) return it;
+    }
+    return null;
+  }
+
   // ---------------------------------------------------------------- daily activity hooks
 
   /** Adjust a scheduled activity for agents with a venture to build or classes to attend. */
@@ -661,6 +839,13 @@ export class LifeSystem {
       if (activity === 'work' && c.profile.workplaceId === own.buildingId) return 'build';
       if (FREE_TIME.includes(activity) && h >= 8 && h < 22) return 'build';
     }
+    const intent = this.activeIntent(life);
+    if (intent && c.dyn.energy > 0.15 && (PLANNABLE.includes(activity) || (activity === 'work' && intent.activity === 'work'))) {
+      if (intent.activity === 'work') return c.profile.workplaceId || c.dyn.currentTaskId ? 'work' : activity;
+      if (intent.activity === 'study') return life.study ? 'study' : activity;
+      if (intent.activity === 'build') return 'build';
+      return intent.activity as ActivityKind;
+    }
     const helping = this.venture(life.helpingId);
     if (helping?.status === 'FITTING_OUT' && FREE_TIME.includes(activity) && h >= 8 && h < 21.5) return 'build';
     if (life.study && FREE_TIME.includes(activity) && ((h >= 17 && h < 21) || (!c.profile.workplaceId && h >= 9 && h < 16))) return 'study';
@@ -671,6 +856,11 @@ export class LifeSystem {
   target(c: CitizenRT, activity: ActivityKind): BuildingDef | null | undefined {
     const life = this.life(c.profile.id);
     if (!life) return undefined;
+    const intent = this.activeIntent(life);
+    if (intent?.buildingId && intent.activity === activity && ['eat', 'park', 'event', 'leisure'].includes(activity)) {
+      const b = this.sim.building(intent.buildingId);
+      if (isOpenAt(b.type, hourOf(this.sim.time) + 0.3) && this.sim.state.buildings[b.index].dyn.status === 'ACTIVE') return b;
+    }
     if (activity === 'build') {
       const v = this.venture(life.ventureId);
       if (v?.status === 'FITTING_OUT') return this.sim.building(v.buildingId);

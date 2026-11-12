@@ -150,6 +150,21 @@ export function AgentSections({ p }: { p: CitizenProfile }) {
             ))}
           </div>
           <AgencyInfo p={p} />
+          {life && (life.intents?.morning || life.intents?.midday) && (
+            <div className="agent-plan" data-testid="agent-today-plans">
+              <label>TODAY'S PLANS</label>
+              {(['morning', 'midday'] as const).map((ph) => {
+                const it = life.intents?.[ph];
+                if (!it) return null;
+                return (
+                  <p key={ph}>
+                    <b>{ph === 'morning' ? 'Lunch' : 'Evening'}:</b> {it.label}
+                    {it.say ? ` — “${it.say}”` : ''} <small>({it.by === 'ai' ? 'AI' : 'simulation'})</small>
+                  </p>
+                );
+              })}
+            </div>
+          )}
           {life && (
             <div className="agent-plan" data-testid="agent-plan">
               <label>TOMORROW'S PLAN</label>

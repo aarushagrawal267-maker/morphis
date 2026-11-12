@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { LifeDecision } from '@morphis/shared';
-import { AGENCY_AGENTS, agencyAgent } from '@morphis/shared';
+import { AGENCY_AGENTS, agencyAgent, dayOf } from '@morphis/shared';
 import { CitySimulation } from '../src/engine';
 
 describe('agent lives', () => {
@@ -63,7 +63,8 @@ describe('agent lives', () => {
   it('a life mind can make the decision; invalid choices fall back to the simulation', () => {
     const sim = CitySimulation.create({ population: 200 });
     const pending: LifeDecision[] = [];
-    sim.life.mind = { request: (d) => (pending.push(d), true) };
+    // this mind takes the evening decisions only (day turns are tested below)
+    sim.life.mind = { request: (d) => (!d.phase || d.phase === 'evening' ? (pending.push(d), true) : false) };
     sim.run(13 * 3600 + 2 * 3600); // to ~21:40 on day 1
     expect(pending.length).toBeGreaterThan(5);
     const first = pending[0];
@@ -164,5 +165,52 @@ describe('agent friendships', () => {
     expect(sim.life.friendsOf(other)).toContain(f.citizenId);
     const restored = CitySimulation.fromSave(JSON.parse(JSON.stringify(sim.serialize('f'))));
     expect(restored.life.friendsOf(f.citizenId)).toContain(other);
+  });
+});
+
+describe('day turns', () => {
+  it('agents plan lunch in the morning and the evening around midday, and follow their plans', () => {
+    const sim = CitySimulation.create({ population: 300 });
+    sim.run(110 * 60); // 06:40 -> about 08:30 on day 1
+    const lives = sim.state.life!;
+    const day = dayOf(sim.time);
+    expect(lives.filter((l) => l.turns?.morning === day).length).toBe(lives.length);
+    const lunch = lives.map((l) => l.intents?.morning).filter((x) => !!x);
+    expect(lunch.length).toBeGreaterThan(lives.length * 0.3);
+    for (const it of lunch) {
+      expect(it!.phase).toBe('morning');
+      expect(it!.by).toBe('sim');
+      expect(it!.until).toBeGreaterThan(it!.from);
+    }
+    // during lunch, agents with an eating plan are at (or on the way to) the place they chose
+    sim.run(4.5 * 3600); // about 13:00, lunch time
+    const eaters = lives.filter((l) => l.intents?.morning?.activity === 'eat' && l.intents.morning.buildingId);
+    expect(eaters.length).toBeGreaterThan(5);
+    const there = eaters.filter((l) => {
+      const c = sim.citizenById(l.citizenId)!;
+      return c.insideId === l.intents!.morning!.buildingId || c.dyn.activity === 'eat';
+    });
+    expect(there.length / eaters.length).toBeGreaterThan(0.5);
+    // the midday turn plans the evening
+    sim.run(3600); // about 14:00
+    expect(lives.filter((l) => l.turns?.midday === day).length).toBe(lives.length);
+    expect(lives.some((l) => l.intents?.midday)).toBe(true);
+  });
+
+  it('a turn the AI takes is resolved with its choice; unknown choices fall back to the simulation', () => {
+    const sim = CitySimulation.create({ population: 200 });
+    const taken: LifeDecision[] = [];
+    sim.life.mind = { request: (d) => (d.phase === 'morning' ? (taken.push(d), true) : false) };
+    sim.run(80 * 60); // 06:40 -> 08:00: morning turns asked, not yet timed out
+    expect(taken.length).toBeGreaterThan(10);
+    const d = taken[0];
+    const pick = d.options.find((o) => o.kind !== 'rest')!;
+    expect(sim.life.resolve(d.id, pick.id, 'I like it there.', 'Off to lunch!').ok).toBe(true);
+    const it = sim.life.life(d.citizenId)!.intents!.morning!;
+    expect(it.by).toBe('ai');
+    expect(it.label).toBe(pick.label);
+    expect(it.say).toBe('Off to lunch!');
+    expect(sim.life.resolve(taken[1].id, 'nonsense', null, null).ok).toBe(false);
+    expect(sim.life.life(taken[1].citizenId)!.pending).toBeNull();
   });
 });
