@@ -528,9 +528,10 @@ export class AgentController {
     this.planner = provider ? new LlmMasterPlanner(provider, this.agency.available ? this.agency : undefined) : null;
     this.executor = provider ? new LiveTaskExecutor(this) : null;
     this.lifeMind =
-      provider && cfg.AI_LIFE_DECISIONS_PER_HOUR > 0
+      provider && (cfg.AI_LIFE_DECISIONS_PER_HOUR > 0 || cfg.AI_DAY_TURNS_PER_HOUR > 0)
         ? new LlmLifeMind(provider, limiter, () => this.sim(), this.memory, {
             perHour: cfg.AI_LIFE_DECISIONS_PER_HOUR,
+            turnsPerHour: cfg.AI_DAY_TURNS_PER_HOUR,
             maxInFlight: 2,
             reserveShare: 0.4,
             dailyCap: cfg.AI_DAILY_REQUEST_CAP,

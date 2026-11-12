@@ -16,8 +16,10 @@ import { extractJson } from './agents';
 import { formatMemory, type AgentMemory } from './memory';
 
 export interface LifeMindOptions {
-  /** Max life decisions sent to the model per real hour. */
+  /** Max evening life decisions sent to the model per real hour. */
   perHour: number;
+  /** Max day turns (lunch and evening plans) sent to the model per real hour (0 = always simulated). */
+  turnsPerHour?: number;
   /** Max decisions in flight at once (the rest are decided by the simulation). */
   maxInFlight: number;
   /** Leave this share of the daily request cap for JARVIS work. */
@@ -35,17 +37,18 @@ export interface LifeMindStats {
 }
 
 const SYSTEM = [
-  'You are the inner voice of one agent living in Morphis, a simulated cyberpunk city in the year 2126.',
-  'Each evening the agent decides what to do with tomorrow. You choose exactly one of the offered options.',
+  'You are the inner voice of one agent living in Morphis, a simulated lantern-lit town on a floating island in the year 2126.',
+  'Three times a day the agent decides something: in the morning what to do at lunch, around midday what to do this evening, and in the evening what to do with tomorrow. You choose exactly one of the offered options.',
   'Stay in character: the agent has a calling, an ambition, interests and a history of deeds.',
   'Only use facts given to you. Money is simulated credits (§). Do not invent people, places or numbers.',
-  'Reply with JSON only: {"choice":"<option id>","reason":"<one or two sentences, first person, why>","plan":"<a short line the agent might say out loud tomorrow, max 70 characters>"}',
+  'Reply with JSON only: {"choice":"<option id>","reason":"<one or two sentences, first person, why>","plan":"<a short line the agent might say out loud about it, max 70 characters>"}',
 ].join('\n');
 
 export class LlmLifeMind implements LifeMind {
   private inFlight = 0;
   private hourStart = Date.now();
   private usedThisHour = 0;
+  private turnsThisHour = 0;
   readonly stats: LifeMindStats = { requested: 0, decided: 0, failed: 0, skipped: 0, lastError: null, recent: [] };
 
   constructor(
@@ -54,6 +57,8 @@ export class LlmLifeMind implements LifeMind {
     private getSim: () => CitySimulation | null,
     private memory: AgentMemory | null,
     private opts: LifeMindOptions,
+    /** Cheaper model for day turns (falls back to the main provider). */
+    private turnProvider: AiProvider | null = null,
   ) {}
 
   request(decision: LifeDecision): boolean {
@@ -61,15 +66,19 @@ export class LlmLifeMind implements LifeMind {
     if (now - this.hourStart > 3_600_000) {
       this.hourStart = now;
       this.usedThisHour = 0;
+      this.turnsThisHour = 0;
     }
+    const isTurn = decision.phase === 'morning' || decision.phase === 'midday';
     const budgetLeft = this.limiter.used < this.opts.dailyCap * (1 - this.opts.reserveShare);
-    if (this.inFlight >= this.opts.maxInFlight || this.usedThisHour >= this.opts.perHour || !budgetLeft) {
+    const hourly = isTurn ? this.turnsThisHour < (this.opts.turnsPerHour ?? 0) : this.usedThisHour < this.opts.perHour;
+    if (this.inFlight >= this.opts.maxInFlight || !hourly || !budgetLeft) {
       this.stats.skipped++;
       return false;
     }
     const sim = this.getSim();
     if (!sim) return false;
-    this.usedThisHour++;
+    if (isTurn) this.turnsThisHour++;
+    else this.usedThisHour++;
     this.inFlight++;
     this.stats.requested++;
     void this.run(sim, decision).finally(() => {
@@ -104,7 +113,7 @@ export class LlmLifeMind implements LifeMind {
         return mem.length ? [`What they remember:\n${mem.map(formatMemory).join('\n')}`] : [];
       })(),
       '',
-      'Options for tomorrow:',
+      d.phase === 'morning' ? 'Options for lunch today:' : d.phase === 'midday' ? 'Options for this evening:' : 'Options for tomorrow:',
       ...d.options.map((o) => `- id "${o.id}": ${o.label}. ${o.detail}`),
     ];
     return lines.filter((l) => l !== '').join('\n');
@@ -114,7 +123,8 @@ export class LlmLifeMind implements LifeMind {
     const c = sim.citizenById(d.citizenId);
     if (!c) return;
     try {
-      const res = await this.provider.complete(
+      const turn = d.phase === 'morning' || d.phase === 'midday';
+      const res = await (turn && this.turnProvider ? this.turnProvider : this.provider).complete(
         [
           { role: 'system', content: SYSTEM },
           { role: 'user', content: this.prompt(sim, d) },
