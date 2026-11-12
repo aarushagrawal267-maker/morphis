@@ -53,6 +53,24 @@ describe('JARVIS planning (template planner, simulated execution)', () => {
     expect(bc.profile.role).toBe('data_analyst');
   });
 
+  it('resident specialists have work hours and finish the tasks they are hired for', () => {
+    const sim = CitySimulation.create({ population: 400 });
+    for (const s of sim.workforce.specialists()) expect(s.profile.schedule.some((b) => b.activity === 'work')).toBe(true);
+    sim.run(3600);
+    const spec = sim.workforce.specialists().find((c) => !c.dyn.currentTaskId)!;
+    const project = sim.workforce.createProject(
+      { name: 'Specialist finishes', kind: 'llm', description: 'test', planner: 'test', tasks: [{ key: 'a', title: 'Specialist work', role: 'researcher', specialist: spec.profile.agent!.agency!, work: 90, dependsOn: [], description: 'x', artifact: 'a.md' }] },
+      'jarvis',
+      sim.state.buildings[0].id,
+      null,
+      null,
+    );
+    const t = sim.workforce.task(project.tasks[0])!;
+    expect(t.assigneeId).toBe(spec.profile.id);
+    sim.run(2 * 86400);
+    expect(t.status).toBe('COMPLETED');
+  });
+
   it('when the workforce role is busy, a free resident specialist of the same division takes the playbook', () => {
     const sim = CitySimulation.create({ population: 300 });
     sim.run(3600 * 2);

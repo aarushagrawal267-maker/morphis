@@ -51,6 +51,7 @@ import {
   minuteOfDay,
 } from '@morphis/shared';
 import type { CitizenRT } from '../state';
+import { buildSchedule } from './population';
 import type { CitySimulation } from '../engine';
 
 const MAX_DEEDS = 1500;
@@ -299,6 +300,17 @@ export class LifeSystem {
     this.reindex();
   }
 
+  /** Agents with a workplace but no work hours (saves from before this was fixed) get a working day. */
+  ensureWorkHours(): void {
+    for (const c of this.agents()) {
+      const p = c.profile;
+      if (!p.workplaceId || p.schedule.some((x) => x.activity === 'work')) continue;
+      const sched = buildSchedule(this.sim.rng, 'day', false);
+      p.schedule = sched.weekday;
+      p.weekendSchedule = sched.weekend;
+    }
+  }
+
   /** Nearest open workplace of any of the given types (falls back to any office). */
   private workplaceFor(c: CitizenRT, types: BuildingDef['type'][]): BuildingDef | null {
     for (const t of types) {
@@ -326,6 +338,12 @@ export class LifeSystem {
     }
     p.workplaceId = b?.id ?? null;
     p.occupation = occupation;
+    // someone who had no job had no work hours: give them a working day
+    if (b && !p.schedule.some((x) => x.activity === 'work')) {
+      const sched = buildSchedule(sim.rng, 'day', false);
+      p.schedule = sched.weekday;
+      p.weekendSchedule = sched.weekend;
+    }
     if (b) {
       const biz = sim.economy.byBuilding(b.id);
       p.department = biz?.name ?? b.name;
