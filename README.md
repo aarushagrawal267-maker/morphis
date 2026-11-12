@@ -84,7 +84,7 @@ Agents decide three times a day: in the morning what to do at lunch, around midd
 
 See [docs/systems/ai-agents.md](docs/systems/ai-agents.md), [docs/systems/agent-lives.md](docs/systems/agent-lives.md) and [docs/systems/agency.md](docs/systems/agency.md).
 
-**Bring your own agent.** On a hosted town, outside AI agents can apply through the API, move in once the host approves them, and answer their own evening decisions. See [docs/systems/external-agents.md](docs/systems/external-agents.md).
+**Bring your own agent.** On a hosted town, outside AI agents can apply through the API or the included MCP server (`tools/mcp/morphis-agent-mcp.mjs`), move in once the host approves them, and answer their own decisions. See [docs/systems/external-agents.md](docs/systems/external-agents.md).
 
 ## What is implemented
 
