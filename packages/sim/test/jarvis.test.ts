@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AGENCY_AGENTS } from '@morphis/shared';
 import { CitySimulation } from '../src/engine';
 import { templatePlan, validatePlan } from '../src/systems/planner';
 
@@ -13,6 +14,38 @@ describe('JARVIS planning (template planner, simulated execution)', () => {
     expect(roots.length).toBeGreaterThanOrEqual(1);
     expect(templatePlan('Build a fleet dashboard').kind).toBe('software');
     expect(templatePlan('Audit the payment system security').kind).toBe('security');
+  });
+
+  it('hires a resident Agency specialist for a task, and falls back to the workforce role otherwise', () => {
+    const sim = CitySimulation.create({ population: 300 });
+    sim.run(3600 * 2);
+    const resident = sim.workforce.specialists()[0];
+    expect(resident).toBeDefined();
+    const id = resident.profile.agent!.agency!;
+    const outsider = AGENCY_AGENTS.find((a) => !a.resident)!;
+    const project = sim.workforce.createProject(
+      {
+        name: 'Specialist test',
+        kind: 'llm',
+        description: 'test',
+        planner: 'test',
+        tasks: [
+          { key: 'a', title: 'Resident specialist task', role: 'researcher', specialist: id, work: 60, dependsOn: [], description: 'x', artifact: 'a.md' },
+          { key: 'b', title: 'Hired-in specialist task', role: 'data_analyst', specialist: outsider.id, work: 60, dependsOn: [], description: 'x', artifact: 'b.md' },
+        ],
+      },
+      'jarvis',
+      sim.state.buildings[0].id,
+      null,
+      null,
+    );
+    const [a, b] = project.tasks.map((t) => sim.workforce.task(t)!);
+    expect(a.specialist).toBe(id);
+    expect(a.assigneeId).toBe(resident.profile.id);
+    expect(a.buildingId).toBe(resident.profile.workplaceId);
+    expect(b.specialist).toBe(outsider.id);
+    const bc = sim.citizenById(b.assigneeId!)!;
+    expect(bc.profile.role).toBe('data_analyst');
   });
 
   it('rejects cyclic plans', () => {

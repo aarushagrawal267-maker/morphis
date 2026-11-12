@@ -250,6 +250,8 @@ export interface SimTask {
   projectId: string;
   title: string;
   role: CoreRole;
+  /** Specialist from The Agency hired for this task (catalogue id); `role` is the fallback. */
+  specialist?: string;
   assigneeId: string | null;
   status: TaskStatus;
   progress: number;
@@ -374,6 +376,8 @@ export interface PlanTask {
   key: string;
   title: string;
   role: CoreRole;
+  /** Specialist from The Agency to hire (catalogue id); `role` is used if none is free. */
+  specialist?: string;
   /** Estimated work in simulated minutes. */
   work: number;
   dependsOn: string[];

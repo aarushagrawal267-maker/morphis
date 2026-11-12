@@ -1,17 +1,45 @@
 import { describe, expect, it } from 'vitest';
 import type { LifeDecision } from '@morphis/shared';
+import { AGENCY_AGENTS, agencyAgent } from '@morphis/shared';
 import { CitySimulation } from '../src/engine';
 
 describe('agent lives', () => {
-  it('creates 50 agents with personas and an arrival deed each', () => {
+  it('creates 50 agents plus the resident Agency specialists, each with a persona and an arrival deed', () => {
     const sim = CitySimulation.create({});
     const agents = sim.life.agents();
-    expect(agents.length).toBe(50);
+    const residents = AGENCY_AGENTS.filter((a) => a.resident).length;
+    expect(residents).toBeGreaterThan(60);
+    expect(agents.length).toBe(50 + residents);
     expect(agents.filter((a) => a.profile.agent!.workforce).length).toBe(25);
+    const specialists = agents.filter((a) => a.profile.agent!.agency);
+    expect(specialists.length).toBe(residents);
+    for (const s of specialists) {
+      const meta = agencyAgent(s.profile.agent!.agency)!;
+      expect(meta.resident).toBe(true);
+      expect(s.profile.agent!.calling).toBe(meta.name);
+      expect(s.profile.workplaceId).not.toBeNull();
+    }
     const slugs = new Set(agents.map((a) => a.profile.agent!.slug));
-    expect(slugs.size).toBe(50);
+    expect(slugs.size).toBe(agents.length);
     for (const a of agents) expect(a.profile.agent!.why.length).toBeGreaterThan(10);
-    expect(sim.state.deeds!.filter((d) => d.kind === 'arrived').length).toBe(50);
+    expect(sim.state.deeds!.filter((d) => d.kind === 'arrived').length).toBe(agents.length);
+  });
+
+  it('saves made before the specialists arrived get them once on load', () => {
+    const a = CitySimulation.create({});
+    const save = JSON.parse(JSON.stringify(a.serialize('pre-agency')));
+    const gone = new Set<string>();
+    for (const c of save.state.citizens) {
+      if (c.profile.agent?.agency) {
+        gone.add(c.profile.id);
+        delete c.profile.agent;
+      }
+    }
+    save.state.life = save.state.life.filter((l: { citizenId: string }) => !gone.has(l.citizenId));
+    const b = CitySimulation.fromSave(save);
+    expect(b.life.agents().filter((c) => c.profile.agent!.agency).length).toBe(AGENCY_AGENTS.filter((x) => x.resident).length);
+    const again = CitySimulation.fromSave(JSON.parse(JSON.stringify(b.serialize('again'))));
+    expect(again.life.agents().length).toBe(b.life.agents().length);
   });
 
   it('agents decide in the evening; ventures open only after real fit-out hours', () => {
@@ -73,7 +101,8 @@ describe('agent lives', () => {
     delete save.state.trains;
     for (const c of save.state.citizens) delete c.profile.agent;
     const b = CitySimulation.fromSave(save);
-    expect(b.life.agents().length).toBe(Math.min(50, b.state.citizens.length));
+    expect(b.life.agents().filter((c) => !c.profile.agent!.agency).length).toBe(Math.min(50, b.state.citizens.length));
+    expect(b.life.agents().some((c) => c.profile.agent!.agency)).toBe(true);
     expect(b.state.trains!.length).toBeGreaterThan(0);
   });
 });

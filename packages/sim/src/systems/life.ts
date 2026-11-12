@@ -27,6 +27,8 @@ import type {
   VentureKind,
 } from '@morphis/shared';
 import {
+  AGENCY_AGENTS,
+  AGENCY_DIVISIONS,
   AMBITION_LABEL,
   BUILDING_TYPES,
   CORE_ROLES,
@@ -213,6 +215,73 @@ export class LifeSystem {
       this.addDeed(c, 'arrived', `Moved to Morphis as ${article(c.profile.agent.calling)} ${c.profile.agent.calling.toLowerCase()}. ${AMBITION_LABEL[c.profile.agent.ambition]}.`, 'sim', { time: Math.min(sim.time, START_TIME), buildingId: c.profile.homeId, silent: true });
     }
     this.reindex();
+  }
+
+  /**
+   * Move The Agency's resident specialists into town: adult residents take on
+   * their persona and work in a building that fits their division. Runs for new
+   * cities and once for saves made before the specialists arrived.
+   */
+  ensureAgency(): void {
+    const sim = this.sim;
+    const st = this.st;
+    if (!st.life || st.citizens.some((c) => c.profile.agent?.agency)) return;
+    const residents = AGENCY_AGENTS.filter((a) => a.resident);
+    const pool = st.citizens.filter((c) => !c.profile.core && !c.profile.agent && c.profile.age >= 22 && c.profile.age < 68);
+    if (!pool.length) return;
+    const slugs = new Set(st.citizens.map((c) => c.profile.agent?.slug).filter(Boolean));
+    const step = Math.max(1, Math.floor(pool.length / residents.length));
+    const taken = new Set<CitizenRT>();
+    residents.forEach((def, i) => {
+      let k = (i * step) % pool.length;
+      while (taken.has(pool[k]) && taken.size < pool.length) k = (k + 1) % pool.length;
+      const c = pool[k];
+      if (!c || taken.has(c)) return;
+      taken.add(c);
+      const div = AGENCY_DIVISIONS[def.division];
+      const p = c.profile;
+      let slug = agentSlug(p.name);
+      for (let n = 2; slugs.has(slug); n++) slug = `${agentSlug(p.name)}-${n}`;
+      slugs.add(slug);
+      p.agent = {
+        slug,
+        calling: def.name,
+        ambition: div?.ambition ?? 'builder',
+        interests: div?.interests ?? ['craft', 'community'],
+        why: def.vibe || def.description,
+        workforce: false,
+        dream: div?.ambition === 'founder' ? 'studio' : null,
+        agency: def.id,
+      };
+      p.bio = `${def.name} from The Agency. ${def.description}`;
+      this.setWork(c, this.workplaceFor(c, div?.workplaces ?? ['office']), def.name);
+      const life: AgentLife = {
+        citizenId: p.id,
+        plan: 'Settling in.',
+        planBy: 'sim',
+        ventureId: null,
+        helpingId: null,
+        stakes: [],
+        study: null,
+        graduated: [],
+        lastDecisionDay: dayOf(sim.time) - 1,
+        decideAt: 19 * 60 + 30 + ((p.index * 37) % 120),
+        pending: null,
+        guestsMet: 0,
+      };
+      st.life!.push(life);
+      this.addDeed(c, 'arrived', `Moved to Morphis as ${article(def.name)} ${def.name}, one of The Agency's specialists.`, 'sim', { time: Math.min(sim.time, START_TIME), buildingId: p.homeId, silent: true });
+    });
+    this.reindex();
+  }
+
+  /** Nearest open workplace of any of the given types (falls back to any office). */
+  private workplaceFor(c: CitizenRT, types: BuildingDef['type'][]): BuildingDef | null {
+    for (const t of types) {
+      const b = this.nearestWorkplace(c, t);
+      if (b) return b;
+    }
+    return this.nearestWorkplace(c, 'office');
   }
 
   private nearestWorkplace(c: CitizenRT, type: BuildingDef['type']): BuildingDef | null {
@@ -416,8 +485,8 @@ export class LifeSystem {
         amount: TUITION,
       });
     }
-    // change job (independent agents only; the workforce stays with JARVIS)
-    if (!persona.workforce && !life.ventureId && (life.graduated.length > 0 || persona.ambition === 'climber')) {
+    // change job (independent agents only; the workforce stays with JARVIS, specialists keep their craft)
+    if (!persona.workforce && !persona.agency && !life.ventureId && (life.graduated.length > 0 || persona.ambition === 'climber')) {
       const job = this.findJob(c, life);
       if (job) {
         out.push({
@@ -505,7 +574,7 @@ export class LifeSystem {
         bd.dyn.status = 'CONSTRUCTION';
         bd.dyn.ownerId = biz.id;
         sim.bus.emit('building.updated', sim.time, { buildingId: site.id, state: bd.dyn });
-        if (!p.agent!.workforce) this.setWork(c, site, `Founder, ${v.name}`, 3200);
+        if (!p.agent!.workforce && !p.agent!.agency) this.setWork(c, site, `Founder, ${v.name}`, 3200);
         const others = this.ventures.filter((x) => x.founderId === p.id).length;
         this.addDeed(c, 'founded', `${first} founded ${v.name}${others > 1 ? `, venture number ${others},` : ''} and put ${formatCredits(cost)} into fitting out ${displayName(site.name)} as a ${VENTURE_KINDS[v.kind].label.toLowerCase()}.${note}`, by, { buildingId: site.id, reason: why });
         sim.cityEvents.news('economy', `${p.name} is opening ${v.name}`, `An agent leased ${displayName(site.name)} and is fitting it out as a ${VENTURE_KINDS[v.kind].label.toLowerCase()}. Other agents can come and help.`, 'info', site.id);

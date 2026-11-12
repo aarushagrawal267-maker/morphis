@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { io as connect, type Socket } from 'socket.io-client';
-import { SOCKET_EVENTS, type InitPayload, type MotionFrame } from '@morphis/shared';
+import { AGENCY_AGENTS, SOCKET_EVENTS, type InitPayload, type MotionFrame } from '@morphis/shared';
 import { buildServer } from '../src/app';
 import { loadConfig } from '../src/config';
 
@@ -227,7 +227,7 @@ describe('AI life decisions (mock provider)', () => {
     expect(aiLives[0].plan).toBe('Off to make it happen.');
     const res = await ctx.app.inject({ method: 'GET', url: '/api/agents' });
     expect(res.statusCode).toBe(200);
-    expect((res.json() as unknown[]).length).toBe(50);
+    expect((res.json() as unknown[]).length).toBe(50 + AGENCY_AGENTS.filter((a) => a.resident).length);
     await ctx.app.close();
   });
 });

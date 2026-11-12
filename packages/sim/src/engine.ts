@@ -209,6 +209,7 @@ export class CitySimulation {
     this.rail.ensureTrains();
     this.life = new LifeSystem(this);
     this.life.ensureAgents();
+    this.life.ensureAgency();
     for (const b of this.state.buildings) b.dyn.occupants = b.occupants.length;
   }
 
