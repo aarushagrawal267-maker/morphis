@@ -10,7 +10,7 @@
  */
 import { z } from 'zod';
 import type { AiProviderInfo, ApprovalRequest, CitizenProfile, CoreRole, ProjectPlan, SimProject, SimTask } from '@morphis/shared';
-import { CORE_ROLES, CORE_ROLE_ORDER, agencyAgent, dayOf } from '@morphis/shared';
+import { CORE_ROLES, CORE_ROLE_ORDER, agencyAgent, dayOf, formatSimDateTime } from '@morphis/shared';
 import type { CitySimulation, TaskExecutor } from '@morphis/sim';
 import { templatePlan, validatePlan } from '@morphis/sim';
 import type { ServerConfig } from '../config';
@@ -338,6 +338,8 @@ export class LiveTaskExecutor implements TaskExecutor {
             'Only use web.fetch for specific, relevant public URLs; the commander may deny it, then continue without it.',
             'Data honesty: use city.data for any Morphis figures. Never invent sources, surveys, studies, citations or measured data. If you estimate, label it clearly as an assumption.',
             'Morphis money is fictional: express costs in simulated credits (§), never in real currencies.',
+            'Where the brief leaves details open (systems, tech stack, team, partners, numbers), present them as clearly labelled assumptions or options, never as established facts.',
+            `It is ${formatSimDateTime(sim.time)} in Morphis; date documents with that, not a real-world date.`,
             'Never claim to have done things you did not do (you cannot email, buy, deploy or run code).',
             isReview ? 'You are the reviewer: check the deliverables for gaps and contradictions, then write the final synthesis with clear next steps.' : '',
           ].join('\n'),
