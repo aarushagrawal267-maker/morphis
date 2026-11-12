@@ -29,6 +29,8 @@ const schema = z.object({
   AI_LIFE_DECISIONS_PER_HOUR: z.coerce.number().int().min(0).max(600).default(20),
   /** Visitor conversations voiced by the model, per minute (0 = always simulated). */
   AI_TALK_PER_MINUTE: z.coerce.number().int().min(0).max(120).default(12),
+  /** Folder with The Agency's persona files (default: vendor/agency-agents found from the server). */
+  AGENCY_DIR: z.string().optional(),
   /** Built web client to serve from this server ('' to serve the API only). */
   WEB_DIST: z.string().default('../web/dist'),
   /** When set, only connections with this key can change the town (speed, weather, saves, JARVIS). Visitors can still walk, wave and talk. */

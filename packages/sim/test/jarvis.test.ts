@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AGENCY_AGENTS } from '@morphis/shared';
+import { AGENCY_AGENTS, agencyAgent } from '@morphis/shared';
 import { CitySimulation } from '../src/engine';
 import { templatePlan, validatePlan } from '../src/systems/planner';
 
@@ -10,6 +10,11 @@ describe('JARVIS planning (template planner, simulated execution)', () => {
     expect(plan.name).toBe('AI Tutoring Startup');
     expect(plan.foundsCompany).toBe('AI Tutoring');
     expect(validatePlan(plan)).toBeNull();
+    // clear matches hire resident specialists from The Agency
+    const hired = plan.tasks.filter((t) => t.specialist).map((t) => agencyAgent(t.specialist)!);
+    expect(hired.length).toBeGreaterThan(2);
+    for (const a of hired) expect(a.resident).toBe(true);
+    expect(new Set(hired.map((a) => a.id)).size).toBe(hired.length);
     const roots = plan.tasks.filter((t) => t.dependsOn.length === 0);
     expect(roots.length).toBeGreaterThanOrEqual(1);
     expect(templatePlan('Build a fleet dashboard').kind).toBe('software');
@@ -65,8 +70,13 @@ describe('JARVIS planning (template planner, simulated execution)', () => {
     expect(assigned.length).toBeGreaterThan(0);
     for (const t of assigned) {
       const c = sim.citizenById(t.assigneeId!)!;
-      expect(c.profile.core).toBe(true);
-      expect(c.profile.role).toBe(t.role);
+      if (c.profile.agent?.agency) {
+        // a resident specialist hired for this task
+        expect(c.profile.agent.agency).toBe(t.specialist);
+      } else {
+        expect(c.profile.core).toBe(true);
+        expect(c.profile.role).toBe(t.role);
+      }
     }
     // progress only while WORKING inside the task building
     sim.run(3600 * 3);

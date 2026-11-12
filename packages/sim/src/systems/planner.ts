@@ -5,6 +5,7 @@
  * ProjectPlan shape and can replace this one.
  */
 import type { CoreRole, PlanTask, ProjectPlan } from '@morphis/shared';
+import { CORE_ROLES, rankAgency } from '@morphis/shared';
 
 type T = [key: string, title: string, role: CoreRole, work: number, deps: string[], location?: string];
 
@@ -144,6 +145,15 @@ export function templatePlan(text: string): ProjectPlan {
     description: `${title} for "${name}"`,
     artifact: `${key}.md`,
   }));
+  // hire resident specialists from The Agency where one clearly fits the task
+  const used = new Set<string>();
+  for (const t of tasks) {
+    const best = rankAgency(`${t.title} ${CORE_ROLES[t.role].label}`, { residentsOnly: true, limit: 3 }).find((m) => m.score >= 7 && !used.has(m.agent.id));
+    if (best) {
+      t.specialist = best.agent.id;
+      used.add(best.agent.id);
+    }
+  }
   return {
     name,
     kind,

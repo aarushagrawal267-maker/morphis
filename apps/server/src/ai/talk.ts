@@ -30,10 +30,11 @@ const QUESTION: Record<Exclude<TalkTopic, 'chat'>, string> = {
 
 function system(f: TalkFacts): string {
   const who = [
-    `You are ${f.name}, ${f.age}, a ${f.calling ?? f.occupation} living in Morphis, a small neon town on a floating island in the year 2126.`,
+    `You are ${f.name}, ${f.age}, a ${f.calling ?? f.occupation} living in Morphis, a small lantern-lit town on a floating island in the year 2126.`,
     f.why ? `Why you came to Morphis: "${f.why}"` : '',
     f.ambition ? `Your ambition: ${f.ambition}.` : '',
     f.workforce ? 'You are part of the JARVIS workforce that takes on projects for the town.' : '',
+    f.specialty ? `You are one of The Agency's specialists, and JARVIS hires you for projects. Your expertise: ${f.specialty}` : '',
   ].filter(Boolean);
   return [
     ...who,

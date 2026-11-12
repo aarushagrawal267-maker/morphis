@@ -62,3 +62,41 @@ export function agencyAgent(id: string | null | undefined): AgencyAgentMeta | un
 export function agencyDivisionLabel(division: string): string {
   return AGENCY_DIVISIONS[division]?.label ?? division;
 }
+
+const STOP = new Set(
+  'a an and the of for to in on with by from at as is are be or our your my this that these those it its into about over under build create make run do new plan project city morphis town using use help need want'.split(' '),
+);
+
+/** Lower-case word stems of a text (very small stemmer: plural/-ing/-ed endings). */
+export function agencyTerms(text: string): string[] {
+  return (text.toLowerCase().match(/[a-z0-9]+/g) ?? [])
+    .filter((w) => w.length > 2 && !STOP.has(w))
+    .map((w) => w.replace(/ies$/, 'y').replace(/(ments|ment|ers|er|ings|ing|ed|es|s|e)$/, ''))
+    .filter((w) => w.length > 2);
+}
+
+export interface AgencyMatch {
+  agent: AgencyAgentMeta;
+  score: number;
+}
+
+/**
+ * Rank specialists by how well their name, division and description match a text.
+ * Name matches weigh most. Deterministic, no AI involved.
+ */
+export function rankAgency(text: string, opts: { residentsOnly?: boolean; limit?: number } = {}): AgencyMatch[] {
+  const terms = new Set(agencyTerms(text));
+  if (!terms.size) return [];
+  const out: AgencyMatch[] = [];
+  for (const agent of AGENCY_AGENTS) {
+    if (opts.residentsOnly && !agent.resident) continue;
+    let score = 0;
+    for (const t of agencyTerms(agent.name)) if (terms.has(t)) score += 3;
+    for (const t of agencyTerms(agencyDivisionLabel(agent.division))) if (terms.has(t)) score += 2;
+    const desc = new Set(agencyTerms(agent.description));
+    for (const t of terms) if (desc.has(t)) score += 1;
+    if (score > 0) out.push({ agent, score: score + (agent.resident ? 0.5 : 0) });
+  }
+  out.sort((a, b) => b.score - a.score || a.agent.id.localeCompare(b.agent.id));
+  return out.slice(0, opts.limit ?? 20);
+}
