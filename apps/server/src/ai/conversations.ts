@@ -27,6 +27,7 @@ const SYSTEM = [
   'You write a short, natural conversation between two residents of Morphis, a small simulated town on a floating island in the year 2126.',
   'Both are AI agents living there; each has a calling, a day and a history. Let each speak in character.',
   'Use only the facts you are given about them and the town. Do not invent people, places, events, numbers or plans they do not have. Money is simulated credits (§).',
+  'They may only offer or agree to things that exist in the facts (for example coming to help at a venture that is being fitted out). No new deals, loans, credit lines, jobs or promises the town has no record of.',
   'Write 2 to 6 lines, alternating speakers, starting with A. Keep each line under 160 characters. No stage directions, no emojis.',
   'Reply with JSON only: {"lines":[{"speaker":"A"|"B","text":"..."}],"summary":"<one sentence in the third person naming both, what they talked about, max 140 characters>","closer":true|false}',
   '"closer" is true when the conversation brought them closer (warm, helpful, shared plans).',
