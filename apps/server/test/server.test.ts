@@ -232,6 +232,52 @@ describe('AI life decisions (mock provider)', () => {
   });
 });
 
+describe('agents that never stop calling tools (mock provider)', () => {
+  let mock: HttpServer;
+  let base = '';
+  beforeAll(async () => {
+    mock = createServer((req, res) => {
+      let body = '';
+      req.on('data', (c) => (body += c));
+      req.on('end', () => {
+        const json = JSON.parse(body) as { messages: { role: string; content: string }[] };
+        const system = json.messages.find((m) => m.role === 'system')?.content ?? '';
+        const user = json.messages.find((m) => m.role === 'user')?.content ?? '';
+        let content = JSON.stringify({ thought: 'more data', action: 'city.data', args: { topic: 'overview' } });
+        if (user.includes('single word: ready')) content = 'ready';
+        else if (system.includes('Master Planner'))
+          content = JSON.stringify({ name: 'Loop Study', description: 'x', foundsCompany: null, tasks: [{ key: 'a', title: 'Collect data', role: 'data_analyst', work: 60, dependsOn: [] }, { key: 'review', title: 'Final review', role: 'project_manager', work: 60, dependsOn: ['a'] }] });
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ choices: [{ message: { content } }], usage: { prompt_tokens: 10, completion_tokens: 20 } }));
+      });
+    });
+    await new Promise<void>((r) => mock.listen(0, '127.0.0.1', r));
+    base = `http://127.0.0.1:${(mock.address() as { port: number }).port}/v1`;
+  });
+  afterAll(() => mock.close());
+
+  it('never saves a tool request as the deliverable; the task is retried, then marked as not done', async () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), 'morphis-loop-'));
+    const ctx = await buildServer(
+      loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '60', AI_PROVIDER: 'openai-compatible', AI_BASE_URL: base, AI_MODEL: 'mock-model', AI_REQUESTS_PER_MINUTE: '6000', AI_AGENT_MAX_STEPS: '2', AI_LIFE_DECISIONS_PER_HOUR: '0', AI_DAY_TURNS_PER_HOUR: '0', AI_AGENT_CHATS_PER_HOUR: '0' }),
+    );
+    const sim = ctx.host.sim;
+    sim.run(3600 * 2);
+    await ctx.host.command({ type: 'jarvis.command', text: 'Study something' });
+    const project = sim.state.projects.find((p) => p.source === 'jarvis')!;
+    const first = sim.workforce.task(project.tasks[0])!;
+    for (let i = 0; i < 300 && first.status !== 'COMPLETED'; i++) {
+      sim.run(300);
+      await wait(20);
+    }
+    expect(first.status).toBe('COMPLETED');
+    expect(first.output).toMatch(/SIMULATED FALLBACK/);
+    const file = ctx.agents.workspace.resolve(first.artifact!);
+    if (existsSync(file)) expect(readFileSync(file, 'utf8')).not.toMatch(/"action"/);
+    await ctx.app.close();
+  });
+});
+
 describe('AI day turns (mock provider)', () => {
   let mock: HttpServer;
   let base = '';
