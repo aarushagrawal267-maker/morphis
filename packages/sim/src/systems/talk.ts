@@ -6,7 +6,7 @@
  * gives it the same facts so it can answer in the person's own voice.
  */
 import type { BuildingDef } from '@morphis/shared';
-import { AMBITION_LABEL, BUILDING_TYPES, VENTURE_KINDS, displayName, firstName, formatClock, hourOf, isOpenAt } from '@morphis/shared';
+import { AMBITION_LABEL, BUILDING_TYPES, VENTURE_KINDS, agencyAgent, displayName, firstName, formatClock, hourOf, isOpenAt } from '@morphis/shared';
 import type { CitizenRT } from '../state';
 import type { CitySimulation } from '../engine';
 
@@ -30,6 +30,8 @@ export interface TalkFacts {
   ambition: string | null;
   why: string | null;
   workforce: boolean;
+  /** For The Agency's specialists: what they are expert in. */
+  specialty: string | null;
   time: string;
   weather: string;
   doing: string;
@@ -160,6 +162,7 @@ export function talkFacts(sim: CitySimulation, c: CitizenRT): TalkFacts {
     ambition: p.agent ? AMBITION_LABEL[p.agent.ambition] : null,
     why: p.agent?.why ?? null,
     workforce: !!p.agent?.workforce,
+    specialty: agencyAgent(p.agent?.agency)?.description ?? null,
     time: formatClock(sim.time),
     weather: sim.state.weather.kind,
     doing,

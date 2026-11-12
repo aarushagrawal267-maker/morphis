@@ -86,7 +86,7 @@ export class LlmLifeMind implements LifeMind {
     const helping = sim.life.venture(life.helpingId);
     const work = p.workplaceId ? sim.building(p.workplaceId).name : 'no job';
     const lines = [
-      `Agent: ${p.name}, ${p.age}, ${a.calling}${a.workforce ? ' (member of the JARVIS workforce)' : ''}.`,
+      `Agent: ${p.name}, ${p.age}, ${a.calling}${a.workforce ? ' (member of the JARVIS workforce)' : a.agency ? " (a specialist from The Agency; keeps their craft and is hired for JARVIS projects)" : ''}.`,
       `Ambition: ${AMBITION_LABEL[a.ambition]}. Interests: ${a.interests.join(', ')}.`,
       `Why they came to Morphis: "${a.why}"`,
       `Now: ${formatSimDateTime(sim.time)}, day ${dayOf(sim.time)}. Works at: ${work}. Credits available: ${formatCredits(sim.life.funds(c))}. Happiness ${Math.round(c.dyn.happiness * 100)}%.`,

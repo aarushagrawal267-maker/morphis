@@ -10,10 +10,11 @@
  */
 import { z } from 'zod';
 import type { AiProviderInfo, ApprovalRequest, CitizenProfile, CoreRole, ProjectPlan, SimProject, SimTask } from '@morphis/shared';
-import { CORE_ROLES, CORE_ROLE_ORDER } from '@morphis/shared';
+import { CORE_ROLES, CORE_ROLE_ORDER, agencyAgent } from '@morphis/shared';
 import type { CitySimulation, TaskExecutor } from '@morphis/sim';
 import { templatePlan, validatePlan } from '@morphis/sim';
 import type { ServerConfig } from '../config';
+import { AgencyLibrary } from './agency';
 import { AgentMemory } from './memory';
 import { createProvider, type AiProvider, type ChatMessage, type RateLimiter } from './provider';
 import { ToolManager } from './tools';
@@ -33,6 +34,7 @@ const planSchema = z.object({
         key: z.string().regex(/^[a-z0-9_-]{1,32}$/),
         title: z.string().min(2).max(90),
         role: z.enum(CORE_ROLE_ORDER as [CoreRole, ...CoreRole[]]),
+        specialist: z.string().max(80).nullable().optional(),
         work: z.coerce.number().min(30).max(600).default(150),
         dependsOn: z.array(z.string()).default([]),
         location: z.string().optional(),
@@ -107,7 +109,10 @@ export function extractJson(text: string): unknown {
 }
 
 export class LlmMasterPlanner {
-  constructor(private provider: AiProvider) {}
+  constructor(
+    private provider: AiProvider,
+    private agency?: AgencyLibrary,
+  ) {}
 
   async plan(command: string): Promise<{ plan: ProjectPlan; note: string }> {
     const roles = CORE_ROLE_ORDER.map((r) => `${r} (${CORE_ROLES[r].label}, ${CORE_ROLES[r].department})`).join('; ');
@@ -118,14 +123,23 @@ export class LlmMasterPlanner {
       `Allowed roles: ${roles}.`,
       `Optional "location" values (landmark keys): ${LANDMARK_KEYS.join(', ')}.`,
       'If the request is to create a company or startup, set "foundsCompany" to a short company name, otherwise null.',
-      'Respond with ONLY a JSON object: {"name": str, "description": str, "foundsCompany": str|null, "tasks": [{"key": "snake_case", "title": str, "role": role, "work": minutes 60-300, "dependsOn": [keys], "location"?: key, "description": str}]}',
+      ...(this.agency
+        ? [
+            '',
+            'JARVIS can also hire specialists from The Agency. For each task, set "specialist" to the id of the specialist who fits it best, or null if none fits well.',
+            'Prefer specialists who live in town (marked *) when they fit equally well; never invent ids. Always also give the closest workforce "role" (used if the specialist is busy).',
+            this.agency.plannerRoster(command),
+            '',
+          ]
+        : []),
+      'Respond with ONLY a JSON object: {"name": str, "description": str, "foundsCompany": str|null, "tasks": [{"key": "snake_case", "title": str, "role": role, "specialist": id|null, "work": minutes 60-300, "dependsOn": [keys], "location"?: key, "description": str}]}',
     ].join('\n');
     const res = await this.provider.complete(
       [
         { role: 'system', content: system },
         { role: 'user', content: `Commander request: ${command}` },
       ],
-      { temperature: 0.2, maxTokens: 1600 },
+      { temperature: 0.2, maxTokens: 2000 },
     );
     const parsed = planSchema.parse(extractJson(res.text));
     const plan: ProjectPlan = {
@@ -138,6 +152,7 @@ export class LlmMasterPlanner {
         key: t.key,
         title: t.title,
         role: t.role,
+        ...(t.specialist && agencyAgent(t.specialist) ? { specialist: t.specialist } : {}),
         work: t.work,
         dependsOn: t.dependsOn.filter((d) => parsed.tasks.some((x) => x.key === d)),
         location: t.location && LANDMARK_KEYS.includes(t.location) ? t.location : undefined,
@@ -263,6 +278,9 @@ export class LiveTaskExecutor implements TaskExecutor {
     const { sim, task, citizen, project } = job;
     const ctl = this.ctl;
     const role = CORE_ROLES[task.role];
+    const specialist = agencyAgent(task.specialist);
+    const persona = specialist ? await ctl.agency.persona(specialist.id) : null;
+    const isResidentSpecialist = !!specialist && citizen.agent?.agency === specialist.id;
     const isReview = /review|synthes/i.test(task.title);
     const ctx = { actor: citizen.id, agentName: citizen.name, taskTitle: task.title, workspace: project.workspace };
     const activity = (text: string) => {
@@ -276,7 +294,7 @@ export class LiveTaskExecutor implements TaskExecutor {
       const inputs: string[] = [];
       for (const t of sources) {
         const content = t.artifact ? await ctl.workspace.read(t.artifact) : null;
-        inputs.push(`### ${t.title} (by ${CORE_ROLES[t.role].label}, file ${t.artifact?.split('/').pop()})\n${(content || t.output || '').slice(0, isReview ? 1400 : 2000)}`);
+        inputs.push(`### ${t.title} (by ${agencyAgent(t.specialist)?.name ?? CORE_ROLES[t.role].label}, file ${t.artifact?.split('/').pop()})\n${(content || t.output || '').slice(0, isReview ? 1400 : 2000)}`);
       }
       const memory = ctl.memory.recent(citizen.id).map((m) => `- ${m.project}: ${m.task} — ${m.summary}`);
       const tools = ctl.tools.agentTools();
@@ -287,8 +305,26 @@ export class LiveTaskExecutor implements TaskExecutor {
         {
           role: 'system',
           content: [
-            `You are ${citizen.name}, the ${role.label} (${role.department}) in MORPHIS, an AI organisation coordinated by JARVIS.`,
-            `Your skills: ${Object.keys(citizen.skills).join(', ')}.`,
+            ...(specialist && isResidentSpecialist
+              ? [`You are ${citizen.name}, ${specialist.name} from The Agency, a specialist living in MORPHIS who JARVIS hired for this task.`]
+              : specialist
+                ? [
+                    `You are ${citizen.name}, the ${role.label} (${role.department}) in MORPHIS, an AI organisation coordinated by JARVIS.`,
+                    `For this task JARVIS brought in the playbook of The Agency's ${specialist.name}: work by its methods and standards.`,
+                  ]
+                : [`You are ${citizen.name}, the ${role.label} (${role.department}) in MORPHIS, an AI organisation coordinated by JARVIS.`]),
+            ...(persona
+              ? [
+                  '',
+                  `=== ${specialist!.name}: persona and playbook (from The Agency) ===`,
+                  persona,
+                  '=== end of playbook ===',
+                  '',
+                  'MORPHIS RULES (these override the playbook wherever they conflict): the playbook was written for assistants that can run code and use other tools.',
+                  'Here you can ONLY use the tools listed below, and your output is a written markdown deliverable. Where the playbook says to run, install, deploy, test live systems or measure, write the plan, code or checklist instead and say it has not been run.',
+                ]
+              : []),
+            `Your skills: ${Object.keys(citizen.skills).join(', ') || (specialist ? specialist.division : 'general')}.`,
             'You work step by step. Each reply must be ONE JSON object and nothing else:',
             '  {"thought": "short reasoning", "action": "<tool name>", "args": {...}}   to use a tool, or',
             '  {"thought": "short reasoning", "final": "<your complete markdown deliverable>"}   when done.',
@@ -349,7 +385,7 @@ export class LiveTaskExecutor implements TaskExecutor {
         final = parsed.final ?? res.text;
       }
       sim.workforce.reportProgress(task.id, 0.9);
-      const header = `<!-- ${task.title} · ${citizen.name} (${role.label}) · model ${ctl.provider!.model} · ${new Date().toISOString()} -->\n`;
+      const header = `<!-- ${task.title} · ${citizen.name} (${specialist ? `${specialist.name}, The Agency` : role.label}) · model ${ctl.provider!.model} · ${new Date().toISOString()} -->\n`;
       // If the agent already wrote its task file during the loop and the hand-in is
       // just a short summary, keep the full document instead of overwriting it.
       const fileName = task.artifact?.split('/').pop();
@@ -449,6 +485,7 @@ export class AgentController {
   readonly workspace: Workspace;
   readonly tools: ToolManager;
   readonly memory: AgentMemory;
+  readonly agency: AgencyLibrary;
   readonly maxSteps: number;
   steps = 0;
   readonly planner: LlmMasterPlanner | null;
@@ -470,6 +507,7 @@ export class AgentController {
     this.info = info;
     this.limiter = limiter;
     this.maxSteps = cfg.AI_AGENT_MAX_STEPS;
+    this.agency = new AgencyLibrary(cfg.AGENCY_DIR);
     this.memory = new AgentMemory(cfg.DATA_DIR);
     void this.memory.load();
     this.workspace = new Workspace(cfg.DATA_DIR);
@@ -480,7 +518,7 @@ export class AgentController {
       onAudit: audit,
       onApprovalsChanged: (list) => this.onApprovals(list),
     });
-    this.planner = provider ? new LlmMasterPlanner(provider) : null;
+    this.planner = provider ? new LlmMasterPlanner(provider, this.agency.available ? this.agency : undefined) : null;
     this.executor = provider ? new LiveTaskExecutor(this) : null;
     this.lifeMind =
       provider && cfg.AI_LIFE_DECISIONS_PER_HOUR > 0
