@@ -370,9 +370,11 @@ kbd { display: inline-block; min-width: 18px; padding: 1px 5px; border-radius: 4
 .share-link { width: 100%; padding: 7px 9px; border-radius: 7px; border: 1px solid var(--line); background: rgba(0,0,0,0.25); color: var(--text); font-family: var(--mono); font-size: 11px; }
 
 /* ---------------------------------------------------------------- agents panel */
-.agents-filter { display: flex; gap: 6px; margin-bottom: 6px; }
+.agents-filter { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.agents-filter select[aria-label="Division"] { flex: 1 1 100%; }
 .agents-filter input, .agents-filter select { flex: 1; min-width: 0; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--line); background: rgba(0,0,0,0.25); color: var(--text); font-size: 12px; }
 .agents-filter select { flex: 0 0 auto; }
+.agents-filter input { flex: 1 1 140px; }
 .agents-list { display: flex; flex-direction: column; gap: 2px; }
 .agent-row { display: grid; grid-template-columns: 10px 1fr; gap: 2px 9px; align-items: center; text-align: left; padding: 6px 8px; border-radius: 7px; }
 .agent-row:hover { background: rgba(34,211,238,0.06); }
