@@ -185,7 +185,8 @@ test('welcome screen leads into walk-in mode; the guest walks, waves and keeps a
 test('agents directory opens an agent card with why, deeds, today and a share link', async ({ page }) => {
   await open(page);
   await page.getByTestId('btn-agents').click();
-  await expect(page.getByTestId('agents-panel')).toContainText('AGENTS · 50');
+  await expect(page.getByTestId('agents-panel')).toContainText('AGENTS · 123');
+  await expect(page.getByTestId('agents-panel')).toContainText('73 specialists from The Agency');
   await page.getByTestId('agent-juno-albright').click();
   await expect(page.getByTestId('panel-title')).toHaveText('JUNO ALBRIGHT');
   await expect(page.getByTestId('agent-why')).toContainText('espresso');
@@ -195,6 +196,20 @@ test('agents directory opens an agent card with why, deeds, today and a share li
   await expect(page.getByTestId('today').locator('li').first()).toBeVisible();
   await page.getByTestId('card-tab-share').click();
   await expect(page.getByTestId('share-link')).toHaveValue(/#citizen=juno-albright$/);
+});
+
+test('specialists from The Agency live in town with their persona on the card', async ({ page }) => {
+  await open(page);
+  await page.getByTestId('btn-agents').click();
+  const panel = page.getByTestId('agents-panel');
+  await panel.locator('.agents-filter select').first().selectOption('agency');
+  await panel.getByRole('combobox', { name: 'Division' }).selectOption('security');
+  const rows = panel.locator('.agent-row');
+  await expect(rows).toHaveCount(4);
+  await rows.first().click();
+  await expect(page.locator('.sel-panel__kicker')).toContainText('THE AGENCY');
+  await expect(page.getByTestId('agency-info')).toContainText('THE AGENCY · SECURITY');
+  await expect(page.getByTestId('agency-info').getByRole('link', { name: 'agency-agents' })).toHaveAttribute('href', /github\.com\/msitarzewski\/agency-agents\/blob\/main\/security\//);
 });
 
 test('a #citizen= link opens that agent and follows them', async ({ page }) => {

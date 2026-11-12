@@ -353,6 +353,11 @@ export class WorkforceSystem {
         // the specialist is busy: wait for them unless the task has waited a working day
         if (sim.time - t.createdAt < 8 * 3600) continue;
       }
+      if (!c && t.specialist) {
+        // a free resident specialist from the same division takes the hired specialist's playbook
+        const division = agencyAgent(t.specialist)?.division;
+        c = this.specialists().find((x) => !x.dyn.currentTaskId && !!x.profile.workplaceId && agencyAgent(x.profile.agent!.agency)?.division === division);
+      }
       if (!c && this.project(t.projectId)?.source === 'jarvis') {
         // JARVIS work has priority: pause a routine company task of the right role
         c = this.core().find((x) => {
