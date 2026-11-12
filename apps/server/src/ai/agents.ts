@@ -307,7 +307,12 @@ export class LiveTaskExecutor implements TaskExecutor {
           content: [
             ...(specialist && isResidentSpecialist
               ? [`You are ${citizen.name}, ${specialist.name} from The Agency, a specialist living in MORPHIS who JARVIS hired for this task.`]
-              : specialist
+              : specialist && agencyAgent(citizen.agent?.agency)
+                ? [
+                    `You are ${citizen.name}, ${agencyAgent(citizen.agent?.agency)!.name} from The Agency, a specialist living in MORPHIS.`,
+                    `For this task JARVIS handed you the playbook of The Agency's ${specialist.name}: work by its methods and standards.`,
+                  ]
+                : specialist
                 ? [
                     `You are ${citizen.name}, the ${role.label} (${role.department}) in MORPHIS, an AI organisation coordinated by JARVIS.`,
                     `For this task JARVIS brought in the playbook of The Agency's ${specialist.name}: work by its methods and standards.`,

@@ -53,6 +53,20 @@ describe('JARVIS planning (template planner, simulated execution)', () => {
     expect(bc.profile.role).toBe('data_analyst');
   });
 
+  it('when the workforce role is busy, a free resident specialist of the same division takes the playbook', () => {
+    const sim = CitySimulation.create({ population: 300 });
+    sim.run(3600 * 2);
+    const outsider = AGENCY_AGENTS.find((a) => !a.resident && a.division === 'security')!;
+    const ivy = sim.workforce.core().find((c) => c.profile.role === 'security_analyst')!;
+    const tasks = [0, 1, 2].map((i) => ({ key: `t${i}`, title: `Audit part ${i}`, role: 'security_analyst' as const, specialist: outsider.id, work: 60, dependsOn: [], description: 'x', artifact: `t${i}.md` }));
+    const project = sim.workforce.createProject({ name: 'Parallel audit', kind: 'llm', description: 'test', planner: 'test', tasks }, 'jarvis', sim.state.buildings[0].id, null, null);
+    const assignees = project.tasks.map((id) => sim.citizenById(sim.workforce.task(id)!.assigneeId!)!);
+    expect(assignees.some((c) => c === ivy)).toBe(true);
+    const helpers = assignees.filter((c) => c !== ivy);
+    expect(helpers.length).toBe(2);
+    for (const h of helpers) expect(agencyAgent(h.profile.agent?.agency)?.division).toBe('security');
+  });
+
   it('rejects cyclic plans', () => {
     const plan = templatePlan('Research city traffic');
     plan.tasks[0].dependsOn = [plan.tasks[plan.tasks.length - 1].key];

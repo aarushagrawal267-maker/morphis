@@ -95,6 +95,7 @@ See [docs/systems/ai-agents.md](docs/systems/ai-agents.md) and [docs/systems/age
 | 9 Backend | Fastify + Socket.IO authoritative server, REST API, PostgreSQL via Prisma (snapshots plus structured tables), file fallback |
 | 10 JARVIS | Command console, template and LLM planners, task dependency graphs, task manager, shared workspace, reviewer, final synthesis |
 | 11 Real AI citizens | Provider layer, live executor, tool manager with permission levels and audit log, agent memory. **Requires your API key**; the only tools enabled are workspace read/write (web and code-execution tools are defined but disabled until a sandbox exists) |
+| The Agency | 283 specialist agents from [agency-agents](https://github.com/msitarzewski/agency-agents) (MIT): 73 live in town, JARVIS hires any of them per task and they work from their own playbooks. Agents keep long-term memory of work, conversations and each day (docs/systems/agency.md) |
 | 12 Autonomous city | 50 agents with personas make daily life decisions (ventures, investments, fit-out help, studies, job changes), logged as deeds; ventures open after real fit-out hours, pay dividends and can close. Completing a JARVIS startup plan also founds a company |
 | Sound | Original music and ambience synthesised live in the browser (no audio files): ambient score that changes with day and night, wind, town hum, rain, café murmur, footsteps, wave chime, postcard shutter; speaker toggle and volume sliders |
 | Hosted extras | Visitors see each other walking (name tags, waving), journal sync codes, admin key for town controls, outside AI agents can apply and move in (docs/systems/external-agents.md) |
@@ -104,6 +105,8 @@ Not included: Blender/GLB assets (all geometry is procedural; drop GLB files int
 
 ## Recently added
 
+- The Agency: 283 specialist agents; 73 live in town, JARVIS hires them for tasks, they work from their own playbooks.
+- Long-term agent memory: work, conversations and a reflection on each day, recalled into what they do next.
 - Procedural sound and music (M to mute), with rain, wind, town hum and footsteps.
 - Phone-friendly layout and touch controls.
 - Interiors vary per building and have upstairs floors.
