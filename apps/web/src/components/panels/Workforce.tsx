@@ -1,7 +1,7 @@
 /** Projects (per building), citizen profile, task view and the JARVIS command console. */
 import { useMemo, useState } from 'react';
 import type { SimProject, SimTask } from '@morphis/shared';
-import { BUILDING_TYPES, CORE_ROLES, formatClock, formatCredits, dayOf, WEEKDAYS } from '@morphis/shared';
+import { BUILDING_TYPES, CORE_ROLES, agencyAgent, formatClock, formatCredits, dayOf, WEEKDAYS } from '@morphis/shared';
 import { run } from '../../sim/commands';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
@@ -20,7 +20,14 @@ function TaskRow({ t }: { t: SimTask }) {
         <span className="task__status">{t.status}</span>
       </div>
       <div className="task__meta">
-        {CORE_ROLES[t.role].label}
+        {agencyAgent(t.specialist) ? (
+          <span title="Specialist from The Agency hired by JARVIS">
+            {agencyAgent(t.specialist)!.emoji} {agencyAgent(t.specialist)!.name}
+            {who && !who.agent?.agency ? ` (playbook, done by ${CORE_ROLES[t.role].label})` : ''}
+          </span>
+        ) : (
+          CORE_ROLES[t.role].label
+        )}
         {who && (
           <>
             {' · '}

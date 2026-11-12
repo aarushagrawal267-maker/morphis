@@ -24,6 +24,8 @@ export interface AgentPersona {
   external?: boolean;
   /** Venture kind this agent dreams of opening (founders). */
   dream: VentureKind | null;
+  /** Specialist from The Agency (agency-agents): id of its persona in the catalogue. */
+  agency?: string;
 }
 
 export type VentureKind = 'cafe' | 'restaurant' | 'shop' | 'studio' | 'workshop';

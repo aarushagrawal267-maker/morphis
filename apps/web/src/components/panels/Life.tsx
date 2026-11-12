@@ -6,8 +6,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CitizenProfile, Deed, ScheduleBlock } from '@morphis/shared';
 import {
+  AGENCY_DIVISIONS,
+  AGENCY_SOURCE,
   AMBITION_LABEL,
   CORE_ROLES,
+  agencyAgent,
+  agencyDivisionLabel,
   VENTURE_KINDS,
   WEEKDAYS,
   dayOf,
@@ -76,6 +80,31 @@ export function agentLink(p: CitizenProfile): string {
 
 type CardTab = 'why' | 'deeds' | 'today' | 'share';
 
+/** Which group an agent belongs to (directory filter and card kicker). */
+export function agentKind(p: CitizenProfile): 'workforce' | 'agency' | 'independent' {
+  return p.agent?.workforce ? 'workforce' : p.agent?.agency ? 'agency' : 'independent';
+}
+
+function AgencyInfo({ p }: { p: CitizenProfile }) {
+  const meta = agencyAgent(p.agent?.agency);
+  if (!meta) return null;
+  return (
+    <div className="agency-info" data-testid="agency-info">
+      <label>
+        {meta.emoji} THE AGENCY · {agencyDivisionLabel(meta.division).toUpperCase()}
+      </label>
+      <p>{meta.description}</p>
+      <small>
+        Specialist persona from{' '}
+        <a href={`${AGENCY_SOURCE.repo}/blob/main/${meta.file}`} target="_blank" rel="noreferrer">
+          agency-agents
+        </a>{' '}
+        (MIT). JARVIS can hire them for projects.
+      </small>
+    </div>
+  );
+}
+
 export function AgentSections({ p }: { p: CitizenProfile }) {
   const [tab, setTab] = useState<CardTab>(p.agent ? 'why' : 'today');
   const life = useSim((s) => s.life.get(p.id));
@@ -118,6 +147,7 @@ export function AgentSections({ p }: { p: CitizenProfile }) {
               </span>
             ))}
           </div>
+          <AgencyInfo p={p} />
           {life && (
             <div className="agent-plan" data-testid="agent-plan">
               <label>TOMORROW'S PLAN</label>
@@ -326,9 +356,16 @@ export function AgentsPanel() {
   const ventures = useSim((s) => s.ventures);
   const deeds = useSim((s) => s.deeds);
   const [q, setQ] = useState('');
-  const [filter, setFilter] = useState<'all' | 'workforce' | 'independent'>('all');
+  const [filter, setFilter] = useState<'all' | 'workforce' | 'agency' | 'independent'>('all');
+  const [division, setDivision] = useState('all');
   if (!open) return null;
-  const list = agents.filter((a) => (filter === 'all' || (filter === 'workforce') === !!a.agent?.workforce) && (!q || `${a.name} ${a.agent?.calling}`.toLowerCase().includes(q.toLowerCase())));
+  const list = agents.filter(
+    (a) =>
+      (filter === 'all' || agentKind(a) === filter) &&
+      (filter !== 'agency' || division === 'all' || agencyAgent(a.agent?.agency)?.division === division) &&
+      (!q || `${a.name} ${a.agent?.calling}`.toLowerCase().includes(q.toLowerCase())),
+  );
+  const count = (k: ReturnType<typeof agentKind>) => agents.filter((a) => agentKind(a) === k).length;
   const recent = deeds.filter((d) => !['arrived', 'hired', 'met'].includes(d.kind)).slice(-6).reverse();
   return (
     <section className="side-panel glass agents-panel" data-testid="agents-panel">
@@ -339,7 +376,7 @@ export function AgentsPanel() {
         </button>
       </div>
       <p className="note">
-        {agents.filter((a) => a.agent?.workforce).length} JARVIS workforce agents and {agents.filter((a) => !a.agent?.workforce).length} independent agents. Each decides one thing every evening: open a venture, invest, help build, study, change job or rest.
+        {count('workforce')} JARVIS workforce agents, {count('agency')} specialists from The Agency and {count('independent')} independent agents. Each decides one thing every evening: open a venture, invest, help build, study, change job or rest. JARVIS hires specialists for projects.
       </p>
       <Applications />
       {recent.length > 0 && (
@@ -367,16 +404,30 @@ export function AgentsPanel() {
         <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
           <option value="all">All</option>
           <option value="workforce">Workforce</option>
+          <option value="agency">The Agency</option>
           <option value="independent">Independent</option>
         </select>
+        {filter === 'agency' && (
+          <select value={division} onChange={(e) => setDivision(e.target.value)} aria-label="Division">
+            <option value="all">All divisions</option>
+            {Object.entries(AGENCY_DIVISIONS).map(([k, d]) => (
+              <option key={k} value={k}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       <div className="agents-list">
         {list.map((a) => (
           <button key={a.id} className="agent-row" onClick={() => useUI.getState().select({ kind: 'citizen', id: a.id })} data-testid={`agent-${a.agent?.slug}`}>
-            <span className="agent-row__dot" style={{ background: a.role ? CORE_ROLES[a.role].color : '#f59e0b' }} />
+            <span className="agent-row__dot" style={{ background: a.role ? CORE_ROLES[a.role].color : a.agent?.agency ? '#38bdf8' : '#f59e0b' }} />
             <span className="agent-row__name">
               <b>{a.name}</b>
-              <small>{a.agent?.calling}</small>
+              <small>
+                {a.agent?.agency ? `${agencyAgent(a.agent.agency)?.emoji ?? ''} ` : ''}
+                {a.agent?.calling}
+              </small>
             </span>
             <span className="agent-row__plan">{life.get(a.id)?.plan}</span>
           </button>

@@ -9,7 +9,7 @@
  * a live executor (server-side AI agents) reports real progress instead.
  */
 import type { ActivityEntry, BuildingDef, CitizenProfile, CitizenStatus, CoreRole, ProjectPlan, SimProject, SimTask } from '@morphis/shared';
-import { CORE_ROLES, hourOf, isWeekend } from '@morphis/shared';
+import { CORE_ROLES, agencyAgent, hourOf, isWeekend } from '@morphis/shared';
 import type { CitizenRT } from '../state';
 import type { CitySimulation } from '../engine';
 
@@ -167,6 +167,16 @@ export class WorkforceSystem {
     return this.sim.state.citizens.filter((c) => c.profile.core);
   }
 
+  /** The Agency's specialists living in town. */
+  specialists(): CitizenRT[] {
+    return this.sim.state.citizens.filter((c) => !!c.profile.agent?.agency);
+  }
+
+  /** Citizens who take on project work: the core workforce and resident specialists. */
+  private isWorker(c: CitizenRT): boolean {
+    return c.profile.core || !!c.profile.agent?.agency;
+  }
+
   // ---------------------------------------------------------------- activity stream
 
   activity(c: CitizenRT, text: string, kind: ActivityEntry['kind'], buildingId?: string): void {
@@ -179,7 +189,8 @@ export class WorkforceSystem {
   }
 
   onTripStart(c: CitizenRT, dest: BuildingDef, activity: string, purpose: string): void {
-    if (!c.profile.core || activity === 'sleep') return;
+    if (!this.isWorker(c) || activity === 'sleep') return;
+    if (!c.profile.core && !c.dyn.currentTaskId) return;
     const task = c.dyn.currentTaskId ? this.task(c.dyn.currentTaskId) : null;
     if (activity === 'meeting' && task) {
       this.activity(c, `Heading to ${dest.name} for "${task.title}"`, 'meeting', dest.id);
@@ -189,13 +200,14 @@ export class WorkforceSystem {
   }
 
   onArrive(c: CitizenRT, buildingId: string, activity: string): void {
-    if (!c.profile.core) return;
+    if (!this.isWorker(c)) return;
+    if (!c.profile.core && !c.dyn.currentTaskId) return;
     const b = this.sim.building(buildingId);
     const task = c.dyn.currentTaskId ? this.task(c.dyn.currentTaskId) : null;
     if ((activity === 'work' || activity === 'meeting') && task && task.buildingId === buildingId) {
       const others = this.sim.state.buildings[b.index].occupants
         .map((id) => this.sim.citizenById(id))
-        .filter((o): o is CitizenRT => !!o && o.profile.core && o !== c);
+        .filter((o): o is CitizenRT => !!o && this.isWorker(o) && o !== c);
       if (activity === 'meeting' && others.length) {
         this.activity(c, `Meeting ${others[0].profile.name} at ${b.name} about "${task.title}"`, 'meeting', buildingId);
       } else {
@@ -209,7 +221,7 @@ export class WorkforceSystem {
   }
 
   onCitizenStatus(c: CitizenRT, _prev: CitizenStatus): void {
-    if (!c.profile.core || c.dyn.status !== 'WORKING' || !c.dyn.currentTaskId) return;
+    if (!this.isWorker(c) || c.dyn.status !== 'WORKING' || !c.dyn.currentTaskId) return;
     const task = this.task(c.dyn.currentTaskId);
     if (task && task.buildingId === c.insideId) this.maybeBegin(task, c);
   }
@@ -241,7 +253,7 @@ export class WorkforceSystem {
     const keyToId = new Map<string, string>();
     for (const pt of plan.tasks) keyToId.set(pt.key, sim.newId('task'));
     for (const pt of plan.tasks) {
-      const owner = this.core().find((c) => c.profile.role === pt.role);
+      const owner = (pt.specialist ? this.specialists().find((c) => c.profile.agent!.agency === pt.specialist) : undefined) ?? this.core().find((c) => c.profile.role === pt.role);
       const loc = pt.location ? sim.landmark(pt.location) : null;
       const where = loc?.id ?? owner?.profile.workplaceId ?? buildingId;
       const task: SimTask = {
@@ -249,6 +261,7 @@ export class WorkforceSystem {
         projectId: project.id,
         title: pt.title,
         role: pt.role,
+        ...(pt.specialist ? { specialist: pt.specialist } : {}),
         assigneeId: null,
         status: pt.dependsOn.length ? 'BLOCKED' : 'PENDING',
         progress: 0,
@@ -333,7 +346,13 @@ export class WorkforceSystem {
         continue;
       }
       t.status = 'PENDING';
-      let c = this.core().find((x) => x.profile.role === t.role && !x.dyn.currentTaskId);
+      // a hired specialist who lives in town does the task; otherwise the workforce role takes it
+      const spec = t.specialist ? this.specialists().find((x) => x.profile.agent!.agency === t.specialist) : undefined;
+      let c = spec && !spec.dyn.currentTaskId && spec.profile.workplaceId ? spec : this.core().find((x) => x.profile.role === t.role && !x.dyn.currentTaskId);
+      if (spec && c !== spec && spec.dyn.currentTaskId && c) {
+        // the specialist is busy: wait for them unless the task has waited a working day
+        if (sim.time - t.createdAt < 8 * 3600) continue;
+      }
       if (!c && this.project(t.projectId)?.source === 'jarvis') {
         // JARVIS work has priority: pause a routine company task of the right role
         c = this.core().find((x) => {
@@ -485,7 +504,7 @@ export class WorkforceSystem {
       `# ${p.name} — final synthesis`,
       live ? '' : '> SIMULATED: produced by the city simulation; no AI provider was connected.',
       '',
-      ...tasks.map((t) => `- **${t.title}** (${CORE_ROLES[t.role].label}): ${t.output ?? 'n/a'}`),
+      ...tasks.map((t) => `- **${t.title}** (${agencyAgent(t.specialist)?.name ?? CORE_ROLES[t.role].label}): ${t.output ?? 'n/a'}`),
     ].join('\n');
     sim.bus.emit('project.completed', sim.time, { project: p });
     const team = [...new Set(tasks.map((t) => t.assigneeId).filter((x): x is string => !!x))];

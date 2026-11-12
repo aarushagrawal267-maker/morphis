@@ -130,8 +130,8 @@ function CitizenPanel({ id }: { id: string }) {
   if (!p) return null;
   return (
     <>
-      <div className="sel-panel__kicker" style={{ color: p.role ? CORE_ROLES[p.role].color : p.agent ? '#f59e0b' : undefined }}>
-        {p.agent ? `AGENT · ${p.agent.external ? 'OUTSIDE AGENT' : p.agent.workforce ? 'JARVIS WORKFORCE' : 'INDEPENDENT'} · ${p.agent.calling.toUpperCase()}` : p.core ? 'CORE WORKFORCE CITIZEN' : 'RESIDENT'}
+      <div className="sel-panel__kicker" style={{ color: p.role ? CORE_ROLES[p.role].color : p.agent?.agency ? '#38bdf8' : p.agent ? '#f59e0b' : undefined }}>
+        {p.agent ? `AGENT · ${p.agent.external ? 'OUTSIDE AGENT' : p.agent.workforce ? 'JARVIS WORKFORCE' : p.agent.agency ? 'THE AGENCY' : 'INDEPENDENT'} · ${p.agent.calling.toUpperCase()}` : p.core ? 'CORE WORKFORCE CITIZEN' : 'RESIDENT'}
       </div>
       <h2 data-testid="panel-title">{p.name.toUpperCase()}</h2>
       <div className={`badge badge--${(d?.status ?? 'idle').toLowerCase()}`} data-testid="citizen-status">
