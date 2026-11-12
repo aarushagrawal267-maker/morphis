@@ -195,3 +195,49 @@ export function createProvider(cfg: ServerConfig): { provider: AiProvider | null
     },
   };
 }
+
+/** Requests and tokens per kind of AI work, so the host can see where the budget goes. */
+export type UsageCategory = 'planning' | 'tasks' | 'life' | 'turns' | 'chats' | 'visitors';
+
+export class UsageMeter {
+  readonly byCategory: Record<UsageCategory, { requests: number; inputTokens: number; outputTokens: number; failed: number }> = {
+    planning: { requests: 0, inputTokens: 0, outputTokens: 0, failed: 0 },
+    tasks: { requests: 0, inputTokens: 0, outputTokens: 0, failed: 0 },
+    life: { requests: 0, inputTokens: 0, outputTokens: 0, failed: 0 },
+    turns: { requests: 0, inputTokens: 0, outputTokens: 0, failed: 0 },
+    chats: { requests: 0, inputTokens: 0, outputTokens: 0, failed: 0 },
+    visitors: { requests: 0, inputTokens: 0, outputTokens: 0, failed: 0 },
+  };
+
+  /** Wrap a provider so every call is counted under a category. */
+  wrap(inner: AiProvider, category: UsageCategory): AiProvider {
+    const row = this.byCategory[category];
+    return {
+      name: inner.name,
+      model: inner.model,
+      async complete(messages, opts) {
+        row.requests++;
+        try {
+          const r = await inner.complete(messages, opts);
+          row.inputTokens += r.inputTokens;
+          row.outputTokens += r.outputTokens;
+          return r;
+        } catch (e) {
+          row.failed++;
+          throw e;
+        }
+      },
+    };
+  }
+}
+
+/**
+ * The cheaper model for routine calls (day turns, conversations, visitor talk),
+ * when AI_MODEL_LIGHT is set; it shares the main provider's rate limits.
+ */
+export function createLightProvider(cfg: ServerConfig, main: AiProvider | null, limiter: RateLimiter): AiProvider | null {
+  if (!main || !cfg.AI_MODEL_LIGHT || cfg.AI_MODEL_LIGHT === cfg.AI_MODEL) return main;
+  return cfg.AI_PROVIDER === 'anthropic'
+    ? new AnthropicProvider(cfg.AI_API_KEY!, cfg.AI_MODEL_LIGHT, limiter, cfg.AI_TIMEOUT_MS, Math.min(cfg.AI_MAX_TOKENS, 1024))
+    : new OpenAICompatibleProvider(cfg.AI_BASE_URL, cfg.AI_API_KEY, cfg.AI_MODEL_LIGHT, limiter, cfg.AI_TIMEOUT_MS, Math.min(cfg.AI_MAX_TOKENS, 1024), false);
+}

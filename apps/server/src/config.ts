@@ -14,6 +14,8 @@ const schema = z.object({
   AI_BASE_URL: z.string().default('https://integrate.api.nvidia.com/v1'),
   AI_MODEL: z.string().default('nvidia/nemotron-3-ultra-550b-a55b'),
   AI_API_KEY: z.string().optional(),
+  /** Optional cheaper model for routine calls (day turns, agent conversations, visitor talk). Same endpoint and key. */
+  AI_MODEL_LIGHT: z.string().optional(),
   AI_REQUESTS_PER_MINUTE: z.coerce.number().min(1).default(30),
   AI_MAX_TOKENS: z.coerce.number().int().min(256).default(4096),
   AI_DAILY_REQUEST_CAP: z.coerce.number().int().min(1).default(400),
