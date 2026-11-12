@@ -210,6 +210,7 @@ export class CitySimulation {
     this.life = new LifeSystem(this);
     this.life.ensureAgents();
     this.life.ensureAgency();
+    this.life.ensureWorkHours();
     for (const b of this.state.buildings) b.dyn.occupants = b.occupants.length;
   }
 
