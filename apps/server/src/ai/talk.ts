@@ -9,6 +9,8 @@ import type { CitySimulation, TalkFacts, TalkTopic } from '@morphis/sim';
 import { simulatedReply, talkFacts } from '@morphis/sim';
 import type { AiProvider, RateLimiter } from './provider';
 import { stripReasoning } from './provider';
+import { dayOf } from '@morphis/shared';
+import { formatMemory, type AgentMemory } from './memory';
 
 export interface TalkReply {
   reply: string;
@@ -57,7 +59,15 @@ export class LlmTalker {
     private provider: AiProvider,
     private limiter: RateLimiter,
     private opts: { perMinute: number; dailyCap: number },
+    private agentMemory: AgentMemory | null = null,
   ) {}
+
+  /** Agents remember their conversations with visitors (long-term memory). */
+  private remember(sim: CitySimulation, citizenId: string, said: string, reply: string): void {
+    if (!this.agentMemory || !sim.citizenById(citizenId)?.profile.agent) return;
+    const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+    this.agentMemory.add(citizenId, { time: new Date().toISOString(), kind: 'talk', day: dayOf(sim.time), summary: `A visitor said "${clip(said, 120)}" and I answered "${clip(reply, 160)}"` });
+  }
 
   private budget(): boolean {
     const now = Date.now();
@@ -78,12 +88,16 @@ export class LlmTalker {
     const said = topic === 'chat' ? (text ?? '').trim() || 'Hello!' : QUESTION[topic];
     const fallback = (note: string): TalkReply => {
       this.stats.simulated++;
-      return { reply: simulatedReply(facts, topic), by: 'sim', note };
+      const reply = simulatedReply(facts, topic);
+      this.remember(sim, citizenId, said, reply);
+      return { reply, by: 'sim', note };
     };
     if (!this.budget()) return fallback('The AI is busy right now, so this answer comes from the simulation.');
     const history = this.memory.get(citizenId) ?? [];
+    const remembered = this.agentMemory?.recall(citizenId, said, 4) ?? [];
     const user = [
       `Facts about you and the town right now (JSON):\n${JSON.stringify(facts)}`,
+      remembered.length ? `Things you remember (your own past days, work and conversations):\n${remembered.map(formatMemory).join('\n')}` : '',
       history.length ? `Earlier today visitors talked with you:\n${history.map((h) => `Visitor: ${h.visitor}\nYou: ${h.me}`).join('\n')}` : '',
       `The visitor says: "${said}"`,
     ]
@@ -106,6 +120,7 @@ export class LlmTalker {
       history.push({ visitor: said, me: out });
       if (history.length > 6) history.shift();
       this.memory.set(citizenId, history);
+      this.remember(sim, citizenId, said, out);
       this.stats.ai++;
       return { reply: out, by: 'ai' };
     } catch (e) {

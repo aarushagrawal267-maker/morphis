@@ -13,6 +13,7 @@ import type { LifeDecision } from '@morphis/shared';
 import { AMBITION_LABEL, dayOf, formatCredits, formatSimDateTime } from '@morphis/shared';
 import type { AiProvider, RateLimiter } from './provider';
 import { extractJson } from './agents';
+import { formatMemory, type AgentMemory } from './memory';
 
 export interface LifeMindOptions {
   /** Max life decisions sent to the model per real hour. */
@@ -51,6 +52,7 @@ export class LlmLifeMind implements LifeMind {
     private provider: AiProvider,
     private limiter: RateLimiter,
     private getSim: () => CitySimulation | null,
+    private memory: AgentMemory | null,
     private opts: LifeMindOptions,
   ) {}
 
@@ -97,6 +99,10 @@ export class LlmLifeMind implements LifeMind {
       life.friends?.length ? `Friends: ${life.friends.map((id) => sim.citizenById(id)?.profile.name).filter(Boolean).join(', ')}.` : '',
       life.stakes.length ? `Investments: ${life.stakes.map((s) => `${formatCredits(s.amount)} in ${sim.life.venture(s.ventureId)?.name ?? '?'}`).join('; ')}.` : '',
       deeds.length ? `Recent deeds:\n${deeds.map((x) => `- ${formatSimDateTime(x.time)}: ${x.text}`).join('\n')}` : '',
+      ...(() => {
+        const mem = this.memory?.recall(p.id, d.options.map((o) => o.label).join(' '), 4) ?? [];
+        return mem.length ? [`What they remember:\n${mem.map(formatMemory).join('\n')}`] : [];
+      })(),
       '',
       'Options for tomorrow:',
       ...d.options.map((o) => `- id "${o.id}": ${o.label}. ${o.detail}`),

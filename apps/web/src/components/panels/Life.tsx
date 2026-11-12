@@ -78,7 +78,7 @@ export function agentLink(p: CitizenProfile): string {
 
 // ------------------------------------------------------------------ agent card
 
-type CardTab = 'why' | 'deeds' | 'today' | 'share';
+type CardTab = 'why' | 'deeds' | 'today' | 'memory' | 'share';
 
 /** Which group an agent belongs to (directory filter and card kicker). */
 export function agentKind(p: CitizenProfile): 'workforce' | 'agency' | 'independent' {
@@ -113,11 +113,13 @@ export function AgentSections({ p }: { p: CitizenProfile }) {
   const deeds = useMemo(() => allDeeds.filter((d) => d.citizenId === p.id || d.others?.includes(p.id)).reverse(), [allDeeds, p.id]);
   const venture = ventures.find((v) => v.id === life?.ventureId);
   const helping = ventures.find((v) => v.id === life?.helpingId);
+  const mode = useSim((s) => s.mode);
   const tabs: { id: CardTab; label: string }[] = p.agent
     ? [
         { id: 'why', label: "WHY I'M HERE" },
         { id: 'deeds', label: `DEEDS · ${deeds.length}` },
         { id: 'today', label: 'TODAY' },
+        ...(mode === 'server' ? [{ id: 'memory' as const, label: 'MEMORY' }] : []),
         { id: 'share', label: 'SHARE' },
       ]
     : [
@@ -179,6 +181,7 @@ export function AgentSections({ p }: { p: CitizenProfile }) {
         </div>
       )}
       {tab === 'today' && <Today p={p} />}
+      {tab === 'memory' && p.agent && <Memory p={p} />}
       {tab === 'share' && p.agent && <Share p={p} />}
     </div>
   );
@@ -296,6 +299,53 @@ interface OutsideApp {
   why: string;
   runner: string;
   status: string;
+}
+
+interface MemoryItem {
+  kind?: 'work' | 'talk' | 'reflection';
+  day?: number;
+  project?: string;
+  task?: string;
+  summary: string;
+}
+
+/** Server towns: the agent's long-term memory (work, conversations, daily reflections). */
+function Memory({ p }: { p: CitizenProfile }) {
+  const [items, setItems] = useState<MemoryItem[] | null>(null);
+  const base = (simClient.transport as { url?: string } | null)?.url ?? '';
+  useEffect(() => {
+    let live = true;
+    void fetch(`${base}/api/agents/${encodeURIComponent(p.agent?.slug ?? p.id)}/memory`)
+      .then((r) => (r.ok ? r.json() : { memories: [] }))
+      .then((j: { memories: MemoryItem[] }) => live && setItems(j.memories))
+      .catch(() => live && setItems([]));
+    return () => {
+      live = false;
+    };
+  }, [base, p.id, p.agent?.slug]);
+  if (!items) return <p className="note">Remembering…</p>;
+  if (!items.length) return <p className="note">No memories yet. Agents remember their work, conversations with visitors and each day once it ends.</p>;
+  const label = { work: 'WORK', talk: 'CONVERSATION', reflection: 'DAY' } as const;
+  return (
+    <div className="agent-card__body">
+      <ol className="deeds deeds--compact" data-testid="agent-memory">
+        {[...items].reverse().map((m, i) => (
+          <li key={i} className={`deed deed--${m.kind === 'reflection' ? 'friends' : m.kind === 'talk' ? 'met' : 'task'}`}>
+            <small>
+              {label[m.kind ?? 'work']}
+              {m.day !== undefined ? ` · DAY ${m.day}` : ''}
+            </small>
+            <span>
+              {m.project ? `${m.project}: ` : ''}
+              {m.task ? `${m.task} — ` : ''}
+              {m.summary}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className="note">Recalled into this agent's work, decisions and conversations. Written only from things that happened in town.</p>
+    </div>
+  );
 }
 
 /** Host only: review outside agents who applied to move in. */

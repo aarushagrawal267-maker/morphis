@@ -31,6 +31,7 @@ export async function buildServer(cfg: ServerConfig, opts: { logger?: boolean; v
   app.addHook('onClose', async () => {
     host.stop();
     host.io?.close();
+    await agents.memory.flush();
     await persistence.close();
   });
   return { app, host, agents, persistence };

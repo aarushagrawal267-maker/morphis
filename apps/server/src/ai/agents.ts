@@ -10,12 +10,12 @@
  */
 import { z } from 'zod';
 import type { AiProviderInfo, ApprovalRequest, CitizenProfile, CoreRole, ProjectPlan, SimProject, SimTask } from '@morphis/shared';
-import { CORE_ROLES, CORE_ROLE_ORDER, agencyAgent } from '@morphis/shared';
+import { CORE_ROLES, CORE_ROLE_ORDER, agencyAgent, dayOf } from '@morphis/shared';
 import type { CitySimulation, TaskExecutor } from '@morphis/sim';
 import { templatePlan, validatePlan } from '@morphis/sim';
 import type { ServerConfig } from '../config';
 import { AgencyLibrary } from './agency';
-import { AgentMemory } from './memory';
+import { AgentMemory, formatMemory } from './memory';
 import { createProvider, type AiProvider, type ChatMessage, type RateLimiter } from './provider';
 import { ToolManager } from './tools';
 import { LlmLifeMind } from './life';
@@ -296,7 +296,7 @@ export class LiveTaskExecutor implements TaskExecutor {
         const content = t.artifact ? await ctl.workspace.read(t.artifact) : null;
         inputs.push(`### ${t.title} (by ${agencyAgent(t.specialist)?.name ?? CORE_ROLES[t.role].label}, file ${t.artifact?.split('/').pop()})\n${(content || t.output || '').slice(0, isReview ? 1400 : 2000)}`);
       }
-      const memory = ctl.memory.recent(citizen.id).map((m) => `- ${m.project}: ${m.task} — ${m.summary}`);
+      const memory = ctl.memory.recall(citizen.id, `${task.title} ${project.name} ${project.description}`, 6).map(formatMemory);
       const tools = ctl.tools.agentTools();
       const toolDocs = tools
         .map((t) => `- ${t.name}: ${t.description}${Object.keys(t.args).length ? ` Args: ${JSON.stringify(t.args)}` : ''}${t.permission === 'approval' ? ' [needs human approval]' : ''}`)
@@ -344,7 +344,7 @@ export class LiveTaskExecutor implements TaskExecutor {
             `Brief: ${project.description}`,
             `Your task: ${task.title}`,
             inputs.length ? `\nDeliverables from teammates:\n${inputs.join('\n\n')}` : '\nNo upstream deliverables: you start this work stream.',
-            memory.length ? `\nYour recent work:\n${memory.join('\n')}` : '',
+            memory.length ? `\nWhat you remember that may help (your own past work, days and conversations):\n${memory.join('\n')}` : '',
             `\nYour final deliverable will be saved as ${task.artifact?.split('/').pop()}. Keep it under 800 words.`,
           ].join('\n'),
         },
@@ -396,7 +396,7 @@ export class LiveTaskExecutor implements TaskExecutor {
       // hand-in goes through the audited workspace tool
       if (fileName) await ctl.tools.invoke(ctx, 'workspace.write', { path: fileName, content: header + final });
       const summary = final.replace(/[#*`>_]/g, '').replace(/\s+/g, ' ').trim().slice(0, 260);
-      ctl.memory.add(citizen.id, { time: new Date().toISOString(), project: project.name, task: task.title, summary: summary.slice(0, 160) });
+      ctl.memory.add(citizen.id, { time: new Date().toISOString(), kind: 'work', day: dayOf(sim.time), project: project.name, task: task.title, summary: summary.slice(0, 200) });
       ctl.usage.tasks++;
       sim.workforce.complete(task.id, `[AI · ${ctl.provider!.model}] ${summary}${summary.length >= 260 ? '…' : ''}`);
       if (isReview) {
@@ -522,14 +522,14 @@ export class AgentController {
     this.executor = provider ? new LiveTaskExecutor(this) : null;
     this.lifeMind =
       provider && cfg.AI_LIFE_DECISIONS_PER_HOUR > 0
-        ? new LlmLifeMind(provider, limiter, () => this.sim(), {
+        ? new LlmLifeMind(provider, limiter, () => this.sim(), this.memory, {
             perHour: cfg.AI_LIFE_DECISIONS_PER_HOUR,
             maxInFlight: 2,
             reserveShare: 0.4,
             dailyCap: cfg.AI_DAILY_REQUEST_CAP,
           })
         : null;
-    this.talker = provider && cfg.AI_TALK_PER_MINUTE > 0 ? new LlmTalker(provider, limiter, { perMinute: cfg.AI_TALK_PER_MINUTE, dailyCap: cfg.AI_DAILY_REQUEST_CAP }) : null;
+    this.talker = provider && cfg.AI_TALK_PER_MINUTE > 0 ? new LlmTalker(provider, limiter, { perMinute: cfg.AI_TALK_PER_MINUTE, dailyCap: cfg.AI_DAILY_REQUEST_CAP }, this.memory) : null;
     this.tools.register({
       name: 'city.data',
       description: 'Read live, real data from the Morphis city simulation (read-only). Use it instead of inventing numbers.',

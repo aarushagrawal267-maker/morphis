@@ -5,7 +5,7 @@
  */
 import type { Server } from 'socket.io';
 import type { InitPayload, SaveSummary, SimCommand } from '@morphis/shared';
-import { PUBLIC_COMMANDS, SOCKET_EVENTS } from '@morphis/shared';
+import { PUBLIC_COMMANDS, SOCKET_EVENTS, dayOf } from '@morphis/shared';
 import { timingSafeEqual } from 'node:crypto';
 import { CitySimulation, SimulationRunner, SimulatedExecutor } from '@morphis/sim';
 import type { AgentController } from '../ai/agents';
@@ -25,6 +25,7 @@ export class SimulationHost {
   private autosave: ReturnType<typeof setInterval> | null = null;
   private last = performance.now();
   private loops = 0;
+  private lastDay = -1;
   io: Server | null = null;
   presence: { count: number; stop(): void } | null = null;
   readonly sessionId = `server-${Date.now().toString(36)}`;
@@ -72,10 +73,18 @@ export class SimulationHost {
     this.runner.advance((now - this.last) / 1000);
     this.last = now;
     this.loops++;
+    this.endOfDay();
     this.broadcastPending();
     if (!this.io) return;
     this.io.volatile.emit(SOCKET_EVENTS.frame, this.sim.buildMotionFrame());
     if (this.loops % 10 === 0) this.io.emit(SOCKET_EVENTS.state, this.sim.buildStateFrame(this.loops % 100 === 0));
+  }
+
+  /** When a simulated day ends, each agent stores a reflection on it in long-term memory. */
+  private endOfDay(): void {
+    const day = dayOf(this.sim.time);
+    if (this.lastDay >= 0 && day > this.lastDay) this.agents.memory.reflect(this.sim, day - 1);
+    this.lastDay = day;
   }
 
   private broadcastPending(): void {
@@ -89,6 +98,7 @@ export class SimulationHost {
 
   private replace(next: CitySimulation): void {
     this.sim = next;
+    this.lastDay = -1;
     this.runner = new SimulationRunner(next, 35);
     this.attachExecutor();
     next.bus.drain();
