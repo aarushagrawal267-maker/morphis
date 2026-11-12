@@ -20,6 +20,7 @@ import { createProvider, type AiProvider, type ChatMessage, type RateLimiter } f
 import { ToolManager } from './tools';
 import { LlmLifeMind } from './life';
 import { LlmTalker } from './talk';
+import { LlmConversations } from './conversations';
 import { Workspace } from './workspace';
 
 const LANDMARK_KEYS = ['hq', 'ai_lab', 'university', 'orbital', 'corporate', 'bank', 'studio', 'datacenter', 'hospital', 'market', 'station'];
@@ -499,6 +500,7 @@ export class AgentController {
   readonly executor: LiveTaskExecutor | null;
   readonly lifeMind: LlmLifeMind | null;
   readonly talker: LlmTalker | null;
+  readonly conversations: LlmConversations | null;
   info: AiProviderInfo;
   verified: 'unverified' | 'ok' | 'failed' = 'unverified';
   lastError: string | null = null;
@@ -538,6 +540,8 @@ export class AgentController {
           })
         : null;
     this.talker = provider && cfg.AI_TALK_PER_MINUTE > 0 ? new LlmTalker(provider, limiter, { perMinute: cfg.AI_TALK_PER_MINUTE, dailyCap: cfg.AI_DAILY_REQUEST_CAP }, this.memory) : null;
+    this.conversations =
+      provider && cfg.AI_AGENT_CHATS_PER_HOUR > 0 ? new LlmConversations(provider, limiter, () => this.sim(), this.memory, { perHour: cfg.AI_AGENT_CHATS_PER_HOUR, dailyCap: cfg.AI_DAILY_REQUEST_CAP }) : null;
     this.tools.register({
       name: 'city.data',
       description: 'Read live, real data from the Morphis city simulation (read-only). Use it instead of inventing numbers.',
@@ -601,6 +605,7 @@ export class AgentController {
       inFlight: this.executor ? [...this.executor.inFlight] : [],
       lifeDecisions: this.lifeMind?.stats ?? null,
       conversations: this.talker?.stats ?? null,
+      agentConversations: this.conversations?.stats ?? null,
     };
   }
 }

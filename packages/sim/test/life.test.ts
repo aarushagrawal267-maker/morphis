@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { LifeDecision } from '@morphis/shared';
+import type { AgentEncounter, LifeDecision } from '@morphis/shared';
 import { AGENCY_AGENTS, agencyAgent, dayOf } from '@morphis/shared';
 import { CitySimulation } from '../src/engine';
 
@@ -212,5 +212,39 @@ describe('day turns', () => {
     expect(it.say).toBe('Off to lunch!');
     expect(sim.life.resolve(taken[1].id, 'nonsense', null, null).ok).toBe(false);
     expect(sim.life.life(taken[1].citizenId)!.pending).toBeNull();
+  });
+});
+
+describe('conversations between agents', () => {
+  it('agents who know each other get talking; the simulation writes it from real facts and it brings them closer', () => {
+    const sim = CitySimulation.create({ population: 300 });
+    sim.run(2 * 86400);
+    const talks = sim.state.deeds!.filter((d) => d.kind === 'talked');
+    expect(talks.length).toBeGreaterThan(3);
+    for (const t of talks.slice(0, 10)) {
+      expect(t.others?.length).toBe(1);
+      expect(t.lines!.length).toBeGreaterThanOrEqual(2);
+      for (const l of t.lines!) expect([t.citizenId, t.others![0]]).toContain(l.citizenId);
+      expect(t.text).toMatch(/ talked about /);
+    }
+    // at most one conversation per pair per day
+    const keys = talks.map((t) => `${dayOf(t.time)}:${[t.citizenId, t.others![0]].sort().join('|')}`);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('an AI can voice the conversation instead', () => {
+    const sim = CitySimulation.create({ population: 300 });
+    const offered: AgentEncounter[] = [];
+    sim.life.talker = { request: (e) => (offered.push(e), true) };
+    sim.run(2 * 86400);
+    expect(offered.length).toBeGreaterThan(0);
+    expect(sim.state.deeds!.some((d) => d.kind === 'talked')).toBe(false);
+    const e = offered[0];
+    const key = `${e.aId}|${e.bId}`;
+    const before = sim.state.bonds![key];
+    const deed = sim.life.recordConversation(e, [{ citizenId: e.aId, text: 'Hello!' }, { citizenId: 'someone-else', text: 'ignored' }, { citizenId: e.bId, text: 'Hi there.' }], 'They caught up.', 'ai', true)!;
+    expect(deed.by).toBe('ai');
+    expect(deed.lines!.map((l) => l.text)).toEqual(['Hello!', 'Hi there.']);
+    expect(sim.state.bonds![key]).toBe(before + 1);
   });
 });

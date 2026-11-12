@@ -342,6 +342,14 @@ function Chatter() {
         ventures: sim.ventures,
         busyProjects: sim.projects.filter((p) => p.status === 'ACTIVE').length,
       };
+      // agents who are in a conversation right now say their lines (one line per ten sim minutes)
+      const saying = new Map<string, string>();
+      for (let k = sim.deeds.length - 1; k >= 0 && k > sim.deeds.length - 60; k--) {
+        const d = sim.deeds[k];
+        if (d.kind !== 'talked' || !d.lines?.length || ctx.time - d.time > 2400 || ctx.time < d.time) continue;
+        const step = Math.floor((ctx.time - d.time) / 600);
+        for (const l of d.lines.filter((_, n) => Math.floor(n / 2) <= step)) saying.set(l.citizenId, l.text);
+      }
       els.forEach((el, k) => {
         const i = chosen[k];
         const p = i !== undefined ? citizenPosition(i) : null;
@@ -370,7 +378,7 @@ function Chatter() {
             }
           }
         }
-        const full = chatterFor(prof, sim.state!.citizens[i], life, { ...ctx, friend });
+        const full = saying.get(prof.id) ?? chatterFor(prof, sim.state!.citizens[i], life, { ...ctx, friend });
         const text = mode === 'mini' && full.length > 20 ? `${full.slice(0, 18).trimEnd()}…` : full;
         if (el.textContent !== text) el.textContent = text;
         el.classList.toggle('chatter--agent', !!prof.agent);

@@ -29,6 +29,8 @@ const schema = z.object({
   AI_LIFE_DECISIONS_PER_HOUR: z.coerce.number().int().min(0).max(600).default(20),
   /** Agents' lunch and evening plans (day turns) made by the model, per real hour (0 = always simulated). */
   AI_DAY_TURNS_PER_HOUR: z.coerce.number().int().min(0).max(600).default(20),
+  /** Conversations between agents voiced by the model, per real hour (0 = always written by the simulation). */
+  AI_AGENT_CHATS_PER_HOUR: z.coerce.number().int().min(0).max(600).default(12),
   /** Visitor conversations voiced by the model, per minute (0 = always simulated). */
   AI_TALK_PER_MINUTE: z.coerce.number().int().min(0).max(120).default(12),
   /** Folder with The Agency's persona files (default: vendor/agency-agents found from the server). */

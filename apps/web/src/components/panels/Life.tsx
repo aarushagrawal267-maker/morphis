@@ -235,6 +235,15 @@ function DeedItem({ d, self }: { d: Deed; self: string }) {
         {d.text}
       </span>
       {d.reason && <q className="deed__reason">{d.reason}</q>}
+      {d.lines && d.lines.length > 0 && (
+        <span className="deed__lines" data-testid="deed-lines">
+          {d.lines.map((l, i) => (
+            <span key={i}>
+              <b>{(citizens.get(l.citizenId)?.name ?? '').split(' ')[0]}:</b> {l.text}
+            </span>
+          ))}
+        </span>
+      )}
       {d.buildingId && (
         <button className="deed__go" onClick={() => goTo(d.buildingId!)} title="Go there">
           <Icon name="walk" size={12} />
