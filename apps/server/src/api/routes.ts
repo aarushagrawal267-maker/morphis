@@ -63,6 +63,14 @@ export function registerRoutes(app: FastifyInstance, host: SimulationHost): void
     };
   });
 
+  /** An agent's long-term memory: work, conversations and daily reflections (all from real town events). */
+  app.get('/api/agents/:slug/memory', async (req, reply) => {
+    const slug = (req.params as { slug: string }).slug;
+    const c = host.sim.life.agents().find((x) => x.profile.agent?.slug === slug || x.profile.id === slug);
+    if (!c) return reply.code(404).send({ error: 'not found' });
+    return { citizenId: c.profile.id, name: c.profile.name, memories: host.agents.memory.all(c.profile.id) };
+  });
+
   app.get('/api/ventures', async () => host.sim.life.ventures);
 
   app.get('/api/buildings/:id', async (req, reply) => {
