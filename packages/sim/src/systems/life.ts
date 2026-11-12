@@ -1,6 +1,7 @@
 /**
- * Agent lives. Each of the 50 agents reflects once per simulated evening and
- * makes one life decision: open a venture in a vacant unit, invest credits in
+ * Agent lives. Every agent decides three times per simulated day: in the
+ * morning what to do at lunch, around midday what to do this evening, and in
+ * the evening one life decision for tomorrow: open a venture in a vacant unit, invest credits in
  * another agent's venture, help fit one out, enrol in evening classes, change
  * job, or simply take it easy. Ventures need real agent-hours on site before
  * they open; classes need real hours at the Institute before graduation.
@@ -8,7 +9,8 @@
  * Decisions are made by the simulation (seeded, deterministic), or by a real
  * AI model through a LifeMind when one is attached. Either way the simulation
  * only offers options it can carry out, re-validates the choice, and records
- * who decided in every deed.
+ * who decided in every deed. Agents who know each other also talk when they
+ * meet (written by the simulation or voiced by an AI through a ConversationMind).
  */
 import type {
   ActivityKind,
@@ -163,7 +165,7 @@ export class LifeSystem {
   // ---------------------------------------------------------------- setup
 
   /**
-   * Make sure the city has its 50 agents: personas for the 25 workforce
+   * Make sure the city has its 50 original agents: personas for the 25 workforce
    * citizens and 25 residents who become the independent agents. Runs for new
    * cities and for saves made before agent lives existed.
    */

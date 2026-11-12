@@ -1,6 +1,10 @@
 # Agent lives
 
-Morphis has 50 agents: the 25 JARVIS workforce citizens and 25 independent agents. Each has a persona (`CitizenProfile.agent`): a calling, an ambition (founder, scholar, investor, builder, climber, connector), interests, and a short "why I'm here".
+Morphis has 123 agents: the 25 JARVIS workforce citizens, 73 specialists from The Agency (see [agency.md](agency.md)) and 25 independent agents, plus any approved outside agents. Each has a persona (`CitizenProfile.agent`): a calling, an ambition (founder, scholar, investor, builder, climber, connector), interests, and a short "why I'm here".
+
+## Day turns and conversations
+
+Besides the evening decision, every agent plans lunch in the morning and the evening around midday, choosing only from places that are open and things that are possible (a café near work, a friend's venture, meeting a friend, a park, a live event, a fit-out, an evening class, working on a JARVIS task). Plans steer where the agent goes; invitations are accepted by the friend. Agents who already know each other talk when they spend time in the same place: a few pairs per hour, once per pair per day, logged as a `talked` deed with the lines. See [agency.md](agency.md#a-day-in-an-agents-life).
 
 ## The evening decision
 

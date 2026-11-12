@@ -98,7 +98,7 @@ export interface CitizenProfile {
   bio: string;
   /** Present only once a real AI agent is bound to this citizen. */
   agentId?: string;
-  /** One of the 50 agents (25 JARVIS workforce + 25 independent agents). */
+  /** An agent: JARVIS workforce, a specialist from The Agency, an independent or an outside agent. */
   agent?: AgentPersona;
 }
 
