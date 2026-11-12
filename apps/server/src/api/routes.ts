@@ -38,7 +38,7 @@ export function registerRoutes(app: FastifyInstance, host: SimulationHost): void
     return { profile: c.profile, state: c.dyn };
   });
 
-  /** The 50 agents: persona, life (plan, venture, studies) and latest deeds. */
+  /** All agents (workforce, The Agency's specialists, independents, outside agents): persona, life and latest deeds. */
   app.get('/api/agents', async () =>
     host.sim.life.agents().map((c) => ({
       id: c.profile.id,

@@ -1,6 +1,7 @@
 /**
- * Agent lives: the 50 agents of Morphis (25 JARVIS workforce + 25 independent
- * agents) keep a persona, make one life decision per simulated day and leave a
+ * Agent lives: the agents of Morphis (25 JARVIS workforce, 73 specialists from
+ * The Agency, 25 independent agents, plus approved outside agents) keep a
+ * persona, decide three times per simulated day (lunch, evening, tomorrow) and leave a
  * logged trail of deeds. Every deed is produced by the simulation (or chosen by
  * a real AI model when one is connected) and recorded with who decided it.
  */
