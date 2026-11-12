@@ -14,3 +14,4 @@ playwright-report
 *.tsbuildinfo
 .DS_Store
 dist-static
+.morphis-credential.json
