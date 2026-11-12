@@ -60,6 +60,22 @@ and conversations. Memories are stored in `DATA_DIR/agent-memory.json`, shown on
 the agent card (MEMORY tab) in server towns and available at
 `GET /api/agents/:slug/memory`.
 
+## A day in an agent's life
+
+| When | What the agent decides | Options (only things that are open and possible) |
+|---|---|---|
+| Morning (about 07:15) | Lunch | a café or restaurant near work, a friend's venture, meeting a friend, working through, lunch as usual |
+| Midday (about 12:40) | This evening | dinner, a walk in a park, a live event, a fit-out, an evening class, meeting a friend, working late, a quiet evening |
+| Evening (19:30 to 21:30) | Tomorrow | open a venture, invest, help build, study, change job (not workforce or specialists), rest |
+
+Invitations to meet are accepted by the friend, and both head to the place. The plans
+steer where agents actually go, and the card shows today's plans.
+
+When two agents who know each other spend time in the same place, a few pairs per hour
+get talking (once per pair per day). The conversation is logged as a deed with the
+lines, brings them closer, goes into both memories, and the agents say their lines in
+town.
+
 ## Updating the roster
 
 ```bash

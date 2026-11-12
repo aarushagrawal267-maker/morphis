@@ -214,7 +214,52 @@ export function SettingsPanel() {
       </div>
       <p className="note">{persistence?.detail}</p>
       <p className="note">{ai?.detail}</p>
+      {mode === 'server' && ai?.connected && <AiUsage />}
     </section>
+  );
+}
+
+type UsageRow = { requests: number; inputTokens: number; outputTokens: number; failed: number };
+
+/** Server towns: where the AI budget goes today (requests and tokens per kind of work). */
+function AiUsage() {
+  const [st, setSt] = useState<{ requestsToday: number; models?: { main: string | null; light: string | null }; usageByCategory?: Record<string, UsageRow> } | null>(null);
+  const base = (simClient.transport as { url?: string } | null)?.url ?? '';
+  useEffect(() => {
+    let live = true;
+    const load = () =>
+      void fetch(`${base}/api/ai/status`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => live && setSt(j))
+        .catch(() => undefined);
+    load();
+    const t = setInterval(load, 10_000);
+    return () => {
+      live = false;
+      clearInterval(t);
+    };
+  }, [base]);
+  if (!st?.usageByCategory) return null;
+  const label: Record<string, string> = { planning: 'JARVIS planning', tasks: 'JARVIS task work', life: 'Evening decisions', turns: 'Lunch & evening plans', chats: 'Agents talking', visitors: 'Talking with visitors' };
+  return (
+    <>
+      <h4>AI usage</h4>
+      <div className="rows" data-testid="ai-usage">
+        {Object.entries(st.usageByCategory).map(([k, r]) => (
+          <div className="row" key={k}>
+            <span>{label[k] ?? k}</span>
+            <b>
+              {r.requests} req · {Math.round((r.inputTokens + r.outputTokens) / 1000)}k tokens{r.failed ? ` · ${r.failed} failed` : ''}
+            </b>
+          </div>
+        ))}
+        <div className="row">
+          <span>Requests today (all)</span>
+          <b>{st.requestsToday}</b>
+        </div>
+      </div>
+      {st.models && <p className="note">Main model: {st.models.main}. Routine calls: {st.models.light === st.models.main ? 'same model (set AI_MODEL_LIGHT for a cheaper one)' : st.models.light}.</p>}
+    </>
   );
 }
 

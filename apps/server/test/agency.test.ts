@@ -75,3 +75,29 @@ describe('planner hires specialists', () => {
     expect(plan.tasks[2].specialist).toBeUndefined();
   });
 });
+
+describe('cost controls', () => {
+  it('counts requests and tokens per kind of AI work', async () => {
+    const { UsageMeter } = await import('../src/ai/provider');
+    const meter = new UsageMeter();
+    const fake: AiProvider = { name: 'fake', model: 'm', complete: async () => ({ text: 'ok', inputTokens: 7, outputTokens: 3, truncated: false }) };
+    const broken: AiProvider = { name: 'fake', model: 'm', complete: async () => Promise.reject(new Error('down')) };
+    await meter.wrap(fake, 'chats').complete([]);
+    await meter.wrap(fake, 'chats').complete([]);
+    await expect(meter.wrap(broken, 'turns').complete([])).rejects.toThrow('down');
+    expect(meter.byCategory.chats).toEqual({ requests: 2, inputTokens: 14, outputTokens: 6, failed: 0 });
+    expect(meter.byCategory.turns.failed).toBe(1);
+  });
+
+  it('uses a lighter model for routine calls only when one is configured', async () => {
+    const { createLightProvider, createProvider } = await import('../src/ai/provider');
+    const { loadConfig } = await import('../src/config');
+    const base = { AI_PROVIDER: 'openai-compatible', AI_BASE_URL: 'http://127.0.0.1:9/v1', AI_MODEL: 'big-model' };
+    const a = loadConfig(base);
+    const pa = createProvider(a);
+    expect(createLightProvider(a, pa.provider, pa.limiter)).toBe(pa.provider);
+    const b = loadConfig({ ...base, AI_MODEL_LIGHT: 'small-model' });
+    const pb = createProvider(b);
+    expect(createLightProvider(b, pb.provider, pb.limiter)!.model).toBe('small-model');
+  });
+});

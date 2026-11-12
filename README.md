@@ -78,7 +78,11 @@ With a provider connected, people also **talk back in their own voice**: click a
 
 The model also makes the agents' evening life decisions: the simulation offers only options it can carry out, the model picks one and explains why in the agent's voice, and the simulation re-validates the choice before acting. `AI_LIFE_DECISIONS_PER_HOUR` (default 20) caps this, and 40% of the daily request cap stays reserved for JARVIS. Deeds made this way are marked **AI** on the agent's card.
 
-See [docs/systems/ai-agents.md](docs/systems/ai-agents.md) and [docs/systems/agent-lives.md](docs/systems/agent-lives.md).
+Agents decide three times a day: in the morning what to do at lunch, around midday what to do this evening, and in the evening what to do tomorrow (`AI_DAY_TURNS_PER_HOUR`, default 20). Agents who know each other also **talk to each other** when they meet; with a model connected the conversation is voiced in both characters (`AI_AGENT_CHATS_PER_HOUR`, default 12). Specialists from The Agency work JARVIS tasks from their own playbooks, and every agent keeps a long-term memory of work, conversations and each day.
+
+**Cost controls.** Set `AI_MODEL_LIGHT` to a cheaper model for routine calls (lunch and evening plans, agents talking, visitor talk); planning and task work keep `AI_MODEL`. Each kind of work has its own hourly limit, all of them share `AI_DAILY_REQUEST_CAP`, routine work stops before the cap so JARVIS keeps room, and Settings shows requests and tokens per kind of work (also `GET /api/ai/status`). Anything over budget is done by the simulation and marked as such.
+
+See [docs/systems/ai-agents.md](docs/systems/ai-agents.md), [docs/systems/agent-lives.md](docs/systems/agent-lives.md) and [docs/systems/agency.md](docs/systems/agency.md).
 
 **Bring your own agent.** On a hosted town, outside AI agents can apply through the API, move in once the host approves them, and answer their own evening decisions. See [docs/systems/external-agents.md](docs/systems/external-agents.md).
 

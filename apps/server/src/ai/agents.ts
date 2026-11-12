@@ -16,7 +16,7 @@ import { templatePlan, validatePlan } from '@morphis/sim';
 import type { ServerConfig } from '../config';
 import { AgencyLibrary } from './agency';
 import { AgentMemory, formatMemory } from './memory';
-import { createProvider, type AiProvider, type ChatMessage, type RateLimiter } from './provider';
+import { UsageMeter, createLightProvider, createProvider, type AiProvider, type ChatMessage, type RateLimiter } from './provider';
 import { ToolManager } from './tools';
 import { LlmLifeMind } from './life';
 import { LlmTalker } from './talk';
@@ -361,7 +361,7 @@ export class LiveTaskExecutor implements TaskExecutor {
       const written = new Set<string>();
       const maxSteps = ctl.maxSteps;
       for (let step = 0; step < maxSteps && final === null; step++) {
-        const res = await ctl.provider!.complete(messages);
+        const res = await ctl.taskProvider!.complete(messages);
         ctl.usage.input += res.inputTokens;
         ctl.usage.output += res.outputTokens;
         if (ctl.sim() !== sim) return; // city replaced while we worked
@@ -387,7 +387,7 @@ export class LiveTaskExecutor implements TaskExecutor {
       }
       if (final === null) {
         messages.push({ role: 'user', content: 'Step limit reached. Reply now with {"final": "<your complete markdown deliverable>"}.' });
-        const res = await ctl.provider!.complete(messages);
+        const res = await ctl.taskProvider!.complete(messages);
         if (ctl.sim() !== sim) return;
         const parsed = parseStep(res.text);
         final = parsed.final ?? res.text;
@@ -489,6 +489,11 @@ export function cityData(sim: CitySimulation | null, topic: string): object {
 
 export class AgentController {
   readonly provider: AiProvider | null;
+  /** Cheaper model for routine calls (the main model when AI_MODEL_LIGHT is not set). */
+  readonly light: AiProvider | null;
+  /** Main model, counted under JARVIS task work. */
+  readonly taskProvider: AiProvider | null;
+  readonly meter = new UsageMeter();
   readonly limiter: RateLimiter;
   readonly workspace: Workspace;
   readonly tools: ToolManager;
@@ -513,6 +518,9 @@ export class AgentController {
   constructor(cfg: ServerConfig, audit?: (actor: string, action: string, detail: object, approved: boolean) => Promise<void>) {
     const { provider, info, limiter } = createProvider(cfg);
     this.provider = provider;
+    this.light = createLightProvider(cfg, provider, limiter);
+    const m = this.meter;
+    this.taskProvider = provider ? m.wrap(provider, 'tasks') : null;
     this.info = info;
     this.limiter = limiter;
     this.maxSteps = cfg.AI_AGENT_MAX_STEPS;
@@ -527,21 +535,21 @@ export class AgentController {
       onAudit: audit,
       onApprovalsChanged: (list) => this.onApprovals(list),
     });
-    this.planner = provider ? new LlmMasterPlanner(provider, this.agency.available ? this.agency : undefined) : null;
+    this.planner = provider ? new LlmMasterPlanner(m.wrap(provider, 'planning'), this.agency.available ? this.agency : undefined) : null;
     this.executor = provider ? new LiveTaskExecutor(this) : null;
     this.lifeMind =
       provider && (cfg.AI_LIFE_DECISIONS_PER_HOUR > 0 || cfg.AI_DAY_TURNS_PER_HOUR > 0)
-        ? new LlmLifeMind(provider, limiter, () => this.sim(), this.memory, {
+        ? new LlmLifeMind(m.wrap(provider, 'life'), limiter, () => this.sim(), this.memory, {
             perHour: cfg.AI_LIFE_DECISIONS_PER_HOUR,
             turnsPerHour: cfg.AI_DAY_TURNS_PER_HOUR,
             maxInFlight: 2,
             reserveShare: 0.4,
             dailyCap: cfg.AI_DAILY_REQUEST_CAP,
-          })
+          }, m.wrap(this.light!, 'turns'))
         : null;
-    this.talker = provider && cfg.AI_TALK_PER_MINUTE > 0 ? new LlmTalker(provider, limiter, { perMinute: cfg.AI_TALK_PER_MINUTE, dailyCap: cfg.AI_DAILY_REQUEST_CAP }, this.memory) : null;
+    this.talker = provider && cfg.AI_TALK_PER_MINUTE > 0 ? new LlmTalker(m.wrap(this.light!, 'visitors'), limiter, { perMinute: cfg.AI_TALK_PER_MINUTE, dailyCap: cfg.AI_DAILY_REQUEST_CAP }, this.memory) : null;
     this.conversations =
-      provider && cfg.AI_AGENT_CHATS_PER_HOUR > 0 ? new LlmConversations(provider, limiter, () => this.sim(), this.memory, { perHour: cfg.AI_AGENT_CHATS_PER_HOUR, dailyCap: cfg.AI_DAILY_REQUEST_CAP }) : null;
+      provider && cfg.AI_AGENT_CHATS_PER_HOUR > 0 ? new LlmConversations(m.wrap(this.light!, 'chats'), limiter, () => this.sim(), this.memory, { perHour: cfg.AI_AGENT_CHATS_PER_HOUR, dailyCap: cfg.AI_DAILY_REQUEST_CAP }) : null;
     this.tools.register({
       name: 'city.data',
       description: 'Read live, real data from the Morphis city simulation (read-only). Use it instead of inventing numbers.',
@@ -604,6 +612,8 @@ export class AgentController {
       approvals: this.tools.recentApprovals(),
       inFlight: this.executor ? [...this.executor.inFlight] : [],
       lifeDecisions: this.lifeMind?.stats ?? null,
+      models: { main: this.provider?.model ?? null, light: this.light?.model ?? null },
+      usageByCategory: this.meter.byCategory,
       conversations: this.talker?.stats ?? null,
       agentConversations: this.conversations?.stats ?? null,
     };
