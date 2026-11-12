@@ -385,13 +385,27 @@ export class LiveTaskExecutor implements TaskExecutor {
         ctl.steps++;
         messages.push({ role: 'user', content: `Observation from ${action}:\n${observation.slice(0, 4000)}\n\nContinue. Reply with one JSON object.` });
       }
-      if (final === null) {
-        messages.push({ role: 'user', content: 'Step limit reached. Reply now with {"final": "<your complete markdown deliverable>"}.' });
+      // step limit: insist on the deliverable; a model that still asks for a tool gets that one answer and a last call
+      for (let extra = 0; extra < 2 && final === null; extra++) {
+        messages.push({ role: 'user', content: 'Step limit reached. Do not call any more tools. Reply now with ONLY {"final": "<your complete markdown deliverable>"}, using what you already have.' });
         const res = await ctl.taskProvider!.complete(messages);
         if (ctl.sim() !== sim) return;
         const parsed = parseStep(res.text);
-        final = parsed.final ?? res.text;
+        messages.push({ role: 'assistant', content: res.text });
+        if (parsed.final !== undefined && !parsed.action) {
+          final = parsed.final;
+        } else if (parsed.action && extra === 0) {
+          let observation: string;
+          try {
+            observation = await ctl.tools.invoke(ctx, parsed.action, parsed.args ?? {});
+          } catch (e) {
+            observation = `ERROR: ${e instanceof Error ? e.message : String(e)}`;
+          }
+          messages.push({ role: 'user', content: `Observation from ${parsed.action}:\n${observation.slice(0, 4000)}` });
+        }
       }
+      // never hand in a tool request as if it were the document
+      if (final === null || /^\s*\{\s*"(thought|action)"/.test(final)) throw new Error('the agent did not produce a deliverable within its step limit');
       sim.workforce.reportProgress(task.id, 0.9);
       const header = `<!-- ${task.title} · ${citizen.name} (${specialist ? `${specialist.name}, The Agency` : role.label}) · model ${ctl.provider!.model} · ${new Date().toISOString()} -->\n`;
       // If the agent already wrote its task file during the loop and the hand-in is
