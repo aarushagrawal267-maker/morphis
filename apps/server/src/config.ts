@@ -10,6 +10,8 @@ const schema = z.object({
   CITY_SEED: z.coerce.number().int().default(2126),
   CITY_POPULATION: z.coerce.number().int().min(25).max(5000).default(400),
   AUTOSAVE_MINUTES: z.coerce.number().min(0).default(0),
+  /** On start, continue the most recent save instead of a fresh town (keeps the town across restarts). */
+  RESUME_LATEST_SAVE: z.enum(['true', 'false']).default('false'),
   AI_PROVIDER: z.enum(['openai-compatible', 'anthropic', 'none']).default('openai-compatible'),
   AI_BASE_URL: z.string().default('https://integrate.api.nvidia.com/v1'),
   AI_MODEL: z.string().default('nvidia/nemotron-3-ultra-550b-a55b'),

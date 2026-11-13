@@ -1,0 +1,29 @@
+# Render Blueprint: one click creates the town (web service) and its database.
+# Render dashboard -> New -> Blueprint -> pick this repository (and branch).
+# You are asked for AI_API_KEY (your NVIDIA key) during setup; ADMIN_TOKEN is generated.
+services:
+  - type: web
+    name: morphis
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free # 512 MB is enough; free services sleep after 15 idle minutes (the town is saved and resumes)
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: morphis-db
+          property: connectionString
+      - key: AI_API_KEY
+        sync: false
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: AUTOSAVE_MINUTES
+        value: "10"
+      - key: RESUME_LATEST_SAVE
+        value: "true"
+      - key: AI_DAILY_REQUEST_CAP
+        value: "400"
+
+databases:
+  - name: morphis-db
+    plan: free

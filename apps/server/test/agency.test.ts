@@ -101,3 +101,22 @@ describe('cost controls', () => {
     expect(createLightProvider(b, pb.provider, pb.limiter)!.model).toBe('small-model');
   });
 });
+
+describe('restarts keep the town', () => {
+  it('saves on shutdown and continues the latest save on start', async () => {
+    const { mkdtempSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const path = await import('node:path');
+    const { buildServer } = await import('../src/app');
+    const { loadConfig } = await import('../src/config');
+    const dir = mkdtempSync(path.join(tmpdir(), 'morphis-resume-'));
+    const env = { DATA_DIR: dir, CITY_POPULATION: '80', AI_PROVIDER: 'none', AUTOSAVE_MINUTES: '10', RESUME_LATEST_SAVE: 'true' };
+    const a = await buildServer(loadConfig(env), { serveWeb: false });
+    a.host.sim.run(3 * 3600);
+    const time = a.host.sim.time;
+    await a.app.close();
+    const b = await buildServer(loadConfig(env), { serveWeb: false });
+    expect(b.host.sim.time).toBe(time);
+    await b.app.close();
+  });
+});
