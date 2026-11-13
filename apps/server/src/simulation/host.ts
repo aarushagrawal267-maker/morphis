@@ -97,6 +97,15 @@ export class SimulationHost {
     return { ...this.sim.buildInit('server', this.sessionId, this.persistence.info, this.agents.info), approvals: this.agents.tools.recentApprovals() };
   }
 
+  /** Continue the most recent save (after a restart or redeploy). Returns its name, or null. */
+  async resumeLatest(): Promise<string | null> {
+    const saves = await this.persistence.list();
+    if (!saves.length) return null;
+    const latest = [...saves].sort((a, b) => b.savedAt.localeCompare(a.savedAt))[0];
+    this.replace(CitySimulation.fromSave(await this.persistence.load(latest.id)));
+    return latest.name;
+  }
+
   private replace(next: CitySimulation): void {
     this.sim = next;
     this.lastDay = -1;

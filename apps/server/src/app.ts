@@ -21,6 +21,14 @@ export async function buildServer(cfg: ServerConfig, opts: { logger?: boolean; v
   const agents = new AgentController(cfg, audit);
   if (opts.verifyAi !== false && agents.provider) await agents.verify();
   const host = new SimulationHost(cfg, persistence, agents);
+  if (cfg.RESUME_LATEST_SAVE === 'true') {
+    try {
+      const name = await host.resumeLatest();
+      if (name) log(`resumed save "${name}"`);
+    } catch (e) {
+      log(`could not resume the latest save: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
   registerRoutes(app, host);
   const outside = new ExternalAgents(cfg.DATA_DIR);
   await outside.load();
@@ -29,6 +37,8 @@ export async function buildServer(cfg: ServerConfig, opts: { logger?: boolean; v
   if (cfg.WEB_DIST && opts.serveWeb !== false) serveWebClient(app, cfg.WEB_DIST, log);
   attachSockets(app.server, host, cfg.CORS_ORIGIN);
   app.addHook('onClose', async () => {
+    // keep the town across redeploys and restarts
+    if (cfg.AUTOSAVE_MINUTES > 0) await host.save(`Autosave ${new Date().toISOString()}`).catch(() => undefined);
     host.stop();
     host.io?.close();
     await agents.memory.flush();

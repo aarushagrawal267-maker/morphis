@@ -18,7 +18,27 @@ To use your model, put the key in a `.env` file next to `docker-compose.yml`:
 AI_API_KEY=nvapi-...
 ```
 
-## 2. Put it on a host
+## 2. Easiest: Render (one click, free to start)
+
+The repository has a `render.yaml` blueprint that creates the town and its
+PostgreSQL database together.
+
+1. Sign in at https://render.com (with GitHub) and allow it to see this repository.
+2. **New → Blueprint**, pick the repository and the branch to deploy.
+3. When asked, paste your NVIDIA key into `AI_API_KEY`. `ADMIN_TOKEN` is generated for you.
+4. Click **Apply**. The first build takes about 5 to 10 minutes.
+5. Open the service URL. The top bar shows `SERVER`.
+6. Copy `ADMIN_TOKEN` from the service's **Environment** tab and enter it in the
+   town under **Settings → Admin key**; that unlocks speed, weather, saves and JARVIS.
+
+The free plan sleeps after 15 minutes without visitors and wakes on the next
+visit (about a minute). The town saves every 10 minutes and on shutdown, and
+continues the latest save when it starts (`AUTOSAVE_MINUTES`,
+`RESUME_LATEST_SAVE`). For a town that keeps living around the clock, switch
+the service to a paid plan. Render's free database expires after 30 days
+unless upgraded.
+
+## 3. Any other host
 
 Any host that runs a Dockerfile and offers PostgreSQL works (for example
 Render, Railway or Fly.io). The steps are the same everywhere; the exact
@@ -37,6 +57,8 @@ buttons differ:
 | `AI_DAILY_REQUEST_CAP` | Hard daily limit on model requests (default 400) |
 | `AI_TALK_PER_MINUTE` | Visitor conversations voiced by the model per minute (default 12) |
 | `AI_LIFE_DECISIONS_PER_HOUR` | Agents' evening decisions made by the model per hour (default 20) |
+| `AUTOSAVE_MINUTES` / `RESUME_LATEST_SAVE` | Save every N minutes and on shutdown / continue the latest save on start (recommended: `10` / `true`) |
+| `AI_MODEL_LIGHT` | Optional cheaper model for routine calls |
 | `PORT` | Most hosts set this for you; the server listens on it |
 
 4. Use `/api/health` as the health check path.
