@@ -6,6 +6,7 @@ import { run } from '../../sim/commands';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { PanelHeader } from '../hud/Feeds';
+import { AdminKey } from '../hud/Panels';
 import { Icon } from '../ui/icons';
 import { focusBuilding, focusCitizen } from './actions';
 
@@ -220,6 +221,7 @@ export function JarvisConsole() {
           <small>{ai?.detail}</small>
         </div>
       </div>
+      <AdminKey />
       <form
         className="cmd"
         onSubmit={(e) => {
