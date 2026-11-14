@@ -415,7 +415,7 @@ describe('hosted towns: admin key and web client', () => {
     const dataDir = mkdtempSync(path.join(tmpdir(), 'morphis-host-'));
     const webDir = mkdtempSync(path.join(tmpdir(), 'morphis-web-'));
     writeFileSync(path.join(webDir, 'index.html'), '<!doctype html><title>Morphis</title>');
-    const ctx = await buildServer(loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '60', AI_PROVIDER: 'none', ADMIN_TOKEN: 'secret-key-123', WEB_DIST: webDir }));
+    const ctx = await buildServer(loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '60', AI_PROVIDER: 'none', ADMIN_TOKEN: 'secret-key-123', OPEN_TOWN: 'false', WEB_DIST: webDir }));
     const speed = { type: 'sim.setSpeed', speed: 5 };
     expect((await ctx.app.inject({ method: 'POST', url: '/api/commands', payload: speed })).statusCode).toBe(403);
     expect((await ctx.app.inject({ method: 'POST', url: '/api/commands', payload: speed, headers: { 'x-admin-token': 'secret-key-123' } })).statusCode).toBe(200);
@@ -490,7 +490,7 @@ describe('visitor presence', () => {
 describe('outside agents (bring your own agent)', () => {
   it('apply -> host approves -> agent moves in and answers its own evening decision', async () => {
     const dataDir = mkdtempSync(path.join(tmpdir(), 'morphis-outside-'));
-    const ctx = await buildServer(loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '200', AI_PROVIDER: 'none', ADMIN_TOKEN: 'host-key-12345', WEB_DIST: '' }));
+    const ctx = await buildServer(loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '200', AI_PROVIDER: 'none', ADMIN_TOKEN: 'host-key-12345', OPEN_TOWN: 'false', WEB_DIST: '' }));
     const apply = await ctx.app.inject({
       method: 'POST',
       url: '/api/external-agents/apply',

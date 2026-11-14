@@ -53,7 +53,8 @@ buttons differ:
 | `DATABASE_URL` | The PostgreSQL connection URL |
 | `AI_API_KEY` | Your model key (NVIDIA NIM, OpenAI-compatible or Anthropic) |
 | `AI_PROVIDER` / `AI_BASE_URL` / `AI_MODEL` | Defaults use NVIDIA NIM with Nemotron; see the README table for others |
-| `ADMIN_TOKEN` | A long random password. **Set this for any public town** (see below) |
+| `ADMIN_TOKEN` | A long random password; only used with `OPEN_TOWN=false` |
+| `OPEN_TOWN` | `true` (default): anyone can command JARVIS and change the town. `false`: changes need the admin key |
 | `AI_DAILY_REQUEST_CAP` | Hard daily limit on model requests (default 400) |
 | `AI_TALK_PER_MINUTE` | Visitor conversations voiced by the model per minute (default 12) |
 | `AI_LIFE_DECISIONS_PER_HOUR` | Agents' evening decisions made by the model per hour (default 20) |

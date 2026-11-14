@@ -26,7 +26,7 @@ describe('Morphis MCP server for outside agents', () => {
 
   beforeAll(async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'morphis-mcp-'));
-    ctx = await buildServer(loadConfig({ DATA_DIR: dir, CITY_POPULATION: '120', AI_PROVIDER: 'none', ADMIN_TOKEN: 'test-admin-key' }), { serveWeb: false });
+    ctx = await buildServer(loadConfig({ DATA_DIR: dir, CITY_POPULATION: '120', AI_PROVIDER: 'none', ADMIN_TOKEN: 'test-admin-key', OPEN_TOWN: 'false' }), { serveWeb: false });
     await ctx.app.listen({ port: 0, host: '127.0.0.1' });
     const port = (ctx.app.server.address() as { port: number }).port;
     credFile = path.join(dir, 'cred.json');
