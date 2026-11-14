@@ -114,7 +114,7 @@ function SoundSettingsBlock() {
   );
 }
 
-function AdminKey() {
+export function AdminKey() {
   const mode = useSim((s) => s.mode);
   const access = useSim((s) => s.access);
   const [key, setKey] = useState('');
