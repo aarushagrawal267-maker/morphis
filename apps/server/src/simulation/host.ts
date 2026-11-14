@@ -121,14 +121,19 @@ export class SimulationHost {
   }
 
   /** Hosted towns: control commands need the admin key; visitors can walk, wave and talk. */
+  /** The admin key in force: none when the town is open to everyone (OPEN_TOWN=true). */
+  private get adminKey(): string | undefined {
+    return this.cfg.OPEN_TOWN === 'true' ? undefined : this.cfg.ADMIN_TOKEN;
+  }
+
   canRun(cmd: SimCommand, token: string | undefined): boolean {
-    const key = this.cfg.ADMIN_TOKEN;
+    const key = this.adminKey;
     if (!key || PUBLIC_COMMANDS.includes(cmd.type)) return true;
     return this.isAdmin(token);
   }
 
   isAdmin(token: string | undefined): boolean {
-    const key = this.cfg.ADMIN_TOKEN;
+    const key = this.adminKey;
     if (!key) return true;
     if (!token) return false;
     const a = Buffer.from(token);
@@ -137,7 +142,7 @@ export class SimulationHost {
   }
 
   get locked(): boolean {
-    return !!this.cfg.ADMIN_TOKEN;
+    return !!this.adminKey;
   }
 
   async command(cmd: SimCommand): Promise<CommandReply> {

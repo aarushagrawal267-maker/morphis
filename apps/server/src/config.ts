@@ -43,6 +43,8 @@ const schema = z.object({
   WEB_DIST: z.string().default('../web/dist'),
   /** When set, only connections with this key can change the town (speed, weather, saves, JARVIS). Visitors can still walk, wave and talk. */
   ADMIN_TOKEN: z.string().min(8).optional(),
+  /** Open town: everyone can command JARVIS and change the town, even when ADMIN_TOKEN is set. Set to false to require the admin key. */
+  OPEN_TOWN: z.enum(['true', 'false']).default('true'),
 });
 
 export type ServerConfig = z.infer<typeof schema>;
