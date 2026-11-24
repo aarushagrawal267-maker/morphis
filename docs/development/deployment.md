@@ -85,3 +85,20 @@ spend your AI quota, so only leave it unset for private use.
 Every conversation and agent decision voiced by the model is one request. The
 caps above keep usage bounded; when they are reached, the simulation answers
 instead and says so. Check `/api/ai/status` for today's request count.
+
+## Server-free demo on GitHub Pages
+
+For a free public demo without a server, database or hosting account, publish
+the static build: the whole town runs in each visitor's browser (local mode),
+cities are saved in that browser, and the AI workforce is simulated and
+labelled as such.
+
+1. Push the repository to GitHub (it must be public for free Pages).
+2. Open Settings → Pages and set **Source** to **GitHub Actions**.
+3. Open the Actions tab, pick **Deploy demo to GitHub Pages**, click
+   **Run workflow** and choose the default branch.
+4. When it finishes, the demo is at `https://<owner>.github.io/<repo>/`.
+
+To try the same build locally: `npm run build:static`, then serve
+`apps/web/dist-static` with any static file server (for example
+`npx vite preview --outDir apps/web/dist-static`).

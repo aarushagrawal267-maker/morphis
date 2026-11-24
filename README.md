@@ -52,6 +52,10 @@ docker compose --profile app up --build
 
 To put it on a host with PostgreSQL and your AI key, and to lock town controls behind an admin key, see [docs/development/deployment.md](docs/development/deployment.md).
 
+**Free public demo on GitHub Pages (no server, no account besides GitHub).** `npm run build:static` makes a server-free build in which the whole town runs in the visitor's browser (local mode, saves in IndexedDB, AI simulated and labelled). The included workflow `.github/workflows/pages.yml` publishes it: in the repository open Settings → Pages, set Source to "GitHub Actions", then run the "Deploy demo to GitHub Pages" workflow from the Actions tab (it also runs on every push to the default branch). The demo appears at `https://<owner>.github.io/morphis/`.
+
+**Continuous integration.** `.github/workflows/ci.yml` runs typecheck, lint, the Vitest suite (including the PostgreSQL round-trip against a Postgres service) and the production build on every push; the Playwright suite runs on pull requests and on demand.
+
 ## Real AI agents (optional)
 
 The server talks to any OpenAI-compatible endpoint or to Anthropic. API keys stay on the server and never reach the browser.
@@ -159,7 +163,7 @@ docs              architecture, systems and development guides
 | `npm run build` | Production build of the web client |
 | `npm run build:static` | Static, server-free build (local mode only, relative paths) into `apps/web/dist-static` |
 
-All of `npm run typecheck`, `npm run lint`, `npm test` and `npm run test:e2e` run from a clean clone (`typecheck` generates the Prisma client first).
+All of `npm run typecheck`, `npm run lint`, `npm test` and `npm run test:e2e` run from a clean clone (`typecheck` generates the Prisma client first). Set `E2E_PORT` to run the browser tests on a port other than 5173.
 
 ## Limitations
 
