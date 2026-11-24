@@ -328,3 +328,27 @@ test('clicking the island from above drops the visitor in at that spot; they can
   const r = await page.evaluate(() => { const g = (window as any).__morphis.guestPose; return Math.hypot(g.x, g.z); });
   expect(r).toBeLessThan(175);
 });
+
+test('districts menu opens on screen and focuses a district, on desktop and on a phone', async ({ page }) => {
+  for (const viewport of [{ width: 1280, height: 720 }, { width: 375, height: 740 }]) {
+    await page.setViewportSize(viewport);
+    await open(page);
+    if (viewport.width === 1280) {
+      // every header control, including the honest AI badge, fits without scrolling the controls row
+      const over = await page.evaluate(() => { const c = document.querySelector('.topbar__controls')!; return c.scrollWidth - c.clientWidth; });
+      expect(over).toBeLessThanOrEqual(0);
+      await expect(page.getByTestId('ai-badge')).toBeInViewport({ ratio: 1 });
+    }
+    await page.getByTestId('tab-districts').click();
+    const menu = page.getByTestId('districts-menu');
+    await expect(menu).toBeInViewport({ ratio: 1 });
+    await menu.getByRole('button', { name: 'Finance District' }).click();
+    await expect(menu).toHaveCount(0);
+    await expect(page.getByTestId('panel-title')).toHaveText('FINANCE DISTRICT');
+    // tapping elsewhere closes an open menu
+    await page.getByTestId('tab-districts').click();
+    await expect(menu).toBeVisible();
+    await page.getByTestId('city-info').click({ position: { x: 12, y: 12 } });
+    await expect(menu).toHaveCount(0);
+  }
+});

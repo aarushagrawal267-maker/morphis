@@ -1,5 +1,5 @@
 /** Top header, navigation tabs and the city information HUD. */
-import { useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { sound } from '../../audio/engine';
 import { CITY_NAME, CITY_TAGLINE, SIM_SPEEDS, WEEKDAYS, dayOf, formatClock, formatCredits, weekdayOf } from '@morphis/shared';
 import { run } from '../../sim/commands';
@@ -117,7 +117,34 @@ export function NavBar() {
   const tab = useUI((s) => s.activeTab);
   const world = useSim((s) => s.world);
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<CSSProperties>({});
+  const districtsBtn = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!menu.current?.contains(t) && !districtsBtn.current?.contains(t)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [open]);
   if (!world) return null;
+  // The menu lives outside the navbar: the navbar scrolls horizontally on phones (and its
+  // backdrop-filter traps fixed children), which would clip a menu nested inside it.
+  // Open downwards under the button on desktop, upwards when the navbar sits at the bottom.
+  const toggleMenu = () => {
+    const r = districtsBtn.current?.getBoundingClientRect();
+    if (r && !open) {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const right = Math.min(Math.max(12, vw - r.right), vw - 242);
+      const up = r.top > vh / 2;
+      const maxHeight = Math.max(160, Math.min(vh * 0.6, (up ? r.top : vh - r.bottom) - 18));
+      setMenuPos(up ? { bottom: vh - r.top + 6, right, maxHeight } : { top: r.bottom + 6, right, maxHeight });
+    }
+    setOpen((o) => !o);
+  };
   const go = (id: string) => {
     const ui = useUI.getState();
     ui.setTab(id);
@@ -151,35 +178,35 @@ export function NavBar() {
     }
   };
   return (
-    <nav className="navbar glass" data-testid="navbar">
-      {TABS.map((t) => (
-        <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => go(t.id)} data-testid={`tab-${t.id}`}>
-          {t.label}
-        </button>
-      ))}
-      <div className="nav-dropdown">
-        <button className={tab === 'districts' ? 'on' : ''} onClick={() => setOpen((o) => !o)} data-testid="tab-districts">
+    <>
+      <nav className="navbar glass" data-testid="navbar">
+        {TABS.map((t) => (
+          <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => go(t.id)} data-testid={`tab-${t.id}`}>
+            {t.label}
+          </button>
+        ))}
+        <button ref={districtsBtn} className={tab === 'districts' ? 'on' : ''} onClick={toggleMenu} aria-expanded={open} data-testid="tab-districts">
           DISTRICTS ▾
         </button>
-        {open && (
-          <div className="dropdown glass">
-            {world.districts.map((d) => (
-              <button
-                key={d.id}
-                onClick={() => {
-                  useUI.getState().setTab('districts');
-                  setOpen(false);
-                  focusDistrict(d);
-                }}
-              >
-                <span className="dot" style={{ background: d.color }} />
-                {d.name}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </nav>
+      </nav>
+      {open && (
+        <div ref={menu} className="dropdown glass" style={menuPos} data-testid="districts-menu">
+          {world.districts.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => {
+                useUI.getState().setTab('districts');
+                setOpen(false);
+                focusDistrict(d);
+              }}
+            >
+              <span className="dot" style={{ background: d.color }} />
+              {d.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
