@@ -148,6 +148,8 @@ test('debug overlay shows engine metrics', async ({ page }) => {
 });
 
 test('welcome screen leads into walk-in mode; the guest walks, waves and keeps a journal', async ({ page }) => {
+  // many steps under software WebGL: on a slow machine the whole flow can exceed the default 2 minutes
+  test.slow();
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await open(page, '&hour=8', true);
@@ -251,6 +253,8 @@ test('the skyrail runs trains between stations', async ({ page }) => {
 });
 
 test('the town floats on an island; you can walk into a building and talk to people', async ({ page }) => {
+  // many steps under software WebGL: on a slow machine the whole flow can exceed the default 2 minutes
+  test.slow();
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await open(page, '&hour=12');
