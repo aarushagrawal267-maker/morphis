@@ -122,6 +122,19 @@ Not included: Blender/GLB assets (all geometry is procedural; drop GLB files int
 - City events with beacons, drifting clouds that darken in rain, lantern-lit names.
 - Shortcuts: J journal, R rise, M mute.
 
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Language | TypeScript (strict) across every package, npm workspaces monorepo |
+| 3D client | React 19, Three.js, React Three Fiber, drei, postprocessing (bloom), Zustand, Vite |
+| Simulation | Custom deterministic engine (`packages/sim`): seeded world generation, A* navigation, IDM car-following, Markov weather, economy; runs in a Web Worker or on the server |
+| Server | Node.js 20+, Fastify, Socket.IO, zod validation |
+| Persistence | PostgreSQL via Prisma, with JSON-file fallback; IndexedDB in local mode |
+| AI layer | Any OpenAI-compatible endpoint (NVIDIA NIM, OpenRouter, OpenAI, Ollama, vLLM) or Anthropic, with rate limits and a daily cap |
+| Sound | Web Audio API, synthesised live (no audio files) |
+| Testing & tooling | Vitest, Playwright (SwiftShader WebGL), ESLint, Prettier, Docker, Render blueprint |
+
 ## Project layout
 
 ```
@@ -145,3 +158,19 @@ docs              architecture, systems and development guides
 | `npm run typecheck` / `npm run lint` | Type-check / lint all packages |
 | `npm run build` | Production build of the web client |
 | `npm run build:static` | Static, server-free build (local mode only, relative paths) into `apps/web/dist-static` |
+
+All of `npm run typecheck`, `npm run lint`, `npm test` and `npm run test:e2e` run from a clean clone (`typecheck` generates the Prisma client first).
+
+## Limitations
+
+- **AI is optional and needs your own key.** Without a provider every agent decision, conversation and JARVIS deliverable is produced by the simulation and labelled `[SIMULATED]`. With a provider, quality and speed depend on the model and its rate limits.
+- **Money is fictional.** All credits (§) are simulated; nothing connects to real payments.
+- **Agent tools are restricted on purpose.** Agents can only read and write their project workspace. Web and code-execution tools are defined but stay disabled until a sandbox exists.
+- **Graphics are procedural.** There are no artist-made 3D models (GLB); everything is generated in code. Low-end or GPU-less machines should use `?quality=low`.
+- **One server process.** The authoritative simulation runs in a single Node process; scaling to many concurrent towns or worker processes (Redis) is not implemented.
+- **Local mode is per browser.** Cities saved in local mode live in that browser's IndexedDB; use server mode (or journal sync codes) to share across devices.
+- **Hosting is not automatic.** A public URL needs a hosting account (for example the included Render blueprint) and, for real AI agents, an API key.
+
+## License
+
+MORPHIS is released under the [MIT License](LICENSE). The specialist agent personas in `vendor/agency-agents` come from [agency-agents](https://github.com/msitarzewski/agency-agents) and keep their own MIT License.
