@@ -15,6 +15,7 @@
     "build": "npm run build --workspace @morphis/web",
     "build:static": "npm run build:static --workspace @morphis/web",
     "start:server": "npm run start --workspace @morphis/server",
+    "pretypecheck": "npm run db:generate --silent",
     "typecheck": "tsc -p packages/shared && tsc -p packages/sim && tsc -p apps/server && tsc -p apps/web",
     "test": "vitest run",
     "test:watch": "vitest",
