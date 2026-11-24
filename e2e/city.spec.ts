@@ -165,13 +165,21 @@ test('welcome screen leads into walk-in mode; the guest walks, waves and keeps a
   // stand next to someone walking and wave: the simulation makes them wave back
   // let the start-up fast-forward to 08:00 finish, so what is on screen matches the simulation
   const clock = () => page.evaluate(() => (window as any).__morphis.sim.getState().state.clock.time as number);
+  // Measured as sim-seconds per real second, so a slow software-GL machine (where each
+  // page.evaluate can take seconds) is not mistaken for a fast-forward. 1x speed is 60.
   await expect
     .poll(async () => {
+      const t0 = Date.now();
       const a = await clock();
       await page.waitForTimeout(500);
-      return (await clock()) - a;
+      const b = await clock();
+      return (b - a) / Math.max(0.5, (Date.now() - t0) / 1000);
     }, { timeout: 20_000 })
     .toBeLessThan(200);
+  // freeze the town while the guest steps next to a walker: at 1x a pedestrian covers tens of
+  // metres per real second, so on a slow machine they would be gone before the wave lands
+  await page.evaluate(() => (window as any).__morphis.simClient.command({ type: 'sim.setPaused', paused: true }));
+  await page.waitForTimeout(1000);
   // someone on foot in the street (not riding a bus or the Skyrail, who cannot wave back)
   const walker = await page.evaluate(() => {
     const m = (window as any).__morphis;
@@ -185,6 +193,7 @@ test('welcome screen leads into walk-in mode; the guest walks, waves and keeps a
   await page.getByTestId('btn-wave').click();
   await expect.poll(() => page.evaluate(() => (window as any).__morphis.journal.getState().totals.waves)).toBe(1);
   await expect.poll(() => page.evaluate(() => { const t = (window as any).__morphis.journal.getState().totals; return t.agentsMet + t.residentsMet; }), { timeout: 15_000 }).toBeGreaterThan(0);
+  await page.evaluate(() => (window as any).__morphis.simClient.command({ type: 'sim.setPaused', paused: false }));
   await page.getByTestId('btn-journal').click();
   await expect(page.getByTestId('journal-panel')).toContainText('TODAY');
   await expect(page.getByTestId('goals').locator('li')).toHaveCount(3);
