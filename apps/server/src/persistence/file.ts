@@ -43,7 +43,16 @@ export class FilePersistence implements PersistenceAdapter {
   }
 
   async load(id: string): Promise<SaveData> {
-    const raw = JSON.parse(await readFile(this.file(id), 'utf8')) as { data: SaveData };
+    let text: string;
+    try {
+      text = await readFile(this.file(id), 'utf8');
+    } catch (e) {
+      // same message as the PostgreSQL adapter, and no server paths in the reply to the client
+      if ((e as NodeJS.ErrnoException).code === 'ENOENT') throw new Error('save not found');
+      throw e;
+    }
+    const raw = JSON.parse(text) as { data?: SaveData };
+    if (!raw.data) throw new Error('save file is damaged');
     return raw.data;
   }
 

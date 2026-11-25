@@ -109,7 +109,10 @@ async function handle(cmd: SimCommand): Promise<unknown> {
 self.onmessage = async (ev: MessageEvent) => {
   const msg = ev.data as { t: 'start'; seed?: number; population?: number; hour?: number } | { t: 'command'; id: number; cmd: unknown };
   if (msg.t === 'start') {
-    const created = CitySimulation.create({ seed: msg.seed, population: msg.population });
+    // ?seed= / ?population= come straight from the URL: keep them to what the command schema allows
+    const seed = Number.isInteger(msg.seed) && msg.seed! >= 0 && msg.seed! < 2 ** 31 ? msg.seed : undefined;
+    const population = Number.isInteger(msg.population) && msg.population! >= 25 && msg.population! <= 5000 ? msg.population : undefined;
+    const created = CitySimulation.create({ seed, population });
     if (msg.hour !== undefined && msg.hour >= 0 && msg.hour < 24) {
       // fast-forward to the requested starting hour (the city lives through those hours)
       const now = (created.time % 86400) / 3600;

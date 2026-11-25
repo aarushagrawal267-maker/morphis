@@ -21,6 +21,8 @@ export async function buildServer(cfg: ServerConfig, opts: { logger?: boolean; v
   const agents = new AgentController(cfg, audit);
   if (opts.verifyAi !== false && agents.provider) await agents.verify();
   const host = new SimulationHost(cfg, persistence, agents);
+  // a slow startup check that answers later may switch JARVIS between live and simulated work
+  agents.onVerified = () => host.refreshExecutor();
   if (cfg.RESUME_LATEST_SAVE === 'true') {
     try {
       const name = await host.resumeLatest();

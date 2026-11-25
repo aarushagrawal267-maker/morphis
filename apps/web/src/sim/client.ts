@@ -51,6 +51,7 @@ export class SimClient {
   private frames: BufferedFrame[] = [];
   private sample: MotionSample | null = null;
   private tmp = { x: 0, z: 0, dx: 0, dz: 0 };
+  private lastPruneTick = 0;
   private eventListeners = new Set<(events: SimEvent[]) => void>();
   lastStateAt = 0;
   eventsReceived = 0;
@@ -106,6 +107,7 @@ export class SimClient {
     this.init = p;
     this.routes.clear();
     this.frames = [];
+    this.lastPruneTick = p.state.clock.tick;
     for (const r of p.routes) this.routes.set(r.route.id, r.route);
     const nc = p.citizens.length;
     const nv = Math.max(p.vehicles.length, 256);
@@ -169,8 +171,9 @@ export class SimClient {
     }
     this.frames.push(bf);
     if (this.frames.length > 6) this.frames.shift();
-    // forget routes nobody uses any more
-    if (frame.tick % 200 === 0) {
+    // forget routes nobody uses any more (every 200+ ticks: frames skip ticks, so `tick % 200 === 0` would only hit by chance)
+    if (frame.tick - this.lastPruneTick >= 200 || frame.tick < this.lastPruneTick) {
+      this.lastPruneTick = frame.tick;
       const used = new Set<number>();
       for (const f of this.frames) {
         for (const r of f.cRoute) if (r >= 0) used.add(r);

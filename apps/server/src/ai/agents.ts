@@ -23,6 +23,11 @@ import { LlmTalker } from './talk';
 import { LlmConversations } from './conversations';
 import { Workspace } from './workspace';
 
+/** How long a JARVIS command waits for the LLM planner (the web client gives up on a command after 120 s). */
+const PLAN_DEADLINE_MS = 90_000;
+/** How long the server waits for the startup check of the AI provider before it starts anyway. */
+const VERIFY_DEADLINE_MS = 45_000;
+
 const LANDMARK_KEYS = ['hq', 'ai_lab', 'university', 'orbital', 'corporate', 'bank', 'studio', 'datacenter', 'hospital', 'market', 'station'];
 
 const planSchema = z.object({
@@ -582,33 +587,69 @@ export class AgentController {
     return this.getSim();
   }
 
-  /** One tiny request to confirm the key and endpoint really work (honest status). */
-  async verify(): Promise<void> {
+  /** Called when a startup check that outlived its deadline finally answers (the host re-picks live vs simulated work). */
+  onVerified: () => void = () => undefined;
+
+  /**
+   * One tiny request to confirm the key and endpoint really work (honest status).
+   * Waits at most `deadlineMs`, so a hanging endpoint cannot keep the server from
+   * listening (retries x AI_TIMEOUT_MS could take minutes). A check still running
+   * after that leaves the status 'unverified' and updates it when it answers.
+   */
+  async verify(deadlineMs = VERIFY_DEADLINE_MS): Promise<void> {
     if (!this.provider) return;
-    try {
-      await this.provider.complete([{ role: 'user', content: 'Reply with the single word: ready' }], { maxTokens: 16, temperature: 0 });
-      this.verified = 'ok';
-      this.info = { ...this.info, connected: true, detail: this.info.detail.replace(/^/, 'Verified. ') };
-    } catch (e) {
-      this.verified = 'failed';
-      this.lastError = e instanceof Error ? e.message : String(e);
-      this.info = { connected: false, provider: this.info.provider, detail: `AI provider configured but the test call failed: ${this.lastError.slice(0, 160)}. Falling back to simulated work.` };
-    }
+    let late = false;
+    const check = this.provider.complete([{ role: 'user', content: 'Reply with the single word: ready' }], { maxTokens: 16, temperature: 0 }).then(
+      () => {
+        this.verified = 'ok';
+        this.info = { ...this.info, connected: true, detail: this.info.detail.replace(/^/, 'Verified. ') };
+      },
+      (e: unknown) => {
+        this.verified = 'failed';
+        this.lastError = e instanceof Error ? e.message : String(e);
+        this.info = { connected: false, provider: this.info.provider, detail: `AI provider configured but the test call failed: ${this.lastError.slice(0, 160)}. Falling back to simulated work.` };
+      },
+    );
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      check,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(() => {
+          late = true;
+          resolve();
+        }, deadlineMs);
+      }),
+    ]);
+    clearTimeout(timer);
+    if (late) void check.then(() => this.onVerified());
   }
 
   get live(): boolean {
     return !!this.provider && this.verified !== 'failed';
   }
 
-  async planCommand(text: string): Promise<{ plan: ProjectPlan; note: string }> {
+  /**
+   * Plan a JARVIS command. The LLM planner gets `deadlineMs` (default 90 s, under the
+   * client's 120 s command timeout); a slower or failed plan falls back to the template
+   * planner so the commander always gets an answer instead of a client-side timeout.
+   */
+  async planCommand(text: string, deadlineMs = PLAN_DEADLINE_MS): Promise<{ plan: ProjectPlan; note: string }> {
     if (this.planner && this.live) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
       try {
-        return await this.planner.plan(text);
+        return await Promise.race([
+          this.planner.plan(text),
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`no plan within ${Math.round(deadlineMs / 1000)} s`)), deadlineMs);
+          }),
+        ]);
       } catch (e) {
         this.lastError = e instanceof Error ? e.message : String(e);
         const plan = templatePlan(text);
         plan.planner = 'template-planner (LLM plan failed)';
         return { plan, note: `LLM planning failed (${this.lastError.slice(0, 80)}); used template planner` };
+      } finally {
+        clearTimeout(timer);
       }
     }
     return { plan: templatePlan(text), note: 'template planner (no AI provider)' };

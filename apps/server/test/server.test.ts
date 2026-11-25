@@ -71,6 +71,12 @@ describe('server: websocket protocol + file persistence', () => {
     expect(init.state.clock.time).toBeGreaterThanOrEqual(t);
     expect(init.state.clock.time).toBeLessThan(t + 600);
   });
+
+  it('reports a missing save plainly, without server file paths', async () => {
+    const r = await fetch(`${url}/api/commands`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'city.load', id: 'save_doesnotexist' }) });
+    expect(r.status).toBe(422);
+    expect(((await r.json()) as { error: string }).error).toBe('save not found');
+  });
 });
 
 describe.runIf(!!process.env.TEST_DATABASE_URL)('server: PostgreSQL persistence', () => {

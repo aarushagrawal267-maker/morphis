@@ -24,7 +24,7 @@ import type {
   StaticWorld,
   Business,
 } from '@morphis/shared';
-import { BUILDING_TYPES, SIGNAL_CYCLE, SIM_SECONDS_PER_MOTION_SECOND, START_TIME, dayOf, hourOf, minuteOfDay } from '@morphis/shared';
+import { SIGNAL_CYCLE, SIM_SECONDS_PER_MOTION_SECOND, START_TIME, dayOf, hourOf, isOpenAt, minuteOfDay } from '@morphis/shared';
 import { Rng } from './core/rng';
 import { EventBus } from './events';
 import { defaultConfig, generateWorld } from './gen/world';
@@ -541,8 +541,8 @@ export class CitySimulation {
     };
   }
 
+  /** Same rule as isOpenAt, so venues open past midnight (e.g. 12:00-02:00) count as open at 01:00. */
   isBuildingOpen(b: BuildingDef): boolean {
-    const meta = BUILDING_TYPES[b.type];
-    return !meta.hours || (hourOf(this.time) >= meta.hours[0] && hourOf(this.time) < meta.hours[1]);
+    return isOpenAt(b.type, hourOf(this.time));
   }
 }

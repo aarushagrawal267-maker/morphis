@@ -44,7 +44,7 @@ export class RateLimiter {
       this.day = today;
       this.used = 0;
     }
-    if (this.used >= this.dailyCap) throw new Error(`daily AI request cap reached (${this.dailyCap})`);
+    if (this.used >= this.dailyCap) throw new AiBudgetError(`daily AI request cap reached (${this.dailyCap})`);
     this.used++;
     const gap = 60_000 / this.rpm;
     const now = Date.now();
@@ -54,6 +54,13 @@ export class RateLimiter {
   }
 }
 
+/** The daily request cap was hit: retrying cannot help until tomorrow. */
+export class AiBudgetError extends Error {}
+
+/**
+ * Retries transient failures. `fn` acquires the rate limiter itself, so every
+ * attempt (including a retry after a 429) is spaced and counted against the daily cap.
+ */
 async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
   let last: unknown;
   for (let i = 0; i < attempts; i++) {
@@ -61,7 +68,7 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
       return await fn();
     } catch (e) {
       last = e;
-      const retryable = e instanceof HttpError ? e.status === 429 || e.status >= 500 : true;
+      const retryable = e instanceof HttpError ? e.status === 429 || e.status >= 500 : !(e instanceof AiBudgetError);
       if (!retryable || i === attempts - 1) break;
       await new Promise((r) => setTimeout(r, 2000 * 2 ** i));
     }
@@ -99,8 +106,8 @@ export class OpenAICompatibleProvider implements AiProvider {
   }
 
   async complete(messages: ChatMessage[], opts: { maxTokens?: number; temperature?: number } = {}): Promise<CompletionResult> {
-    await this.limiter.acquire();
     return withRetry(async () => {
+      await this.limiter.acquire();
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), this.timeoutMs);
       try {
@@ -143,10 +150,10 @@ export class AnthropicProvider implements AiProvider {
   ) {}
 
   async complete(messages: ChatMessage[], opts: { maxTokens?: number; temperature?: number } = {}): Promise<CompletionResult> {
-    await this.limiter.acquire();
     const system = messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n');
     const rest = messages.filter((m) => m.role !== 'system');
     return withRetry(async () => {
+      await this.limiter.acquire();
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), this.timeoutMs);
       try {

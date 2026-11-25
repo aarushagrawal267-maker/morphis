@@ -81,6 +81,22 @@ describe('simulation engine', () => {
     expect(sim.state.economy.summary.history.length).toBe(before + 1);
   });
 
+  it('treats venues that close after midnight as open in the small hours', () => {
+    const s2 = CitySimulation.create({ population: 25 });
+    const venue = s2.buildingsOfType(['entertainment'])[0];
+    const shop = s2.buildingsOfType(['shop'])[0];
+    expect(venue && shop).toBeTruthy();
+    const midnight = s2.time - Math.round(hourOf(s2.time) * 3600) + 86400;
+    s2.state.clock.time = midnight + 3600; // 01:00, entertainment is open 12:00-02:00
+    expect(s2.isBuildingOpen(venue)).toBe(true);
+    expect(s2.isBuildingOpen(shop)).toBe(false);
+    s2.state.clock.time = midnight + 3 * 3600; // 03:00
+    expect(s2.isBuildingOpen(venue)).toBe(false);
+    s2.state.clock.time = midnight + 13 * 3600; // 13:00
+    expect(s2.isBuildingOpen(venue)).toBe(true);
+    expect(s2.isBuildingOpen(shop)).toBe(true);
+  });
+
   it('save -> restore produces an identical future', () => {
     const save = sim.serialize('test');
     const copy = CitySimulation.fromSave(JSON.parse(JSON.stringify(save)));

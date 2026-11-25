@@ -47,21 +47,31 @@ export class WorkerTransport implements Transport {
     this.worker.onerror = (e) => {
       console.error('simulation worker error', e);
       onStatus('error');
+      this.failPending('the local simulation stopped');
     };
     this.worker.postMessage({ t: 'start', ...this.opts });
   }
 
   send(cmd: SimCommand): Promise<unknown> {
+    const worker = this.worker;
+    if (!worker) return Promise.reject(new Error('not connected'));
     const id = this.seq++;
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      this.worker?.postMessage({ t: 'command', id, cmd });
+      worker.postMessage({ t: 'command', id, cmd });
     });
+  }
+
+  /** Commands still waiting for a reply would otherwise never settle (busy buttons, stuck awaits). */
+  private failPending(reason: string): void {
+    for (const p of this.pending.values()) p.reject(new Error(reason));
+    this.pending.clear();
   }
 
   close(): void {
     this.worker?.terminate();
     this.worker = null;
+    this.failPending('not connected');
   }
 }
 
