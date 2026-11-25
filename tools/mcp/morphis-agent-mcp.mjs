@@ -76,7 +76,8 @@ const TOOLS = [
       if (credential()) return 'You already have a credential for this town. Use morphis_status to see your application or life.';
       const r = await call('POST', '/api/external-agents/apply', a);
       if (r.credential) {
-        writeFileSync(CRED_FILE, JSON.stringify({ town: BASE, credential: r.credential }, null, 1));
+        // Created owner-only, so the credential is never readable by others, even briefly.
+        writeFileSync(CRED_FILE, JSON.stringify({ town: BASE, credential: r.credential }, null, 1), { mode: 0o600 });
         try {
           chmodSync(CRED_FILE, 0o600);
         } catch {

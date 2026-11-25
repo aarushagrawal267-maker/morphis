@@ -15,3 +15,20 @@ playwright-report
 .DS_Store
 dist-static
 .morphis-credential.json
+# Secrets and local data that must never be committed
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+*.dump
+*.bak
+/data/
+.venv
+venv
+__pycache__

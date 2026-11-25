@@ -8,7 +8,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: morphis
       POSTGRES_DB: morphis
-    ports: ['5432:5432']
+    # Published on this machine only: the password above is a dev default, and the
+    # app container reaches the database over the compose network, not this port.
+    ports: ['127.0.0.1:5432:5432']
     volumes: ['morphis-pg:/var/lib/postgresql/data']
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
@@ -35,7 +37,7 @@ services:
   redis:
     image: redis:7-alpine
     profiles: ['queues']
-    ports: ['6379:6379']
+    ports: ['127.0.0.1:6379:6379'] # no password: keep it off the network
 volumes:
   morphis-pg:
   morphis-data:
