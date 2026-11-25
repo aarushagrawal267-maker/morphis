@@ -1,5 +1,5 @@
 import { createServer, type Server as HttpServer } from 'node:http';
-import { mkdtempSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -76,6 +76,14 @@ describe('server: websocket protocol + file persistence', () => {
     const r = await fetch(`${url}/api/commands`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'city.load', id: 'save_doesnotexist' }) });
     expect(r.status).toBe(422);
     expect(((await r.json()) as { error: string }).error).toBe('save not found');
+  });
+
+  it('reports a truncated save file as damaged', async () => {
+    mkdirSync(path.join(dataDir, 'saves'), { recursive: true });
+    writeFileSync(path.join(dataDir, 'saves', 'save_truncated.json'), '{"summary":{"id":"save_truncated"},"data":{"na');
+    const r = await fetch(`${url}/api/commands`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'city.load', id: 'save_truncated' }) });
+    expect(r.status).toBe(422);
+    expect(((await r.json()) as { error: string }).error).toBe('save file is damaged');
   });
 });
 

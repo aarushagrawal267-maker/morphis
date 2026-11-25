@@ -173,7 +173,7 @@ All of `npm run typecheck`, `npm run lint`, `npm test` and `npm run test:e2e` ru
 - **Graphics are procedural.** There are no artist-made 3D models (GLB); everything is generated in code. Low-end or GPU-less machines should use `?quality=low`.
 - **One server process.** The authoritative simulation runs in a single Node process; scaling to many concurrent towns or worker processes (Redis) is not implemented.
 - **Local mode is per browser.** Cities saved in local mode live in that browser's IndexedDB; use server mode (or journal sync codes) to share across devices.
-- **Hosting is not automatic.** A public URL needs a hosting account (for example the included Render blueprint) and, for real AI agents, an API key.
+- **Server hosting is not automatic.** The server-free demo can go on GitHub Pages for free, but the full version (shared town, PostgreSQL, real AI agents) needs a hosting account (for example the included Render blueprint), plus an API key for the AI agents.
 
 ## License
 

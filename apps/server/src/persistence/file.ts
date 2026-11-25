@@ -51,8 +51,14 @@ export class FilePersistence implements PersistenceAdapter {
       if ((e as NodeJS.ErrnoException).code === 'ENOENT') throw new Error('save not found');
       throw e;
     }
-    const raw = JSON.parse(text) as { data?: SaveData };
-    if (!raw.data) throw new Error('save file is damaged');
+    // a save cut short (e.g. the process stopped mid-write) is as damaged as one without data
+    let raw: { data?: SaveData } | null;
+    try {
+      raw = JSON.parse(text) as { data?: SaveData } | null;
+    } catch {
+      raw = null;
+    }
+    if (!raw?.data) throw new Error('save file is damaged');
     return raw.data;
   }
 
