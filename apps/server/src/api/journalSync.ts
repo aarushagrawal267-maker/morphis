@@ -18,11 +18,25 @@ function newCode(): string {
   return `MORPH-${part(0)}-${part(4)}-${part(8)}`;
 }
 
+/** Saves per address per hour: plenty for a visitor, but stops one address filling the disk. */
+export const JOURNAL_SAVES_PER_HOUR = 60;
+
 export function registerJournalSync(app: FastifyInstance, dataDir: string): void {
   const dir = path.resolve(dataDir, 'journals');
   const file = (code: string) => path.join(dir, `${createHash('sha256').update(code).digest('hex')}.json`);
+  const recent = new Map<string, number[]>();
+  const throttled = (ip: string): boolean => {
+    const now = Date.now();
+    if (recent.size > 10_000) for (const [k, v] of recent) if (!v.some((t) => now - t < 3_600_000)) recent.delete(k);
+    const list = (recent.get(ip) ?? []).filter((t) => now - t < 3_600_000);
+    if (list.length >= JOURNAL_SAVES_PER_HOUR) return true;
+    list.push(now);
+    recent.set(ip, list);
+    return false;
+  };
 
   app.post('/api/journal', { bodyLimit: 64 * 1024 }, async (req, reply) => {
+    if (throttled(req.ip)) return reply.code(429).send({ error: 'too many journal saves from this address; try again later' });
     const body = z.object({ code: codeSchema.optional(), journal: z.record(z.string(), z.unknown()) }).safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: 'journal object required' });
     const code = body.data.code ?? newCode();

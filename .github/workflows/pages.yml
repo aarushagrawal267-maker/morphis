@@ -11,9 +11,11 @@ permissions:
   pages: write
   id-token: write
 
+# One group per branch: pushes to other branches (whose deploy job is skipped)
+# must not cancel a deploy that is running for the default branch.
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   deploy:

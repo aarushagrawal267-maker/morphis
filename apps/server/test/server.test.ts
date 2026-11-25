@@ -1,5 +1,5 @@
 import { createServer, type Server as HttpServer } from 'node:http';
-import { mkdirSync, mkdtempSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -7,6 +7,7 @@ import { io as connect, type Socket } from 'socket.io-client';
 import { AGENCY_AGENTS, SOCKET_EVENTS, type InitPayload, type MotionFrame } from '@morphis/shared';
 import { buildServer } from '../src/app';
 import { loadConfig } from '../src/config';
+import { JOURNAL_SAVES_PER_HOUR } from '../src/api/journalSync';
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -543,6 +544,17 @@ describe('journal sync codes', () => {
     expect(back.json().journal.totals.waves).toBe(3);
     expect((await ctx.app.inject({ method: 'GET', url: '/api/journal/MORPH-AAAA-AAAA-AAAA' })).statusCode).toBe(404);
     expect((await ctx.app.inject({ method: 'GET', url: '/api/journal/../../etc' })).statusCode).not.toBe(200);
+    await ctx.app.close();
+  });
+
+  it('limits journal saves per address so one visitor cannot fill the disk', async () => {
+    const dataDir = mkdtempSync(path.join(tmpdir(), 'morphis-journal-'));
+    const ctx = await buildServer(loadConfig({ DATA_DIR: dataDir, CITY_POPULATION: '60', AI_PROVIDER: 'none', WEB_DIST: '' }));
+    const post = (ip: string) => ctx.app.inject({ method: 'POST', url: '/api/journal', remoteAddress: ip, payload: { journal: { totals: { waves: 1 } } } });
+    for (let i = 0; i < JOURNAL_SAVES_PER_HOUR; i++) expect((await post('10.0.0.1')).statusCode).toBe(200);
+    expect((await post('10.0.0.1')).statusCode).toBe(429);
+    expect((await post('10.0.0.2')).statusCode).toBe(200);
+    expect(readdirSync(path.join(dataDir, 'journals'))).toHaveLength(JOURNAL_SAVES_PER_HOUR + 1);
     await ctx.app.close();
   });
 });
