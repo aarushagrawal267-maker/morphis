@@ -2,6 +2,8 @@
 
 **Emergent AI city • Year 2126 • The Complex**
 
+**Live demo:** https://huggingface.co/spaces/agrawalaarush08/morphis (direct link: https://agrawalaarush08-morphis.static.hf.space). The server-free build: the whole town runs in your browser, with AI decisions simulated and labelled. It needs WebGL.
+
 MORPHIS is a browser-based 3D simulation of a small neon town built on a floating island, above a sea of clouds. A deterministic simulation engine runs the town: streets, traffic signals, low-rise houses, shops and cafés, about 400 citizens with homes, jobs and daily schedules, cars, taxis, buses, delivery vans and an elevated Skyrail, weather, a day/night cycle, an economy and city events. Visitor traffic arrives and leaves through sky-lift gates at the island's edge. A Three.js renderer shows that state as it happens.
 
 **123 agents live in the city.** Twenty-five are the JARVIS workforce, who run projects. Seventy-three are specialists from [The Agency](https://github.com/msitarzewski/agency-agents) (engineers, designers, marketers, analysts, security experts and more) whom JARVIS hires for tasks. Twenty-five are independent agents: a barista who wants her own café, a painter, a robotics student, an investor and others. Each agent plans lunch in the morning and the evening around midday, and agents who know each other talk when they meet. Every evening each agent makes one life decision: open a venture in a vacant unit, put credits into someone else's venture, help fit one out, enrol in classes, change job, or rest. Ventures only open after real agent-hours of fit-out work on site, and classes only count while the agent is actually at the university. Every deed is logged on the agent's card.
@@ -52,7 +54,10 @@ docker compose --profile app up --build
 
 To put it on a host with PostgreSQL and your AI key, and to lock town controls behind an admin key, see [docs/development/deployment.md](docs/development/deployment.md).
 
-**Free public demo on GitHub Pages (no server, no account besides GitHub).** `npm run build:static` makes a server-free build in which the whole town runs in the visitor's browser (local mode, saves in IndexedDB, AI simulated and labelled). The included workflow `.github/workflows/pages.yml` publishes it: in the repository open Settings → Pages, set Source to "GitHub Actions", then run the "Deploy demo to GitHub Pages" workflow from the Actions tab (it also runs on every push to the default branch). The demo appears at `https://<owner>.github.io/morphis/`.
+**Free public demo (no server).** `npm run build:static` makes a server-free build in `apps/web/dist-static/` in which the whole town runs in the visitor's browser (local mode, saves in IndexedDB, AI simulated and labelled). It uses relative paths, so any static host can serve it from any folder.
+
+- **Hugging Face Spaces (where the live demo above runs):** a public Space with `sdk: static` and the contents of `dist-static/` plus a `README.md` that holds the Space settings.
+- **GitHub Pages:** the included workflow `.github/workflows/pages.yml` publishes the same build. Pages is not switched on for this repository yet, so `https://<owner>.github.io/morphis/` currently answers 404. To use it, open Settings → Pages, set Source to "GitHub Actions", then run the "Deploy demo to GitHub Pages" workflow from the Actions tab on `main` (it also runs on every push to the default branch).
 
 **Continuous integration.** `.github/workflows/ci.yml` runs typecheck, lint, the Vitest suite (including the PostgreSQL round-trip against a Postgres service) and the production build on every push; the Playwright suite runs on pull requests and on demand.
 
@@ -173,7 +178,7 @@ All of `npm run typecheck`, `npm run lint`, `npm test` and `npm run test:e2e` ru
 - **Graphics are procedural.** There are no artist-made 3D models (GLB); everything is generated in code. Low-end or GPU-less machines should use `?quality=low`.
 - **One server process.** The authoritative simulation runs in a single Node process; scaling to many concurrent towns or worker processes (Redis) is not implemented.
 - **Local mode is per browser.** Cities saved in local mode live in that browser's IndexedDB; use server mode (or journal sync codes) to share across devices.
-- **Server hosting is not automatic.** The server-free demo can go on GitHub Pages for free, but the full version (shared town, PostgreSQL, real AI agents) needs a hosting account (for example the included Render blueprint), plus an API key for the AI agents.
+- **Server hosting is not automatic.** The server-free demo runs for free on a static host (Hugging Face Spaces or GitHub Pages), but the full version (shared town, PostgreSQL, real AI agents) needs a hosting account (for example the included Render blueprint), plus an API key for the AI agents.
 
 ## License
 

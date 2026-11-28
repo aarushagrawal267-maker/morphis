@@ -99,6 +99,16 @@ labelled as such.
    **Run workflow** and choose the default branch.
 4. When it finishes, the demo is at `https://<owner>.github.io/<repo>/`.
 
+### On Hugging Face Spaces
+
+The live demo linked from the README is this build on a free static Space
+(`agrawalaarush08/morphis`). To publish or update it: run `npm run build:static`,
+copy the contents of `apps/web/dist-static/` into a folder, add a `README.md`
+whose front matter sets `sdk: static` and `app_file: index.html`, and upload
+the folder to the Space (web upload, `git push` to the Space repository, or
+`huggingface_hub`'s `upload_folder`). The build uses relative paths, so it
+works from the Space root.
+
 To try the same build locally: `npm run build:static`, then serve
 `apps/web/dist-static` with any static file server (for example
 `npx vite preview --outDir apps/web/dist-static`).
