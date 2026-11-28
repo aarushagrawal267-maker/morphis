@@ -120,6 +120,8 @@ h4 { margin: 20px 0 8px; font-size: 12px; color: var(--muted); font-weight: 500;
 .bar__track { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
 .bar__track span { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
 .bar__track.small { height: 4px; margin-top: 8px; }
+.bar__track--need span { background: var(--text-2); }
+.bar__track--need.low span { background: var(--warn); }
 
 /* stream */
 .stream { margin-top: auto; flex: 0 1 auto; min-height: 44px; display: flex; flex-direction: column; padding: 12px; }

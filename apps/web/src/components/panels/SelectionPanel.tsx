@@ -36,15 +36,16 @@ function Row({ k, v, testid }: { k: string; v: React.ReactNode; testid?: string 
   );
 }
 
-function Bar({ label, value, color }: { label: string; value: number; color: string }) {
+/** A citizen need: a flat neutral fill that turns amber once it runs low. */
+function Bar({ label, value }: { label: string; value: number }) {
   return (
     <div className="bar">
       <div className="bar__label">
         <span>{label}</span>
         <b>{Math.round(value * 100)}%</b>
       </div>
-      <div className="bar__track">
-        <span style={{ width: `${Math.round(value * 100)}%`, background: color }} />
+      <div className={`bar__track bar__track--need ${value < 0.25 ? 'low' : ''}`}>
+        <span style={{ width: `${Math.round(value * 100)}%` }} />
       </div>
     </div>
   );
@@ -147,9 +148,9 @@ function CitizenPanel({ id }: { id: string }) {
         <Row k="Money" v={<span title="Simulated credits">{formatCredits(d?.money ?? 0)}</span>} />
         {p.core && <Row k="AI agent" v={p.agentId ? p.agentId : ai?.connected ? 'Available' : 'Not connected (simulated)'} />}
       </div>
-      <Bar label="Energy" value={d?.energy ?? 0} color="linear-gradient(90deg,#22d3ee,#38bdf8)" />
-      <Bar label="Happiness" value={d?.happiness ?? 0} color="linear-gradient(90deg,#a78bfa,#e879f9)" />
-      <Bar label="Satiety" value={d?.satiety ?? 0} color="linear-gradient(90deg,#fbbf24,#fb923c)" />
+      <Bar label="Energy" value={d?.energy ?? 0} />
+      <Bar label="Happiness" value={d?.happiness ?? 0} />
+      <Bar label="Satiety" value={d?.satiety ?? 0} />
       <div className="actions actions--row">
         <button onClick={() => followCitizen(p.id)} data-testid="btn-follow">
           <Icon name="walk" /> Follow

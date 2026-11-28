@@ -4,7 +4,6 @@ import { CORE_ROLES, formatClock, formatCredits } from '@morphis/shared';
 import { useSim } from '../../state/simStore';
 import { useUI, type Highlight } from '../../state/uiStore';
 import { Icon } from '../ui/icons';
-import { SourceTag } from '../ui/SourceTag';
 import { focusBuilding, focusCitizen, focusPoint } from '../panels/actions';
 
 export function AgentStream() {
@@ -37,7 +36,6 @@ export function AgentStream() {
                 <div>
                   <div className="who">
                     {p?.name} <em>{p?.role ? CORE_ROLES[p.role].label : ''}</em>
-                    <SourceTag by="sim" />
                     <time>{formatClock(a.time)}</time>
                   </div>
                   <div className="what">“{a.text}”</div>
