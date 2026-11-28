@@ -8,6 +8,7 @@ const P: Record<string, ReactNode> = {
       <path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3" />
     </>
   ),
+  chevron: <path d="M6 9l6 6 6-6" />,
   tower: <path d="M6 22V6l6-4 6 4v16M9 9h1M14 9h1M9 13h1M14 13h1M9 17h1M14 17h1M4 22h16" />,
   book: <path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5zM4 19a2 2 0 0 1 2-2h13" />,
   flask: <path d="M9 2h6M10 2v6L4 19a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-6-11V2M7 14h10" />,
@@ -76,7 +77,7 @@ const P: Record<string, ReactNode> = {
 
 export function Icon({ name, size = 16 }: { name: string; size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       {P[name] ?? P.core}
     </svg>
   );
@@ -86,18 +87,11 @@ export function DistrictIcon({ name }: { name: string }) {
   return <Icon name={name} size={18} />;
 }
 
-export function Logo({ size = 34 }: { size?: number }) {
+export function Logo({ size = 28 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" aria-label="Morphis logo">
-      <defs>
-        <linearGradient id="mg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#22d3ee" />
-          <stop offset="1" stopColor="#e879f9" />
-        </linearGradient>
-      </defs>
-      <polygon points="32,3 57,17.5 57,46.5 32,61 7,46.5 7,17.5" fill="none" stroke="url(#mg)" strokeWidth="3" />
-      <path d="M18 44V22l14 11 14-11v22" fill="none" stroke="url(#mg)" strokeWidth="4.5" strokeLinejoin="round" strokeLinecap="round" />
-      <circle cx="32" cy="33" r="3.2" fill="#e879f9" />
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-label="Morphis logo" className="logo">
+      <polygon points="32,3 57,17.5 57,46.5 32,61 7,46.5 7,17.5" fill="none" stroke="currentColor" strokeWidth="3" />
+      <path d="M18 44V22l14 11 14-11v22" fill="none" stroke="currentColor" strokeWidth="4.5" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
 }

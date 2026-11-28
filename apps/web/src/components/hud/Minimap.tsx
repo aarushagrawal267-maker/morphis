@@ -38,24 +38,21 @@ export function Minimap() {
     c.width = c.height = SIZE * 2;
     const g = c.getContext('2d')!;
     g.scale(2, 2);
-    g.fillStyle = '#070a12';
+    g.fillStyle = '#0c0d0f';
     g.fillRect(0, 0, SIZE, SIZE);
     if (world.island) {
-      // the island itself, with a soft glow at its edge
+      // the island itself, with a hairline edge
       const o = world.island.outline;
       g.beginPath();
       g.moveTo(...toPx(o[0], o[1]));
       for (let i = 2; i < o.length; i += 2) g.lineTo(...toPx(o[i], o[i + 1]));
       g.closePath();
-      g.fillStyle = '#141a28';
-      g.shadowColor = '#6d5bd0';
-      g.shadowBlur = 8;
+      g.fillStyle = '#16171a';
       g.fill();
-      g.shadowBlur = 0;
-      g.strokeStyle = '#4c4f8f';
+      g.strokeStyle = 'rgba(230, 234, 240, 0.22)';
       g.lineWidth = 1;
       g.stroke();
-      g.fillStyle = '#22d3ee';
+      g.fillStyle = '#5ccbe0';
       for (const l of world.island.lifts) {
         const [x, y] = toPx(l.x, l.z);
         g.fillRect(x - 2, y - 2, 4, 4);
@@ -75,7 +72,7 @@ export function Minimap() {
     for (const e of world.roads.edges) {
       const a = world.roads.nodes[e.a];
       const b = world.roads.nodes[e.b];
-      g.strokeStyle = e.cls === 'highway' ? '#64748b' : e.cls === 'avenue' ? '#475569' : '#334155';
+      g.strokeStyle = e.cls === 'highway' ? '#55595f' : e.cls === 'avenue' ? '#43464b' : '#323438';
       g.lineWidth = Math.max(0.8, e.width * scale * 0.9);
       g.beginPath();
       g.moveTo(...toPx(a.x, a.z));
@@ -89,7 +86,7 @@ export function Minimap() {
         [1, 1],
         [-1, 1],
       ].map(([sx, sz]) => toPx(...(Object.values(localToWorld(b.position.x, b.position.z, b.rotation, (sx * b.width) / 2, (sz * b.depth) / 2)) as [number, number])));
-      g.fillStyle = b.type === 'park' ? '#14532d' : b.named ? '#c084fc' : '#1e293b';
+      g.fillStyle = b.type === 'park' ? '#25382c' : b.named ? '#c9cdd3' : '#26282c';
       g.beginPath();
       g.moveTo(...pts[0]);
       for (const p of pts.slice(1)) g.lineTo(...p);
@@ -98,7 +95,7 @@ export function Minimap() {
     }
     if (world.rail) {
       const pts = world.rail.points;
-      g.strokeStyle = '#a78bfa';
+      g.strokeStyle = '#8a9099';
       g.lineWidth = 1.2;
       g.beginPath();
       g.moveTo(...toPx(pts[0], pts[1]));
@@ -108,7 +105,7 @@ export function Minimap() {
     }
     const hq = world.buildings.find((b) => b.id === world.hqId)!;
     const [hx, hy] = toPx(hq.position.x, hq.position.z);
-    g.fillStyle = '#22d3ee';
+    g.fillStyle = '#5ccbe0';
     g.beginPath();
     g.arc(hx, hy, 4, 0, Math.PI * 2);
     g.fill();
@@ -131,13 +128,13 @@ export function Minimap() {
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.drawImage(base, 0, 0);
       g.scale(2, 2);
-      g.fillStyle = '#67e8f9';
+      g.fillStyle = '#5ccbe0';
       for (let i = 0; i < sample.cVisible.length; i++) {
         if (!sample.cVisible[i]) continue;
         const [x, y] = toPx(sample.cX[i], sample.cZ[i]);
         g.fillRect(x - 0.6, y - 0.6, 1.2, 1.2);
       }
-      g.fillStyle = '#fbbf24';
+      g.fillStyle = '#d9ad62';
       for (let i = 0; i < sample.vVisible.length; i++) {
         if (!sample.vVisible[i]) continue;
         const [x, y] = toPx(sample.vX[i], sample.vZ[i]);
@@ -156,7 +153,7 @@ export function Minimap() {
         const [x, y] = toPx(guestPose.x, guestPose.z);
         const a = guestPose.yaw;
         g.fillStyle = '#ffffff';
-        g.strokeStyle = '#0b1020';
+        g.strokeStyle = '#0c0d0f';
         g.beginPath();
         g.moveTo(x + Math.sin(a) * 6, y + Math.cos(a) * 6);
         g.lineTo(x + Math.sin(a + 2.5) * 4, y + Math.cos(a + 2.5) * 4);
@@ -173,7 +170,7 @@ export function Minimap() {
         ctrl.getTarget(target);
         const [tx, ty] = toPx(target.x, target.z);
         const [cx, cy] = toPx(cam.position.x, cam.position.z);
-        g.strokeStyle = '#fde047';
+        g.strokeStyle = '#e7e9ec';
         g.lineWidth = 1;
         g.beginPath();
         g.moveTo(cx, cy);
@@ -186,7 +183,7 @@ export function Minimap() {
         const b = useSim.getState().buildingsById.get(sel.id);
         if (b) {
           const [x, y] = toPx(b.position.x, b.position.z);
-          g.strokeStyle = '#fde047';
+          g.strokeStyle = '#e7e9ec';
           g.lineWidth = 1.5;
           g.beginPath();
           g.arc(x, y, 6, 0, Math.PI * 2);
@@ -226,16 +223,16 @@ export function Minimap() {
       />
       <div className="minimap__legend">
         <span>
-          <i style={{ background: '#67e8f9' }} /> citizens
+          <i style={{ background: '#5ccbe0' }} /> citizens
         </span>
         <span>
-          <i style={{ background: '#fbbf24' }} /> vehicles
+          <i style={{ background: '#d9ad62' }} /> vehicles
         </span>
         <span>
-          <i style={{ background: '#c084fc' }} /> landmarks
+          <i style={{ background: '#c9cdd3' }} /> landmarks
         </span>
         <span>
-          <i style={{ background: '#a78bfa' }} /> skyrail
+          <i style={{ background: '#8a9099' }} /> skyrail
         </span>
       </div>
     </section>

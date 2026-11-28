@@ -1,12 +1,13 @@
 /** Top header, navigation tabs and the city information HUD. */
 import { useState } from 'react';
 import { sound } from '../../audio/engine';
-import { CITY_NAME, CITY_TAGLINE, SIM_SPEEDS, WEEKDAYS, dayOf, formatClock, formatCredits, weekdayOf } from '@morphis/shared';
+import { SIM_SPEEDS, dayOf, formatClock, formatCredits, weekdayOf } from '@morphis/shared';
 import { run } from '../../sim/commands';
 import { focusDistrict } from '../../scene/districts/DistrictPins';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { Icon, Logo } from '../ui/icons';
+import { HUD_CITY_NAME, HUD_TAGLINE, weekday } from '../ui/format';
 import { focusBuilding } from '../panels/actions';
 import { useGuest } from '../../state/guestStore';
 import { rise, startWalk } from './GuestHud';
@@ -46,25 +47,25 @@ export function TopHeader() {
       <div className="brand">
         <Logo />
         <div>
-          <div className="brand__name">{CITY_NAME}</div>
-          <div className="brand__tag">{CITY_TAGLINE}</div>
+          <div className="brand__name">{HUD_CITY_NAME}</div>
+          <div className="brand__tag">{HUD_TAGLINE}</div>
         </div>
       </div>
       <div className="topbar__controls">
         <button className={`chip walk ${walking ? 'on' : ''}`} onClick={() => (walking ? rise() : startWalk())} data-testid="btn-walk" title={walking ? 'Rise back to the overview' : 'Walk the streets as a guest'}>
-          <Icon name={walking ? 'rise' : 'walk'} /> {walking ? 'RISE' : 'WALK IN'}
+          <Icon name={walking ? 'rise' : 'walk'} /> {walking ? 'Rise' : 'Walk in'}
         </button>
         <button className={`chip ${panel === 'agents' ? 'on' : ''}`} onClick={() => ui.togglePanel('agents')} data-testid="btn-agents">
-          <Icon name="user" /> AGENTS <span className="chip__state">{agents}</span>
+          <Icon name="user" /> Agents <span className="chip__state">{agents}</span>
         </button>
         <button className={`chip ${pins ? 'on' : ''}`} onClick={() => ui.setPins(!pins)} data-testid="toggle-pins">
-          <Icon name="pin" /> DISTRICT PINS <span className="chip__state">{pins ? 'ON' : 'OFF'}</span>
+          <Icon name="pin" /> District pins <span className="chip__state">{pins ? 'on' : 'off'}</span>
         </button>
         <button className={`chip ${panel === 'features' ? 'on' : ''}`} onClick={() => ui.togglePanel('features')} data-testid="btn-features">
-          <Icon name="star" /> KEY FEATURES
+          <Icon name="star" /> Key features
         </button>
         <button className={`chip ${panel === 'story' ? 'on' : ''}`} onClick={() => ui.togglePanel('story')} data-testid="btn-story">
-          <Icon name="story" /> CITY STORY
+          <Icon name="story" /> City story
         </button>
         <button className={`chip jarvis ${panel === 'jarvis' ? 'on' : ''}`} onClick={() => ui.togglePanel('jarvis')} data-testid="btn-jarvis">
           <Icon name="terminal" /> JARVIS
@@ -95,10 +96,10 @@ export function TopHeader() {
           <Icon name="gear" />
         </button>
         <span className={`conn conn--${connection}`} title={`Simulation authority: ${mode === 'server' ? 'Node.js server' : 'in-browser worker'} (${connection})`}>
-          {mode === 'server' ? 'SERVER' : 'LOCAL SIM'}
+          {mode === 'server' ? 'Server' : 'Local sim'}
         </span>
         <span className={`conn ${ai?.connected ? 'conn--connected' : 'conn--sim'}`} title={ai?.connected ? `${ai.provider} — ${ai.detail}` : ai?.detail} data-testid="ai-badge">
-          {ai?.connected ? 'AI · LIVE' : 'AI · SIMULATED'}
+          {ai?.connected ? 'AI · live' : 'AI · simulated'}
         </span>
       </div>
     </header>
@@ -106,11 +107,11 @@ export function TopHeader() {
 }
 
 const TABS = [
-  { id: 'overview', label: 'CITY OVERVIEW' },
-  { id: 'complex', label: 'THE COMPLEX' },
-  { id: 'institute', label: 'THE INSTITUTE' },
-  { id: 'apartments', label: 'APARTMENTS' },
-  { id: 'research', label: 'RESEARCH LAB' },
+  { id: 'overview', label: 'City overview' },
+  { id: 'complex', label: 'The Complex' },
+  { id: 'institute', label: 'The Institute' },
+  { id: 'apartments', label: 'Apartments' },
+  { id: 'research', label: 'Research lab' },
 ] as const;
 
 export function NavBar() {
@@ -159,7 +160,7 @@ export function NavBar() {
       ))}
       <div className="nav-dropdown">
         <button className={tab === 'districts' ? 'on' : ''} onClick={() => setOpen((o) => !o)} data-testid="tab-districts">
-          DISTRICTS ▾
+          Districts <Icon name="chevron" size={12} />
         </button>
         {open && (
           <div className="dropdown glass">
@@ -192,35 +193,38 @@ export function CityInfo() {
   const statusTone = st.status === 'NORMAL' ? 'ok' : st.status === 'BUSY' ? 'busy' : 'warn';
   return (
     <section className="cityinfo glass" data-testid="city-info">
-      <div className="cityinfo__name">{CITY_NAME}</div>
+      <div className="cityinfo__name">{HUD_CITY_NAME}</div>
       <div className="cityinfo__time">
         <span>
-          DAY {dayOf(t)} · {WEEKDAYS[weekdayOf(t)]}
+          Day {dayOf(t)} · {weekday(weekdayOf(t))}
         </span>
         <strong data-testid="clock">{formatClock(t)}</strong>
       </div>
       <div className="cityinfo__grid">
         <div>
-          <label>POPULATION</label>
+          <label>Population</label>
           <b>{st.population.toLocaleString()}</b>
         </div>
         <div>
-          <label>ACTIVE CITIZENS</label>
+          <label>Active citizens</label>
           <b>{st.activeCitizens.toLocaleString()}</b>
         </div>
         <div>
-          <label>WEATHER</label>
+          <label>Weather</label>
           <b className="cap">
             <Icon name={w.kind === 'clear' ? 'sun' : w.kind} size={13} /> {w.kind}
           </b>
         </div>
         <div>
-          <label>CITY BUDGET</label>
+          <label>City budget</label>
           <b title="Simulated credits — fictional">{formatCredits(state.economy.cityBudget)}</b>
         </div>
       </div>
       <div className={`cityinfo__status ${statusTone}`} data-testid="city-status">
-        <span className="pulse" /> CITY STATUS · {st.status}
+        <span className="status-dot" />
+        <span>
+          City status · <span className="enum">{st.status}</span>
+        </span>
       </div>
     </section>
   );

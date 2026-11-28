@@ -25,9 +25,9 @@ export function InteriorPanel() {
   const placed = placeOccupants(layout, inside.slice(0, 120), hash01);
   return (
     <aside className="sel-panel glass interior-panel" data-testid="interior-panel">
-      <div className="sel-panel__kicker">INTERIOR VIEW · {BUILDING_TYPES[b.type].label.toUpperCase()}</div>
+      <div className="sel-panel__kicker">Interior view · {BUILDING_TYPES[b.type].label}</div>
       <h2>{b.name}</h2>
-      <div className="badge">{all.length} PEOPLE INSIDE</div>
+      <div className="badge">{all.length} people inside</div>
       {floors > 1 && (
         <>
           <h4>Floors</h4>
@@ -70,7 +70,7 @@ export function InteriorPanel() {
       )}
       <div className="actions">
         <button onClick={() => (useGuest.getState().active ? leaveInterior() : exitBuilding())} data-testid="btn-exit">
-          <Icon name="exit" /> EXIT BUILDING
+          <Icon name="exit" /> Exit building
         </button>
       </div>
       <p className="note">Occupants and their activities come from the live simulation.</p>

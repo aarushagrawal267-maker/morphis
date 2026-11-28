@@ -117,7 +117,7 @@ function InsideBar({ buildingId }: { buildingId: string }) {
       <section className="guest-bar glass" data-testid="inside-bar">
         <div className="guest-bar__top">
           <button className="chip" onClick={leaveInterior} data-testid="btn-out" title="Walk back out to the street (Esc)">
-            <Icon name="exit" /> OUT
+            <Icon name="exit" /> Out
           </button>
           <div className="guest-bar__where">
             <strong>{displayName(biz?.name ?? b.name)}</strong>
@@ -164,7 +164,7 @@ function GuestBar() {
     <section className="guest-bar glass" data-testid="guest-bar">
       <div className="guest-bar__top">
         <button className="chip" onClick={rise} data-testid="btn-rise" title="Leave the street and return to the overview">
-          <Icon name="rise" /> RISE
+          <Icon name="rise" /> Rise
         </button>
         <div className="guest-bar__where">
           <strong data-testid="guest-street">{place?.street ?? '…'}</strong>
@@ -187,7 +187,7 @@ function GuestBar() {
           <Icon name="book" /> {done}/{goals.length || 3}
         </button>
         <button className="chip" title="People's chatter bubbles" onClick={() => useGuest.getState().setChatter(nextChatter)} data-testid="btn-chatter">
-          <Icon name="chat" /> {chatter.toUpperCase()}
+          <Icon name="chat" /> {chatter.charAt(0).toUpperCase() + chatter.slice(1)}
         </button>
         <button className={`icon-btn ${panel === 'look' ? 'on' : ''}`} title="Your look" onClick={() => ui.togglePanel('look')} data-testid="btn-look">
           <Icon name="shirt" />

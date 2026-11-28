@@ -9,6 +9,7 @@ import { focusDistrict, pinAnchor } from '../../scene/districts/DistrictPins';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { DistrictIcon } from '../ui/icons';
+import { hudName } from '../ui/format';
 
 export function PinOverlay() {
   const world = useSim((s) => s.world);
@@ -60,7 +61,7 @@ export function PinOverlay() {
             <DistrictIcon name={d.icon} />
           </span>
           <span className="district-pin__text">
-            <strong>{d.name.toUpperCase()}</strong>
+            <strong>{hudName(d.name)}</strong>
             <small>{d.tagline}</small>
           </span>
         </button>

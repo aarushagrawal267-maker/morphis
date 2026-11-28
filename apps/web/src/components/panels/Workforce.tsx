@@ -1,7 +1,8 @@
 /** Projects (per building), citizen profile, task view and the JARVIS command console. */
 import { useMemo, useState } from 'react';
 import type { SimProject, SimTask } from '@morphis/shared';
-import { BUILDING_TYPES, CORE_ROLES, agencyAgent, formatClock, formatCredits, dayOf, WEEKDAYS } from '@morphis/shared';
+import { BUILDING_TYPES, CORE_ROLES, agencyAgent, formatClock, formatCredits, dayOf } from '@morphis/shared';
+import { hudName, weekday } from '../ui/format';
 import { run } from '../../sim/commands';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
@@ -23,7 +24,7 @@ function TaskRow({ t }: { t: SimTask }) {
       <div className="task__meta">
         {agencyAgent(t.specialist) ? (
           <span title="Specialist from The Agency hired by JARVIS">
-            {agencyAgent(t.specialist)!.emoji} {agencyAgent(t.specialist)!.name}
+            {agencyAgent(t.specialist)!.name}
             {who && !who.agent?.agency ? ` (playbook, done by ${CORE_ROLES[t.role].label})` : ''}
           </span>
         ) : (
@@ -85,7 +86,7 @@ export function ProjectsPanel() {
   const relevant = b ? projects.filter((p) => p.buildingId === b.id || p.tasks.some((id) => tasks.get(id)?.buildingId === b.id)) : projects;
   return (
     <section className="side-panel glass wide" data-testid="projects-panel">
-      <PanelHeader title={b ? `PROJECTS · ${b.name}` : 'ALL PROJECTS'} />
+      <PanelHeader title={b ? `Projects · ${hudName(b.name)}` : 'All projects'} />
       {relevant.length === 0 && <p className="note">No projects involve this building yet. Projects appear when companies or JARVIS assign work here.</p>}
       {relevant
         .slice()
@@ -109,7 +110,7 @@ export function ProfileModal() {
   const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
   return (
     <section className="side-panel glass wide" data-testid="profile-panel">
-      <PanelHeader title="CITIZEN PROFILE" />
+      <PanelHeader title="Citizen profile" />
       <h2>{p.name}</h2>
       <p className="desc">{p.bio}</p>
       <div className="rows">
@@ -173,7 +174,7 @@ export function TaskModal() {
   if (!open) return null;
   return (
     <section className="side-panel glass wide" data-testid="task-panel">
-      <PanelHeader title="CURRENT TASK" />
+      <PanelHeader title="Current task" />
       {!task && <p className="note">{p?.name ?? 'This citizen'} has no task right now.</p>}
       {task && (
         <>
@@ -213,7 +214,7 @@ export function JarvisConsole() {
   const jarvisProjects = projects.filter((p) => p.source === 'jarvis').slice().reverse();
   return (
     <section className="side-panel glass wide jarvis-console" data-testid="jarvis-panel">
-      <PanelHeader title="JARVIS · COMMAND INTERFACE" />
+      <PanelHeader title="JARVIS · command line" />
       <div className={`ai-status ${ai?.connected ? 'live' : 'sim'}`}>
         <Icon name="core" />
         <div>
@@ -232,7 +233,7 @@ export function JarvisConsole() {
         <span className="prompt">JARVIS&gt;</span>
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Give JARVIS a high-level command…" maxLength={500} data-testid="jarvis-input" />
         <button disabled={busy || text.trim().length < 3} data-testid="jarvis-submit">
-          SEND
+          Send
         </button>
       </form>
       <label className="toggle" data-testid="jarvis-urgent">
@@ -260,10 +261,10 @@ export function JarvisConsole() {
                   {a.status === 'PENDING' ? (
                     <span className="appr__btns">
                       <button onClick={() => run({ type: 'jarvis.approve', id: a.id, approve: true }, 'Approved')} data-testid="approve">
-                        APPROVE
+                        Approve
                       </button>
                       <button className="deny" onClick={() => run({ type: 'jarvis.approve', id: a.id, approve: false }, 'Denied')}>
-                        DENY
+                        Deny
                       </button>
                     </span>
                   ) : (
@@ -293,7 +294,7 @@ export function JarvisConsole() {
                 <li key={c.id} className={`cmd-${c.status.toLowerCase()}`}>
                   <b>“{c.text}”</b>
                   <small>
-                    {c.status} · {c.planner} · {c.message} · Day {dayOf(c.time)} {WEEKDAYS[(dayOf(c.time) - 1) % 7]} {formatClock(c.time)}
+                    {c.status} · {c.planner} · {c.message} · Day {dayOf(c.time)} {weekday((dayOf(c.time) - 1) % 7)} {formatClock(c.time)}
                   </small>
                 </li>
               ))}
@@ -314,7 +315,7 @@ export function JarvisConsole() {
               <span className="wf__dot" style={{ background: CORE_ROLES[c.role!].color }} />
               <span className="wf__name">{c.name}</span>
               <span className="wf__role">{CORE_ROLES[c.role!].label}</span>
-              <span className={`wf__status s-${(d?.status ?? '').toLowerCase()}`}>{d?.status}</span>
+              <span className={`wf__status s-${(d?.status ?? '').toLowerCase()}`}>{d?.status?.replace(/_/g, ' ')}</span>
             </button>
           );
         })}

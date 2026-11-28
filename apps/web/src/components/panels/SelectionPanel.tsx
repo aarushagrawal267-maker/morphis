@@ -1,7 +1,8 @@
 /** Floating information panels for the current selection. Every button performs a real action. */
 import { useMemo } from 'react';
 import type { BuildingDef, CitizenDynamic, CitizenProfile } from '@morphis/shared';
-import { BUILDING_TYPES, CORE_ROLES, formatCredits } from '@morphis/shared';
+import { BUILDING_TYPES, formatCredits } from '@morphis/shared';
+import { hudName } from '../ui/format';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { Icon } from '../ui/icons';
@@ -35,15 +36,16 @@ function Row({ k, v, testid }: { k: string; v: React.ReactNode; testid?: string 
   );
 }
 
-function Bar({ label, value, color }: { label: string; value: number; color: string }) {
+/** A citizen need: a flat neutral fill that turns amber once it runs low. */
+function Bar({ label, value }: { label: string; value: number }) {
   return (
     <div className="bar">
       <div className="bar__label">
         <span>{label}</span>
         <b>{Math.round(value * 100)}%</b>
       </div>
-      <div className="bar__track">
-        <span style={{ width: `${Math.round(value * 100)}%`, background: color }} />
+      <div className={`bar__track bar__track--need ${value < 0.25 ? 'low' : ''}`}>
+        <span style={{ width: `${Math.round(value * 100)}%` }} />
       </div>
     </div>
   );
@@ -77,11 +79,11 @@ function BuildingPanel({ id }: { id: string }) {
   const status = dyn?.status ?? (b.construction ? 'CONSTRUCTION' : 'ACTIVE');
   return (
     <>
-      <div className="sel-panel__kicker" style={{ color: district?.color }}>
-        {meta.label.toUpperCase()}
+      <div className="sel-panel__kicker">
+        {meta.label}
       </div>
-      <h2 data-testid="panel-title">{b.name}</h2>
-      <div className={`badge badge--${status.toLowerCase()}`}>{status}</div>
+      <h2 data-testid="panel-title">{hudName(b.name)}</h2>
+      <div className={`badge badge--${status.toLowerCase()}`}>{status.replace(/_/g, ' ')}</div>
       <div className="rows">
         <Row k="Type" v={meta.label} />
         <Row k="District" v={district?.name ?? '—'} />
@@ -107,13 +109,13 @@ function BuildingPanel({ id }: { id: string }) {
       <p className="note">Economic values are simulated credits (§), not real money.</p>
       <div className="actions">
         <button onClick={() => focusBuilding(b.id)} data-testid="btn-focus">
-          <Icon name="focus" /> FOCUS
+          <Icon name="focus" /> Focus
         </button>
         <button disabled={!b.enterable} title={b.enterable ? 'Enter the building interior' : 'This building has no interior yet'} onClick={() => enterBuilding(b.id)} data-testid="btn-enter">
-          <Icon name="door" /> ENTER BUILDING
+          <Icon name="door" /> Enter building
         </button>
         <button onClick={() => useUI.getState().setPanel('projects')} data-testid="btn-projects">
-          <Icon name="task" /> VIEW PROJECTS
+          <Icon name="task" /> View projects
         </button>
       </div>
     </>
@@ -130,12 +132,12 @@ function CitizenPanel({ id }: { id: string }) {
   if (!p) return null;
   return (
     <>
-      <div className="sel-panel__kicker" style={{ color: p.role ? CORE_ROLES[p.role].color : p.agent?.agency ? '#38bdf8' : p.agent ? '#f59e0b' : undefined }}>
-        {p.agent ? `AGENT · ${p.agent.external ? 'OUTSIDE AGENT' : p.agent.workforce ? 'JARVIS WORKFORCE' : p.agent.agency ? 'THE AGENCY' : 'INDEPENDENT'} · ${p.agent.calling.toUpperCase()}` : p.core ? 'CORE WORKFORCE CITIZEN' : 'RESIDENT'}
+      <div className="sel-panel__kicker">
+        {p.agent ? `Agent · ${p.agent.external ? 'outside agent' : p.agent.workforce ? 'JARVIS workforce' : p.agent.agency ? 'The Agency' : 'independent'} · ${p.agent.calling}` : p.core ? 'Core workforce citizen' : 'Resident'}
       </div>
-      <h2 data-testid="panel-title">{p.name.toUpperCase()}</h2>
+      <h2 data-testid="panel-title">{p.name}</h2>
       <div className={`badge badge--${(d?.status ?? 'idle').toLowerCase()}`} data-testid="citizen-status">
-        {d?.status ?? '—'}
+        {d?.status?.replace(/_/g, ' ') ?? '—'}
       </div>
       <TalkBox key={`talk-${p.id}`} p={p} />
       {p.agent && <AgentSections key={p.id} p={p} />}
@@ -146,18 +148,18 @@ function CitizenPanel({ id }: { id: string }) {
         <Row k="Money" v={<span title="Simulated credits">{formatCredits(d?.money ?? 0)}</span>} />
         {p.core && <Row k="AI agent" v={p.agentId ? p.agentId : ai?.connected ? 'Available' : 'Not connected (simulated)'} />}
       </div>
-      <Bar label="Energy" value={d?.energy ?? 0} color="linear-gradient(90deg,#22d3ee,#38bdf8)" />
-      <Bar label="Happiness" value={d?.happiness ?? 0} color="linear-gradient(90deg,#a78bfa,#e879f9)" />
-      <Bar label="Satiety" value={d?.satiety ?? 0} color="linear-gradient(90deg,#fbbf24,#fb923c)" />
+      <Bar label="Energy" value={d?.energy ?? 0} />
+      <Bar label="Happiness" value={d?.happiness ?? 0} />
+      <Bar label="Satiety" value={d?.satiety ?? 0} />
       <div className="actions actions--row">
         <button onClick={() => followCitizen(p.id)} data-testid="btn-follow">
-          <Icon name="walk" /> FOLLOW
+          <Icon name="walk" /> Follow
         </button>
         <button onClick={() => useUI.getState().setPanel('profile')} data-testid="btn-profile">
-          <Icon name="user" /> PROFILE
+          <Icon name="user" /> Profile
         </button>
         <button disabled={!task} title={task ? 'Open task' : 'No current task'} onClick={() => useUI.getState().setPanel('task')} data-testid="btn-task">
-          <Icon name="task" /> TASK
+          <Icon name="task" /> Task
         </button>
       </div>
       {!p.agent && <AgentSections key={p.id} p={p} />}
@@ -179,10 +181,10 @@ function DistrictPanel({ id }: { id: string }) {
   const named = inD.filter((b) => b.named);
   return (
     <>
-      <div className="sel-panel__kicker" style={{ color: d.color }}>
-        DISTRICT
+      <div className="sel-panel__kicker">
+        District
       </div>
-      <h2 data-testid="panel-title">{d.name.toUpperCase()}</h2>
+      <h2 data-testid="panel-title">{hudName(d.name)}</h2>
       <p className="desc">{d.description}</p>
       <div className="rows">
         <Row k="Buildings" v={inD.length} />
@@ -211,7 +213,7 @@ function DistrictPanel({ id }: { id: string }) {
       )}
       <div className="actions">
         <button onClick={() => focusPoint(d.center.x, d.center.z, d.radius * 2.6 + 45)} data-testid="btn-focus">
-          <Icon name="focus" /> FOCUS DISTRICT
+          <Icon name="focus" /> Focus district
         </button>
       </div>
     </>
@@ -227,9 +229,9 @@ function VehiclePanel({ id }: { id: string }) {
   if (!v) return null;
   return (
     <>
-      <div className="sel-panel__kicker">{v.kind.toUpperCase()}</div>
+      <div className="sel-panel__kicker cap">{v.kind}</div>
       <h2 data-testid="panel-title">{v.label}</h2>
-      <div className={`badge badge--${(d?.status ?? 'idle').toLowerCase()}`}>{d?.status ?? '—'}</div>
+      <div className={`badge badge--${(d?.status ?? 'idle').toLowerCase()}`}>{d?.status?.replace(/_/g, ' ') ?? '—'}</div>
       <div className="rows">
         {v.lineId && <Row k="Line" v={lines?.find((l) => l.id === v.lineId)?.name ?? v.lineId} />}
         <Row k="Speed" v={`${Math.round((d?.speed ?? 0) * 7.2)} km/h`} />
@@ -240,7 +242,7 @@ function VehiclePanel({ id }: { id: string }) {
       </div>
       <div className="actions">
         <button onClick={() => followVehicle(v.id)} data-testid="btn-follow">
-          <Icon name="car" /> FOLLOW VEHICLE
+          <Icon name="car" /> Follow vehicle
         </button>
       </div>
     </>
