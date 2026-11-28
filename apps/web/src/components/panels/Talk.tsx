@@ -16,6 +16,7 @@ import { useJournal } from '../../state/journalStore';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { Icon } from '../ui/icons';
+import { SourceTag } from '../ui/SourceTag';
 
 type Line = { who: 'you' | 'them'; text: string; by?: 'ai' | 'sim'; note?: string };
 
@@ -69,7 +70,7 @@ export function TalkBox({ p }: { p: CitizenProfile }) {
           {lines.map((l, i) => (
             <p key={i} className={`talk__line talk__line--${l.who}`} title={l.note}>
               {l.text}
-              {l.who === 'them' && l.by === 'ai' && <em className="talk__ai">AI</em>}
+              {l.who === 'them' && <SourceTag by={l.by} />}
             </p>
           ))}
           {busy && <p className="talk__line talk__line--them talk__typing">…</p>}

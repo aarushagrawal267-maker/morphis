@@ -88,7 +88,7 @@ function Loading() {
   const connection = useSim((s) => s.connection);
   return (
     <div className="loading" data-testid="loading">
-      <div className="loading__logo">MORPHIS</div>
+      <div className="loading__logo">Morphis</div>
       <div className="loading__bar">
         <span />
       </div>
