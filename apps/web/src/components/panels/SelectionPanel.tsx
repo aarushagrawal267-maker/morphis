@@ -1,7 +1,8 @@
 /** Floating information panels for the current selection. Every button performs a real action. */
 import { useMemo } from 'react';
 import type { BuildingDef, CitizenDynamic, CitizenProfile } from '@morphis/shared';
-import { BUILDING_TYPES, displayName, formatCredits } from '@morphis/shared';
+import { BUILDING_TYPES, formatCredits } from '@morphis/shared';
+import { hudName } from '../ui/format';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { Icon } from '../ui/icons';
@@ -80,7 +81,7 @@ function BuildingPanel({ id }: { id: string }) {
       <div className="sel-panel__kicker">
         {meta.label}
       </div>
-      <h2 data-testid="panel-title">{displayName(b.name)}</h2>
+      <h2 data-testid="panel-title">{hudName(b.name)}</h2>
       <div className={`badge badge--${status.toLowerCase()}`}>{status.replace(/_/g, ' ')}</div>
       <div className="rows">
         <Row k="Type" v={meta.label} />
@@ -182,7 +183,7 @@ function DistrictPanel({ id }: { id: string }) {
       <div className="sel-panel__kicker">
         District
       </div>
-      <h2 data-testid="panel-title">{displayName(d.name)}</h2>
+      <h2 data-testid="panel-title">{hudName(d.name)}</h2>
       <p className="desc">{d.description}</p>
       <div className="rows">
         <Row k="Buildings" v={inD.length} />

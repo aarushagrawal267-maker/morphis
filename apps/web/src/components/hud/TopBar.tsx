@@ -1,12 +1,13 @@
 /** Top header, navigation tabs and the city information HUD. */
 import { useState } from 'react';
 import { sound } from '../../audio/engine';
-import { CITY_NAME, CITY_TAGLINE, SIM_SPEEDS, WEEKDAYS, dayOf, formatClock, formatCredits, weekdayOf } from '@morphis/shared';
+import { SIM_SPEEDS, dayOf, formatClock, formatCredits, weekdayOf } from '@morphis/shared';
 import { run } from '../../sim/commands';
 import { focusDistrict } from '../../scene/districts/DistrictPins';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { Icon, Logo } from '../ui/icons';
+import { HUD_CITY_NAME, HUD_TAGLINE, weekday } from '../ui/format';
 import { focusBuilding } from '../panels/actions';
 import { useGuest } from '../../state/guestStore';
 import { rise, startWalk } from './GuestHud';
@@ -46,8 +47,8 @@ export function TopHeader() {
       <div className="brand">
         <Logo />
         <div>
-          <div className="brand__name">{CITY_NAME}</div>
-          <div className="brand__tag">{CITY_TAGLINE}</div>
+          <div className="brand__name">{HUD_CITY_NAME}</div>
+          <div className="brand__tag">{HUD_TAGLINE}</div>
         </div>
       </div>
       <div className="topbar__controls">
@@ -192,10 +193,10 @@ export function CityInfo() {
   const statusTone = st.status === 'NORMAL' ? 'ok' : st.status === 'BUSY' ? 'busy' : 'warn';
   return (
     <section className="cityinfo glass" data-testid="city-info">
-      <div className="cityinfo__name">{CITY_NAME}</div>
+      <div className="cityinfo__name">{HUD_CITY_NAME}</div>
       <div className="cityinfo__time">
         <span>
-          Day {dayOf(t)} · {WEEKDAYS[weekdayOf(t)]}
+          Day {dayOf(t)} · {weekday(weekdayOf(t))}
         </span>
         <strong data-testid="clock">{formatClock(t)}</strong>
       </div>

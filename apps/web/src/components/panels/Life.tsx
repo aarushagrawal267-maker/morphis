@@ -13,7 +13,6 @@ import {
   agencyAgent,
   agencyDivisionLabel,
   VENTURE_KINDS,
-  WEEKDAYS,
   dayOf,
   displayName,
   formatClock,
@@ -30,6 +29,7 @@ import { useUI } from '../../state/uiStore';
 import { dropIn, rise, startWalk } from '../hud/GuestHud';
 import { Icon } from '../ui/icons';
 import { SourceTag } from '../ui/SourceTag';
+import { weekday } from '../ui/format';
 import { focusBuilding, followCitizen } from './actions';
 
 const ACTIVITY_LABEL: Record<string, string> = {
@@ -68,7 +68,7 @@ function buildingName(id: string): string {
 }
 
 export function deedTime(t: number): string {
-  return `Day ${dayOf(t)} ${WEEKDAYS[weekdayOf(t)]} ${formatClock(t)}`;
+  return `Day ${dayOf(t)} ${weekday(weekdayOf(t))} ${formatClock(t)}`;
 }
 
 /** Share link for an agent card (hash links work everywhere, including static hosting). */

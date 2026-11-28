@@ -6,7 +6,8 @@
  */
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
-import { WEEKDAYS, dayOf, formatClock, weekdayOf } from '@morphis/shared';
+import { dayOf, formatClock, weekdayOf } from '@morphis/shared';
+import { weekday } from '../../components/ui/format';
 import { useGuest } from '../../state/guestStore';
 import { useJournal } from '../../state/journalStore';
 import { useSim } from '../../state/simStore';
@@ -32,7 +33,7 @@ export function PostcardCapture() {
     const place = useGuest.getState().place;
     const t = useSim.getState().state?.clock.time ?? 0;
     const label = place?.landmark && place.landmarkDist < 60 ? place.landmark : place?.street || 'Morphis';
-    const caption = `Morphis · ${label} · Day ${dayOf(t)} ${WEEKDAYS[weekdayOf(t)]} ${formatClock(t)}`;
+    const caption = `Morphis · ${label} · Day ${dayOf(t)} ${weekday(weekdayOf(t))} ${formatClock(t)}`;
     void frame(shot, caption)
       .then((url) => useJournal.getState().addPostcard(url, label))
       .then(() => useUI.getState().notify('Postcard saved to your journal'))

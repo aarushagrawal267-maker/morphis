@@ -1,7 +1,8 @@
 /** Projects (per building), citizen profile, task view and the JARVIS command console. */
 import { useMemo, useState } from 'react';
 import type { SimProject, SimTask } from '@morphis/shared';
-import { BUILDING_TYPES, CORE_ROLES, agencyAgent, displayName, formatClock, formatCredits, dayOf, WEEKDAYS } from '@morphis/shared';
+import { BUILDING_TYPES, CORE_ROLES, agencyAgent, formatClock, formatCredits, dayOf } from '@morphis/shared';
+import { hudName, weekday } from '../ui/format';
 import { run } from '../../sim/commands';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
@@ -85,7 +86,7 @@ export function ProjectsPanel() {
   const relevant = b ? projects.filter((p) => p.buildingId === b.id || p.tasks.some((id) => tasks.get(id)?.buildingId === b.id)) : projects;
   return (
     <section className="side-panel glass wide" data-testid="projects-panel">
-      <PanelHeader title={b ? `Projects · ${displayName(b.name)}` : 'All projects'} />
+      <PanelHeader title={b ? `Projects · ${hudName(b.name)}` : 'All projects'} />
       {relevant.length === 0 && <p className="note">No projects involve this building yet. Projects appear when companies or JARVIS assign work here.</p>}
       {relevant
         .slice()
@@ -293,7 +294,7 @@ export function JarvisConsole() {
                 <li key={c.id} className={`cmd-${c.status.toLowerCase()}`}>
                   <b>“{c.text}”</b>
                   <small>
-                    {c.status} · {c.planner} · {c.message} · Day {dayOf(c.time)} {WEEKDAYS[(dayOf(c.time) - 1) % 7]} {formatClock(c.time)}
+                    {c.status} · {c.planner} · {c.message} · Day {dayOf(c.time)} {weekday((dayOf(c.time) - 1) % 7)} {formatClock(c.time)}
                   </small>
                 </li>
               ))}
