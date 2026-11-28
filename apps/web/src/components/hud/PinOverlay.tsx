@@ -8,6 +8,7 @@ import { cameraBridge } from '../../scene/cameraBridge';
 import { focusDistrict, pinAnchor } from '../../scene/districts/DistrictPins';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
+import { displayName } from '@morphis/shared';
 import { DistrictIcon } from '../ui/icons';
 
 export function PinOverlay() {
@@ -60,7 +61,7 @@ export function PinOverlay() {
             <DistrictIcon name={d.icon} />
           </span>
           <span className="district-pin__text">
-            <strong>{d.name.toUpperCase()}</strong>
+            <strong>{displayName(d.name)}</strong>
             <small>{d.tagline}</small>
           </span>
         </button>

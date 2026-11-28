@@ -17,15 +17,15 @@ export function ClockPanel() {
   if (!open || !state) return null;
   const t = state.clock.time;
   const dl = daylight(t);
-  const phase = dl > 0.95 ? 'DAY' : dl < 0.05 ? 'NIGHT' : (t % 86400) / 3600 < 12 ? 'SUNRISE' : 'SUNSET';
+  const phase = dl > 0.95 ? 'day' : dl < 0.05 ? 'night' : (t % 86400) / 3600 < 12 ? 'sunrise' : 'sunset';
   const weathers: (WeatherKind | 'auto')[] = ['auto', 'clear', 'rain', 'fog', 'storm'];
   return (
     <section className="side-panel glass" data-testid="clock-panel">
-      <PanelHeader title="DAY / NIGHT & ENVIRONMENT" />
+      <PanelHeader title="Day, night and environment" />
       <div className="clock-big">
         <strong>{formatClock(t)}</strong>
         <span>
-          DAY {dayOf(t)} · {phase}
+          Day {dayOf(t)} · {phase}
         </span>
       </div>
       <div className="dayline">
@@ -34,7 +34,7 @@ export function ClockPanel() {
       <label className="lbl">Simulation speed (1x = 1 sim minute per second)</label>
       <div className="speeds wide">
         <button className={state.clock.paused ? 'on' : ''} onClick={() => run({ type: 'sim.setPaused', paused: !state.clock.paused })}>
-          {state.clock.paused ? 'PLAY' : 'PAUSE'}
+          {state.clock.paused ? 'Play' : 'Pause'}
         </button>
         {SIM_SPEEDS.map((s) => (
           <button key={s} className={state.clock.speed === s ? 'on' : ''} onClick={() => run({ type: 'sim.setSpeed', speed: s })}>
@@ -61,7 +61,7 @@ export function ClockPanel() {
             onClick={() => run({ type: 'sim.setWeather', weather: w })}
             data-testid={`weather-${w}`}
           >
-            {w.toUpperCase()}
+            {w.charAt(0).toUpperCase() + w.slice(1)}
           </button>
         ))}
       </div>
@@ -167,7 +167,7 @@ export function SettingsPanel() {
   );
   return (
     <section className="side-panel glass" data-testid="settings-panel">
-      <PanelHeader title="SETTINGS" />
+      <PanelHeader title="Settings" />
       <AdminKey />
       <SoundSettingsBlock />
       <h4>Graphics</h4>
@@ -178,7 +178,7 @@ export function SettingsPanel() {
       <input type="range" min={0.6} max={2} step={0.1} value={q.pixelRatio} onChange={(e) => ui.setQuality({ pixelRatio: Number(e.target.value) })} />
       <h4>Camera</h4>
       <div className="speeds wide">
-        <button onClick={() => ui.requestCamera({ kind: 'overview' }, 'overview')} data-testid="cam-overview">OVERVIEW</button>
+        <button onClick={() => ui.requestCamera({ kind: 'overview' }, 'overview')} data-testid="cam-overview">Overview</button>
         <button
           onClick={() => {
             const w = useSim.getState().world;
@@ -187,13 +187,13 @@ export function SettingsPanel() {
           }}
           data-testid="cam-street"
         >
-          STREET
+          Street
         </button>
         <button onClick={() => ui.requestCamera({ kind: 'cinematic' }, 'cinematic')} data-testid="cam-cinematic">
-          CINEMATIC
+          Cinematic
         </button>
       </div>
-      <p className="note">Left-drag pans, right-drag orbits, wheel zooms toward the cursor. Selecting a citizen and pressing FOLLOW tracks them.</p>
+      <p className="note">Left-drag pans, right-drag orbits, wheel zooms toward the cursor. Selecting a citizen and pressing Follow tracks them.</p>
       <h4>Interface</h4>
       <Toggle label="District pins" on={pins} set={(v) => ui.setPins(v)} id="set-pins" />
       <Toggle label="Developer debug overlay" on={debug} set={(v) => ui.setDebug(v)} id="set-debug" />
@@ -286,7 +286,7 @@ export function DebugOverlay() {
   return (
     <section className="debug glass" data-testid="debug-overlay">
       <header>
-        <Icon name="bug" /> DEBUG
+        <Icon name="bug" /> Debug
         <button className="close" onClick={() => useUI.getState().setDebug(false)}>
           <Icon name="close" />
         </button>
@@ -330,7 +330,7 @@ export function CityStory() {
   const milestones = news.filter((n) => n.category === 'project' || n.category === 'economy' || n.category === 'event').slice(-12).reverse();
   return (
     <section className="side-panel glass story" data-testid="story-panel">
-      <PanelHeader title="CITY STORY" />
+      <PanelHeader title="City story" />
       <p className="desc">
         Morphis is a compressed metropolis of {state.stats.population} simulated citizens. Every person has a home, a schedule and needs; every
         trip happens on the streets you see. Twenty-five core citizens form the city's workforce and run projects coordinated by JARVIS.
@@ -397,7 +397,7 @@ export function SavesPanel() {
   if (!open) return null;
   return (
     <section className="side-panel glass" data-testid="saves-panel">
-      <PanelHeader title="SAVE · LOAD · NEW CITY" />
+      <PanelHeader title="Save, load or start a new city" />
       <p className="note">Storage: {persistence?.detail}</p>
       <div className="form">
         <input placeholder="Save name" value={name} onChange={(e) => setName(e.target.value)} data-testid="save-name" />
@@ -411,7 +411,7 @@ export function SavesPanel() {
           }}
           data-testid="btn-save"
         >
-          SAVE CITY
+          Save city
         </button>
       </div>
       <ul className="saves">
@@ -432,7 +432,7 @@ export function SavesPanel() {
               }}
               data-testid="btn-load"
             >
-              LOAD
+              Load
             </button>
             <button
               className="ghost"
@@ -470,7 +470,7 @@ export function SavesPanel() {
           }}
           data-testid="btn-new"
         >
-          NEW CITY
+          New city
         </button>
       </div>
       <p className="note">Current world: seed {world?.seed} · hash {world?.hash}</p>

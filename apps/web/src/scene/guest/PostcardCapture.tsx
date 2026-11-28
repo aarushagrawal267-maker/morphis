@@ -32,7 +32,7 @@ export function PostcardCapture() {
     const place = useGuest.getState().place;
     const t = useSim.getState().state?.clock.time ?? 0;
     const label = place?.landmark && place.landmarkDist < 60 ? place.landmark : place?.street || 'Morphis';
-    const caption = `MORPHIS · ${label.toUpperCase()} · DAY ${dayOf(t)} ${WEEKDAYS[weekdayOf(t)]} ${formatClock(t)}`;
+    const caption = `Morphis · ${label} · Day ${dayOf(t)} ${WEEKDAYS[weekdayOf(t)]} ${formatClock(t)}`;
     void frame(shot, caption)
       .then((url) => useJournal.getState().addPostcard(url, label))
       .then(() => useUI.getState().notify('Postcard saved to your journal'))

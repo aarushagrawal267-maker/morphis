@@ -2,8 +2,8 @@ import type { BuildingType, DistrictType, InteriorKind, RoadClass } from './type
 import type { CoreRole } from './types/sim';
 import type { AmbitionKind, Interest, VentureKind } from './types/life';
 
-export const CITY_NAME = 'MORPHIS';
-export const CITY_TAGLINE = 'EMERGENT AI CITY • YEAR 2126 • THE COMPLEX';
+export const CITY_NAME = 'Morphis';
+export const CITY_TAGLINE = 'Emergent AI city · year 2126 · The Complex';
 export const DEFAULT_SEED = 2126;
 export const WORLD_VERSION = 3;
 
@@ -20,7 +20,7 @@ export type SimSpeed = (typeof SIM_SPEEDS)[number];
 export const DAY_SECONDS = 86400;
 /** The city starts on Day 1 (a Monday) at 06:40. */
 export const START_TIME = 6 * 3600 + 40 * 60;
-export const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const;
+export const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
 export function dayOf(time: number): number {
   return Math.floor(time / DAY_SECONDS) + 1;
@@ -47,7 +47,7 @@ export function formatClock(time: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 export function formatSimDateTime(time: number): string {
-  return `DAY ${dayOf(time)} ${WEEKDAYS[weekdayOf(time)]} ${formatClock(time)}`;
+  return `Day ${dayOf(time)} ${WEEKDAYS[weekdayOf(time)]} ${formatClock(time)}`;
 }
 /** Simulated currency formatting. The "§" credit sign marks every amount as fictional. */
 export function formatCredits(v: number): string {
@@ -576,7 +576,7 @@ export function displayName(name: string): string {
   return name
     .toLowerCase()
     .split(/\s+/)
-    .map((w) => (w === 'ai' || w === 'hq' ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+    .map((w) => (w === 'ai' || w === 'hq' || w === 'jarvis' ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
     .join(' ');
 }
 

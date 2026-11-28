@@ -29,6 +29,7 @@ import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { dropIn, rise, startWalk } from '../hud/GuestHud';
 import { Icon } from '../ui/icons';
+import { SourceTag } from '../ui/SourceTag';
 import { focusBuilding, followCitizen } from './actions';
 
 const ACTIVITY_LABEL: Record<string, string> = {
@@ -91,7 +92,7 @@ function AgencyInfo({ p }: { p: CitizenProfile }) {
   return (
     <div className="agency-info" data-testid="agency-info">
       <label>
-        {meta.emoji} THE AGENCY · {agencyDivisionLabel(meta.division).toUpperCase()}
+        The Agency · {agencyDivisionLabel(meta.division)}
       </label>
       <p>{meta.description}</p>
       <small>
@@ -116,15 +117,15 @@ export function AgentSections({ p }: { p: CitizenProfile }) {
   const mode = useSim((s) => s.mode);
   const tabs: { id: CardTab; label: string }[] = p.agent
     ? [
-        { id: 'why', label: "WHY I'M HERE" },
-        { id: 'deeds', label: `DEEDS · ${deeds.length}` },
-        { id: 'today', label: 'TODAY' },
-        ...(mode === 'server' ? [{ id: 'memory' as const, label: 'MEMORY' }] : []),
-        { id: 'share', label: 'SHARE' },
+        { id: 'why', label: 'Why I’m here' },
+        { id: 'deeds', label: `Deeds · ${deeds.length}` },
+        { id: 'today', label: 'Today' },
+        ...(mode === 'server' ? [{ id: 'memory' as const, label: 'Memory' }] : []),
+        { id: 'share', label: 'Share' },
       ]
     : [
-        { id: 'today', label: 'TODAY' },
-        { id: 'deeds', label: `DEEDS · ${deeds.length}` },
+        { id: 'today', label: 'Today' },
+        { id: 'deeds', label: `Deeds · ${deeds.length}` },
       ];
   return (
     <div className="agent-card" data-testid="agent-card">
@@ -152,14 +153,14 @@ export function AgentSections({ p }: { p: CitizenProfile }) {
           <AgencyInfo p={p} />
           {life && (life.intents?.morning || life.intents?.midday) && (
             <div className="agent-plan" data-testid="agent-today-plans">
-              <label>TODAY'S PLANS</label>
+              <label>Today’s plans</label>
               {(['morning', 'midday'] as const).map((ph) => {
                 const it = life.intents?.[ph];
                 if (!it) return null;
                 return (
                   <p key={ph}>
                     <b>{ph === 'morning' ? 'Lunch' : 'Evening'}:</b> {it.label}
-                    {it.say ? ` — “${it.say}”` : ''} <small>({it.by === 'ai' ? 'AI' : 'simulation'})</small>
+                    {it.say ? ` — “${it.say}”` : ''} <SourceTag by={it.by} />
                   </p>
                 );
               })}
@@ -167,9 +168,11 @@ export function AgentSections({ p }: { p: CitizenProfile }) {
           )}
           {life && (
             <div className="agent-plan" data-testid="agent-plan">
-              <label>TOMORROW'S PLAN</label>
+              <label>Tomorrow’s plan</label>
               <p>{life.plan}</p>
-              <small>{life.planBy === 'ai' ? 'Decided by the connected AI model' : 'Decided by the simulation'}</small>
+              <small>
+                <SourceTag by={life.planBy} /> {life.planBy === 'ai' ? 'Decided by the connected AI model' : 'Decided by the simulation'}
+              </small>
             </div>
           )}
           <div className="rows">
@@ -206,7 +209,7 @@ function Friends({ ids }: { ids: string[] }) {
   const citizens = useSim((s) => s.citizensById);
   return (
     <div className="friends" data-testid="friends">
-      <label>FRIENDS · {ids.length}</label>
+      <label>Friends · {ids.length}</label>
       <div className="tags">
         {ids.map((id) => {
           const f = citizens.get(id);
@@ -228,7 +231,7 @@ function DeedItem({ d, self }: { d: Deed; self: string }) {
     <li className={`deed deed--${d.kind}`}>
       <span className="deed__time">
         {deedTime(d.time)}
-        {d.by === 'ai' && <em className="deed__ai">AI</em>}
+        <SourceTag by={d.by} />
       </span>
       <span>
         {about && <b>{about.name}: </b>}
@@ -273,7 +276,7 @@ function Today({ p }: { p: CitizenProfile }) {
       </ol>
       <div className="actions">
         <button onClick={() => followCitizen(p.id)} data-testid="btn-follow-day">
-          <Icon name="walk" /> FOLLOW THEIR DAY
+          <Icon name="walk" /> Follow their day
         </button>
       </div>
       <p className="note">Follow, then use 1x, 10x or 60x in the top bar to ride along through the day.</p>
@@ -298,7 +301,7 @@ function Share({ p }: { p: CitizenProfile }) {
           }}
           data-testid="btn-copy-link"
         >
-          <Icon name="share" /> {copied ? 'COPIED' : 'COPY LINK'}
+          <Icon name="share" /> {copied ? 'Copied' : 'Copy link'}
         </button>
       </div>
     </div>
@@ -349,7 +352,7 @@ function Memory({ p }: { p: CitizenProfile }) {
   }, [base, p.id, p.agent?.slug]);
   if (!items) return <p className="note">Remembering…</p>;
   if (!items.length) return <p className="note">No memories yet. Agents remember their work, conversations with visitors and each day once it ends.</p>;
-  const label = { work: 'WORK', talk: 'CONVERSATION', reflection: 'DAY' } as const;
+  const label = { work: 'Work', talk: 'Conversation', reflection: 'Day' } as const;
   return (
     <div className="agent-card__body">
       <ol className="deeds deeds--compact" data-testid="agent-memory">
@@ -357,7 +360,7 @@ function Memory({ p }: { p: CitizenProfile }) {
           <li key={i} className={`deed deed--${m.kind === 'reflection' ? 'friends' : m.kind === 'talk' ? 'met' : 'task'}`}>
             <small>
               {label[m.kind ?? 'work']}
-              {m.day !== undefined ? ` · DAY ${m.day}` : ''}
+              {m.day !== undefined ? ` · day ${m.day}` : ''}
             </small>
             <span>
               {m.project ? `${m.project}: ` : ''}
@@ -406,7 +409,7 @@ function Applications() {
       });
   return (
     <>
-      <h4>OUTSIDE AGENTS · {pending.length} WAITING</h4>
+      <h4>Outside agents · {pending.length} waiting</h4>
       {pending.length === 0 && <p className="note">No applications waiting. Agents apply through the agent API (see docs/systems/external-agents.md).</p>}
       {pending.map((a) => (
         <div key={a.id} className="application" data-testid="application">
@@ -444,7 +447,7 @@ export function AgentsPanel() {
   return (
     <section className="side-panel glass agents-panel" data-testid="agents-panel">
       <div className="panel-head">
-        <span>AGENTS · {agents.length}</span>
+        <span>Agents · {agents.length}</span>
         <button className="close" onClick={() => useUI.getState().setPanel(null)} aria-label="Close">
           <Icon name="close" />
         </button>
@@ -455,7 +458,7 @@ export function AgentsPanel() {
       <Applications />
       {recent.length > 0 && (
         <>
-          <h4>LATEST DEEDS</h4>
+          <h4>Latest deeds</h4>
           <ol className="deeds deeds--compact">
             {recent.map((d) => (
               <DeedItem key={d.id} d={d} self="" />
@@ -463,7 +466,7 @@ export function AgentsPanel() {
           </ol>
         </>
       )}
-      <h4>VENTURES · {ventures.length}</h4>
+      <h4>Ventures · {ventures.length}</h4>
       {ventures.length === 0 && <p className="note">No agent has opened a venture yet. Founders decide in the evening.</p>}
       <div className="list">
         {ventures.map((v) => (
@@ -472,7 +475,7 @@ export function AgentsPanel() {
           </button>
         ))}
       </div>
-      <h4>DIRECTORY</h4>
+      <h4>Directory</h4>
       <div className="agents-filter">
         <input placeholder="Search agents" value={q} onChange={(e) => setQ(e.target.value)} />
         <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
@@ -499,8 +502,7 @@ export function AgentsPanel() {
             <span className="agent-row__name">
               <b>{a.name}</b>
               <small>
-                {a.agent?.agency ? `${agencyAgent(a.agent.agency)?.emoji ?? ''} ` : ''}
-                {a.agent?.calling}
+                                {a.agent?.calling}
               </small>
             </span>
             <span className="agent-row__plan">{life.get(a.id)?.plan}</span>
@@ -526,12 +528,12 @@ export function JournalPanel() {
   return (
     <section className="side-panel glass journal" data-testid="journal-panel">
       <div className="panel-head">
-        <span>JOURNAL</span>
+        <span>Journal</span>
         <button className="close" onClick={() => useUI.getState().setPanel(null)} aria-label="Close">
           <Icon name="close" />
         </button>
       </div>
-      <h4>TODAY</h4>
+      <h4>Today</h4>
       {j.goals.length === 0 && <p className="note">Walk in to get today's goals.</p>}
       <ul className="goals" data-testid="goals">
         {j.goals.map((g) => (
@@ -554,7 +556,7 @@ export function JournalPanel() {
           </button>
         ))}
       </div>
-      <h4>TOTALS</h4>
+      <h4>Totals</h4>
       <div className="totals">
         <div>
           <b>{j.totals.agentsMet}</b>
@@ -581,7 +583,7 @@ export function JournalPanel() {
           <span>Days in a row</span>
         </div>
       </div>
-      <h4>BADGES · {badges.filter((b) => b.earned).length}/{badges.length}</h4>
+      <h4>Badges · {badges.filter((b) => b.earned).length}/{badges.length}</h4>
       <div className="badges">
         {badges.map((b) => (
           <span key={b.id} className={`badge-chip ${b.earned ? 'on' : ''}`} title={b.hint}>
@@ -590,7 +592,7 @@ export function JournalPanel() {
         ))}
       </div>
       <JournalSync />
-      <h4>POSTCARDS · {j.postcards.length}</h4>
+      <h4>Postcards · {j.postcards.length}</h4>
       {j.postcards.length === 0 && <p className="note">Press the camera button (or P) while walking to take one.</p>}
       <div className="postcards">
         {j.postcards.map((pc) => (
@@ -655,7 +657,7 @@ function JournalSync() {
       .catch(() => useUI.getState().notify('No journal under that code', 'error'));
   return (
     <>
-      <h4>SYNC</h4>
+      <h4>Sync</h4>
       <p className="note">{code ? `Your code: ${code}. Use it on another device to bring your journal along (postcard images stay on this device).` : 'Save your journal under a private code to continue on another device.'}</p>
       <div className="talk__actions">
         <button onClick={save} data-testid="journal-save">{code ? 'Update saved journal' : 'Save to a code'}</button>
@@ -690,7 +692,7 @@ export function LookPanel() {
   return (
     <section className="side-panel glass look-panel" data-testid="look-panel">
       <div className="panel-head">
-        <span>YOUR LOOK</span>
+        <span>Your look</span>
         <button className="close" onClick={() => useUI.getState().setPanel(null)} aria-label="Close">
           <Icon name="close" />
         </button>
@@ -714,7 +716,7 @@ export function LookPanel() {
       {swatch('eyes', 'Eyes')}
       <div className="actions">
         <button onClick={() => g.randomLook()} data-testid="btn-random-look">
-          <Icon name="spark" /> RANDOMISE
+          <Icon name="spark" /> Randomise
         </button>
       </div>
     </section>
@@ -733,8 +735,8 @@ export function Welcome() {
   return (
     <div className="welcome" data-testid="welcome">
       <div className="welcome__card glass">
-        <div className="welcome__kicker">MORPHIS · YEAR 2126</div>
-        <h1>A city where AI agents live.</h1>
+        <div className="welcome__kicker">Morphis · year 2126</div>
+        <h1>A floating town where AI agents live</h1>
         <p>
           {agents} agents and {population - agents} residents keep their own days here. The agents open ventures, back each other with credits, study at the Institute and take on JARVIS projects. Every deed is logged.
           {ai?.connected ? ' A real AI model is making their decisions right now.' : ' In this version the simulation makes their decisions (no AI model is connected).'}
@@ -748,7 +750,7 @@ export function Welcome() {
             }}
             data-testid="btn-welcome-walk"
           >
-            <Icon name="walk" /> WALK IN
+            <Icon name="walk" /> Walk in
           </button>
           <button
             onClick={() => {
@@ -757,7 +759,7 @@ export function Welcome() {
             }}
             data-testid="btn-welcome-watch"
           >
-            <Icon name="map" /> WATCH FROM ABOVE
+            <Icon name="map" /> Watch from above
           </button>
           <button
             onClick={() => {
@@ -765,7 +767,7 @@ export function Welcome() {
               useUI.getState().setPanel('agents');
             }}
           >
-            <Icon name="user" /> MEET THE AGENTS
+            <Icon name="user" /> Meet the agents
           </button>
         </div>
         <ul className="welcome__list">

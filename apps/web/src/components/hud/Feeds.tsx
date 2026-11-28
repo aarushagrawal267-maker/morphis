@@ -15,7 +15,7 @@ export function AgentStream() {
   return (
     <section className={`stream glass ${collapsed ? 'collapsed' : ''}`} data-testid="agent-stream">
       <header onClick={() => setCollapsed((c) => !c)}>
-        <span className="live" /> AGENT STREAM
+        <span className="live" /> Agent stream
         <small>{ai?.connected ? 'live AI agents' : 'simulated workforce'}</small>
       </header>
       {!collapsed && (
@@ -60,7 +60,7 @@ export function NewsFeed() {
   const upcoming = events.filter((e) => e.status !== 'ENDED').sort((a, b) => a.start - b.start);
   return (
     <section className="side-panel glass" data-testid="news-panel">
-      <PanelHeader title="CITY EVENTS & NEWS" />
+      <PanelHeader title="City events and news" />
       {upcoming.length > 0 && (
         <div className="events">
           {upcoming.map((e) => (
@@ -142,7 +142,7 @@ export function KeyFeatures() {
   ];
   return (
     <section className="side-panel glass features" data-testid="features-panel">
-      <PanelHeader title="KEY FEATURES" />
+      <PanelHeader title="Key features" />
       <ul>
         {items.map((it) => (
           <li key={it.label}>
@@ -173,12 +173,12 @@ export function BottomBar() {
     if (useUI.getState().highlight === h) ui.notify(msg);
   };
   const items = [
-    { id: 'walk', icon: 'walk', label: 'CITIZENS WALKING', on: highlight === 'pedestrians', act: () => toggle('pedestrians', `${walking} citizens walking right now — highlighted`) },
-    { id: 'interior', icon: 'door', label: 'INTERIOR VIEWS', on: highlight === 'enterable', act: () => toggle('enterable', 'Enterable buildings highlighted — click one, then ENTER BUILDING') },
-    { id: 'transport', icon: 'bus', label: 'VEHICLES & TRANSPORT', on: highlight === 'transport', act: () => toggle('transport', `${moving} vehicles moving · bus lines shown`) },
-    { id: 'daynight', icon: 'sun', label: 'DAY / NIGHT CYCLE', on: panel === 'clock', act: () => ui.togglePanel('clock') },
-    { id: 'clickable', icon: 'cursor', label: 'CLICKABLE BUILDINGS', on: highlight === 'clickable', act: () => toggle('clickable', 'Building selection mode — click any highlighted building') },
-    { id: 'events', icon: 'bell', label: 'CITY EVENTS', on: panel === 'news', act: () => ui.togglePanel('news') },
+    { id: 'walk', icon: 'walk', label: 'Citizens walking', on: highlight === 'pedestrians', act: () => toggle('pedestrians', `${walking} citizens walking right now — highlighted`) },
+    { id: 'interior', icon: 'door', label: 'Interior views', on: highlight === 'enterable', act: () => toggle('enterable', 'Enterable buildings highlighted — click one, then Enter building') },
+    { id: 'transport', icon: 'bus', label: 'Vehicles and transport', on: highlight === 'transport', act: () => toggle('transport', `${moving} vehicles moving · bus lines shown`) },
+    { id: 'daynight', icon: 'sun', label: 'Day and night', on: panel === 'clock', act: () => ui.togglePanel('clock') },
+    { id: 'clickable', icon: 'cursor', label: 'Clickable buildings', on: highlight === 'clickable', act: () => toggle('clickable', 'Building selection mode — click any highlighted building') },
+    { id: 'events', icon: 'bell', label: 'City events', on: panel === 'news', act: () => ui.togglePanel('news') },
   ];
   return (
     <footer className="bottombar glass" data-testid="bottom-bar">

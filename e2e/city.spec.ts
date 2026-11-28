@@ -15,7 +15,7 @@ test('renders the city with header, navigation and live HUD numbers', async ({ p
   page.on('pageerror', (e) => errors.push(e.message));
   await open(page);
   await expect(page.getByTestId('navbar')).toBeVisible();
-  await expect(page.getByTestId('city-info')).toContainText('POPULATION');
+  await expect(page.getByTestId('city-info')).toContainText('Population');
   await expect(page.getByTestId('city-info')).toContainText('150');
   await expect(page.getByTestId('bottom-bar')).toBeVisible();
   await expect(page.getByTestId('minimap')).toBeVisible();
@@ -52,11 +52,11 @@ test('dragging the canvas pans the camera', async ({ page }) => {
 test('navigation tabs focus places and select landmarks', async ({ page }) => {
   await open(page);
   await page.getByTestId('tab-institute').click();
-  await expect(page.getByTestId('panel-title')).toHaveText('MORPHIS UNIVERSITY');
+  await expect(page.getByTestId('panel-title')).toHaveText('Morphis University');
   await page.getByTestId('tab-research').click();
-  await expect(page.getByTestId('panel-title')).toHaveText('MORPHIS AI LAB');
+  await expect(page.getByTestId('panel-title')).toHaveText('Morphis AI Lab');
   await page.getByTestId('tab-apartments').click();
-  await expect(page.getByTestId('panel-title')).toHaveText('RESIDENTIAL DISTRICT');
+  await expect(page.getByTestId('panel-title')).toHaveText('Residential District');
   await page.getByTestId('tab-overview').click();
   await expect(page.getByTestId('selection-panel')).toHaveCount(0);
 });
@@ -68,7 +68,7 @@ test('district pins toggle and focus a district', async ({ page }) => {
   await page.getByTestId('toggle-pins').click();
   await expect(page.getByTestId('pin-finance')).toBeVisible();
   await page.getByTestId('pin-finance').click();
-  await expect(page.getByTestId('panel-title')).toHaveText('FINANCE DISTRICT');
+  await expect(page.getByTestId('panel-title')).toHaveText('Finance District');
   await page.getByTestId('toggle-pins').click();
   await expect(page.getByTestId('pin-finance')).toHaveCount(0);
   await page.getByTestId('toggle-pins').click();
@@ -186,7 +186,7 @@ test('welcome screen leads into walk-in mode; the guest walks, waves and keeps a
   await expect.poll(() => page.evaluate(() => (window as any).__morphis.journal.getState().totals.waves)).toBe(1);
   await expect.poll(() => page.evaluate(() => { const t = (window as any).__morphis.journal.getState().totals; return t.agentsMet + t.residentsMet; }), { timeout: 15_000 }).toBeGreaterThan(0);
   await page.getByTestId('btn-journal').click();
-  await expect(page.getByTestId('journal-panel')).toContainText('TODAY');
+  await expect(page.getByTestId('journal-panel')).toContainText('Today');
   await expect(page.getByTestId('goals').locator('li')).toHaveCount(3);
   await page.getByTestId('btn-rise').click();
   await expect(page.getByTestId('guest-bar')).toHaveCount(0);
@@ -197,10 +197,10 @@ test('welcome screen leads into walk-in mode; the guest walks, waves and keeps a
 test('agents directory opens an agent card with why, deeds, today and a share link', async ({ page }) => {
   await open(page);
   await page.getByTestId('btn-agents').click();
-  await expect(page.getByTestId('agents-panel')).toContainText('AGENTS · 123');
+  await expect(page.getByTestId('agents-panel')).toContainText('Agents · 123');
   await expect(page.getByTestId('agents-panel')).toContainText('73 specialists from The Agency');
   await page.getByTestId('agent-juno-albright').click();
-  await expect(page.getByTestId('panel-title')).toHaveText('JUNO ALBRIGHT');
+  await expect(page.getByTestId('panel-title')).toHaveText('Juno Albright');
   await expect(page.getByTestId('agent-why')).toContainText('espresso');
   await page.getByTestId('card-tab-deeds').click();
   await expect(page.getByTestId('deeds')).toContainText('Moved to Morphis');
@@ -219,14 +219,14 @@ test('specialists from The Agency live in town with their persona on the card', 
   const rows = panel.locator('.agent-row');
   await expect(rows).toHaveCount(4);
   await rows.first().click();
-  await expect(page.locator('.sel-panel__kicker')).toContainText('THE AGENCY');
-  await expect(page.getByTestId('agency-info')).toContainText('THE AGENCY · SECURITY');
+  await expect(page.locator('.sel-panel__kicker')).toContainText('The Agency');
+  await expect(page.getByTestId('agency-info')).toContainText('The Agency · Security');
   await expect(page.getByTestId('agency-info').getByRole('link', { name: 'agency-agents' })).toHaveAttribute('href', /github\.com\/msitarzewski\/agency-agents\/blob\/main\/security\//);
 });
 
 test('a #citizen= link opens that agent and follows them', async ({ page }) => {
   await open(page, '#citizen=sarah-chen');
-  await expect(page.getByTestId('panel-title')).toHaveText('SARAH CHEN', { timeout: 30_000 });
+  await expect(page.getByTestId('panel-title')).toHaveText('Sarah Chen', { timeout: 30_000 });
   await expect.poll(() => page.evaluate(() => (window as any).__morphis.ui.getState().follow?.kind)).toBe('citizen');
 });
 
