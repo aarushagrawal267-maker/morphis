@@ -498,11 +498,10 @@ export function AgentsPanel() {
       <div className="agents-list">
         {list.map((a) => (
           <button key={a.id} className="agent-row" onClick={() => useUI.getState().select({ kind: 'citizen', id: a.id })} data-testid={`agent-${a.agent?.slug}`}>
-            <span className="agent-row__dot" style={{ background: a.role ? CORE_ROLES[a.role].color : a.agent?.agency ? '#38bdf8' : '#f59e0b' }} />
+            <span className="agent-row__dot" style={{ background: a.role ? CORE_ROLES[a.role].color : a.agent?.agency ? 'var(--text-2)' : 'var(--muted)' }} />
             <span className="agent-row__name">
               <b>{a.name}</b>
-              <small>
-                                {a.agent?.calling}
+              <small>{a.agent?.calling}
               </small>
             </span>
             <span className="agent-row__plan">{life.get(a.id)?.plan}</span>
@@ -547,7 +546,7 @@ export function JournalPanel() {
       </ul>
       <p className="note">New goals every day. Your journal lives in this browser only.</p>
       <h4>
-        PLACES · {j.visited.filter((id) => world.landmarks.includes(id)).length}/{world.landmarks.length}
+        Places · {j.visited.filter((id) => world.landmarks.includes(id)).length}/{world.landmarks.length}
       </h4>
       <div className="places">
         {world.landmarks.map((id) => (

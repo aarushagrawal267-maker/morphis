@@ -1,7 +1,7 @@
 /** Floating information panels for the current selection. Every button performs a real action. */
 import { useMemo } from 'react';
 import type { BuildingDef, CitizenDynamic, CitizenProfile } from '@morphis/shared';
-import { BUILDING_TYPES, CORE_ROLES, displayName, formatCredits } from '@morphis/shared';
+import { BUILDING_TYPES, displayName, formatCredits } from '@morphis/shared';
 import { useSim } from '../../state/simStore';
 import { useUI } from '../../state/uiStore';
 import { Icon } from '../ui/icons';
